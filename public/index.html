@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Wars - Multiplayer Arena Combat</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="game-container"></div>
+    <div id="ui-container"></div>
+    <div id="admin-panel" class="admin-panel hidden">
+        <h3>Admin Console</h3>
+        <input type="text" id="admin-command" placeholder="Enter command">
+        <button id="admin-execute">Execute</button>
+        <div id="admin-output"></div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="js/physics.js"></script>
+    <script src="js/gameClient.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/inputHandler.js"></script>
+    <script src="js/uiManager.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
