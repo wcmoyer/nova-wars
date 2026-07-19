@@ -1,0 +1,1 @@
+{\n  "name": "nova-wars",\n  "description": "A multiplayer physics-based arena game",\n  "image": "https://www.example.com/logo.png",\n  "keywords": [\n    "game",\n    "multiplayer",\n    "three.js",\n    "socket.io"\n  ]\n}\n
