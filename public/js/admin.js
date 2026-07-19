@@ -1,4 +1,4 @@
-class AdminManager {
+class AdminPanel {
   constructor() {
     this.adminPanel = document.getElementById('admin-panel');
     this.commandInput = document.getElementById('admin-command');
@@ -116,4 +116,4 @@ class AdminManager {
   }
 }
 
-const adminManager = new AdminManager();
+const adminPanel = new AdminPanel();
