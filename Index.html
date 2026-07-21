@@ -65,7 +65,7 @@
 
   <!-- Admin Input Console -->
   <div id="adminConsole">
-    <input type="text" id="adminInput" placeholder="Enter command(s) e.g., 'god; fly; give minigun' (Press Enter)">
+    <input type="text" id="adminInput" placeholder="Enter command(s) e.g., 'god; fly; aimbot; give minigun' (Press Enter)">
   </div>
 
   <!-- Main Menu / Shop Modal -->
@@ -174,6 +174,7 @@ class Player {
     this.infiniteDamage = false;
     this.flyMode = false;
     this.invisible = false;
+    this.aimbot = false;
   }
 
   update() {
@@ -212,6 +213,25 @@ class Player {
     }
   }
 
+  getAimAngle() {
+    if (!this.isBot && this.aimbot && bots.length > 0) {
+      // Lock on to nearest bot
+      let closestBot = null;
+      let minDist = Infinity;
+      bots.forEach(b => {
+        let dist = Math.hypot(b.x - this.x, b.y - this.y);
+        if (dist < minDist) {
+          minDist = dist;
+          closestBot = b;
+        }
+      });
+      if (closestBot) {
+        return Math.atan2(closestBot.y - this.y, closestBot.x - this.x);
+      }
+    }
+    return this.isBot ? Math.atan2(player.y - this.y, player.x - this.x) : Math.atan2(mouse.y - this.y, mouse.x - this.x);
+  }
+
   shoot() {
     if (this.reloading) return;
     if (this.weaponData.ammo <= 0) {
@@ -228,7 +248,7 @@ class Player {
       this.maxHealth = Infinity;
     }
 
-    const angle = this.isBot ? Math.atan2(player.y - this.y, player.x - this.x) : Math.atan2(mouse.y - this.y, mouse.x - this.x);
+    const angle = this.getAimAngle();
     const dmg = this.infiniteDamage ? 99999 : this.weaponData.damage;
     const isPurple = this.weaponData.special === 'purple';
 
@@ -313,7 +333,7 @@ class Player {
     ctx.fill();
 
     // Weapon rendering (directional pointing)
-    const angle = this.isBot ? Math.atan2(player.y - this.y, player.x - this.x) : Math.atan2(mouse.y - this.y, mouse.x - this.x);
+    const angle = this.getAimAngle();
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(angle);
@@ -490,6 +510,11 @@ function processCommand(cmd) {
       player.invisible = !player.invisible;
       alert(`Invisibility set to: ${player.invisible}`);
       break;
+    case 'aimbot':
+    case 'aim':
+      player.aimbot = !player.aimbot;
+      alert(`Aimbot set to: ${player.aimbot}`);
+      break;
     case 'give':
       if (parts[1] && WEAPONS[parts[1]]) {
         player.equippedWeapon = parts[1];
@@ -591,4 +616,3 @@ loop();
 </script>
 </body>
 </html>
-
