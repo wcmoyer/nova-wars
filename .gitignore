@@ -1,1 +1,0 @@
-node_modules/\n.env\n.DS_Store\n.env.local\n.env.*.local\ndist/\nbuild/\n.next/\nout/\n.vuepress/dist\n.nuxt/\n.cache\n.vuepress/dist\nDist\ndist-ssr/\n*.local\n
