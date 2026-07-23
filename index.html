@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NOVA WARS - 1v1 Arena Shooter</title>
+  <title>Rival Ragdolls - 1v1 Arena Shooter</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body, html { width: 100%; height: 100%; overflow: hidden; background: #111; color: #fff; touch-action: none; }
@@ -155,11 +155,18 @@ let currentMap = 'cyber';
 let tutorialActive = false;
 let tutorialStep = 0;
 
-// Admin Registry (Only NovaWarsDevW starts with admin rights)
-const adminUsers = new Set(["NovaWarsDevW"]);
+// Creator Username Constant
+const OWNER_USERNAME = "NovaWarsDevW";
+
+// Admin Registry (NovaWarsDevW starts with admin rights)
+const adminUsers = new Set([OWNER_USERNAME]);
 
 function hasAdmin(user) {
   return adminUsers.has(user);
+}
+
+function isOwnerUser(user) {
+  return user === OWNER_USERNAME;
 }
 
 // Inputs (Keyboard & Touch)
@@ -216,7 +223,7 @@ const WEAPONS = {
   shotgun: { name: 'Shotgun', tier: 'Tier 2 - Burst Spread', damage: 1, rate: 550, ammo: 8, maxAmmo: 8, speed: 18, cost: 400, ownerOnly: false, multishot: 3 },
   sniper: { name: 'Sniper Rifle', tier: 'Tier 3 - High Speed', damage: 3, rate: 700, ammo: 6, maxAmmo: 6, speed: 40, cost: 700, ownerOnly: false, multishot: 1 },
   minigun: { name: 'Minigun', tier: 'Tier 4 - Ultra Rapid', damage: 1, rate: 30, ammo: 250, maxAmmo: 250, speed: 24, cost: 1200, ownerOnly: false, multishot: 1 },
-  // Owner Weapons
+  // Owner Weapons (NovaWarsDevW Exclusive)
   khopesh: { name: 'Owner Khopesh', tier: 'Owner Weapon', damage: 30, rate: 200, ammo: 999, maxAmmo: 999, speed: 0, cost: 0, ownerOnly: true, multishot: 1 },
   flail: { name: 'Owner Flail', tier: 'Owner Weapon', damage: 30, rate: 15, ammo: 9999, maxAmmo: 9999, speed: 25, cost: 0, ownerOnly: true, special: 'purple', multishot: 1 },
   crook: { name: 'Owner Crook', tier: 'Owner Weapon', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal', multishot: 1 }
@@ -551,11 +558,12 @@ function initShop() {
   const wShop = document.getElementById('weaponShop');
   wShop.innerHTML = '';
   
-  const isAdmin = player && hasAdmin(player.name);
+  // Owner weapons strictly restricted to username "NovaWarsDevW"
+  const isOwner = player && isOwnerUser(player.name);
 
   Object.keys(WEAPONS).forEach(key => {
     const w = WEAPONS[key];
-    if (w.ownerOnly && !isAdmin) return;
+    if (w.ownerOnly && !isOwner) return;
 
     const card = document.createElement('div');
     card.className = 'shop-card';
@@ -574,9 +582,14 @@ function initShop() {
 
 function equipWeapon(key) {
   const w = WEAPONS[key];
-  const isAdmin = player && hasAdmin(player.name);
+  const isOwner = player && isOwnerUser(player.name);
 
-  if (credits >= w.cost || (w.ownerOnly && isAdmin)) {
+  if (w.ownerOnly && !isOwner) {
+    alert("Access Denied: Owner weapons are strictly reserved for username NovaWarsDevW.");
+    return;
+  }
+
+  if (credits >= w.cost || (w.ownerOnly && isOwner)) {
     player.equippedWeapon = key;
     player.weaponData = { ...w };
     alert(`Equipped ${w.name}!`);
@@ -634,8 +647,13 @@ function processCommand(cmd) {
       break;
     case 'give':
       if (parts[1] && WEAPONS[parts[1]]) {
+        const targetWep = WEAPONS[parts[1]];
+        if (targetWep.ownerOnly && !isOwnerUser(player.name)) {
+          alert("Access Denied: Owner weapons are strictly reserved for username NovaWarsDevW.");
+          return;
+        }
         player.equippedWeapon = parts[1];
-        player.weaponData = { ...WEAPONS[parts[1]] };
+        player.weaponData = { ...targetWep };
         alert(`Gave ${parts[1]}`);
       }
       break;
@@ -647,9 +665,6 @@ function processCommand(cmd) {
       if (targetUser) {
         adminUsers.add(targetUser);
         alert(`Granted admin privileges to "${targetUser}"`);
-        if (opponent && opponent.name === targetUser) {
-          // If given to opponent
-        }
       } else {
         alert("Usage: grant <username>");
       }
@@ -657,7 +672,7 @@ function processCommand(cmd) {
     case 'revoke':
     case 'removeadmin':
       if (targetUser) {
-        if (targetUser === "NovaWarsDevW") {
+        if (targetUser === OWNER_USERNAME) {
           alert("Cannot revoke owner admin status!");
         } else {
           adminUsers.delete(targetUser);
@@ -693,7 +708,7 @@ function renderTutorialOverlay() {
   let msg = "";
   if (tutorialStep === 1) msg = "TUTORIAL: Use WASD / Arrow Keys or screen buttons to move & jump!";
   if (tutorialStep === 2) msg = "TUTORIAL: Click or touch to fire! Each kill earns +100 credits for shop weapons!";
-  if (tutorialStep === 3) msg = "TUTORIAL: Only NovaWarsDevW has admin powers! Use 'grant <user>' to share permissions!";
+  if (tutorialStep === 3) msg = "TUTORIAL: NovaWarsDevW owns special weapons & admin controls! Use 'grant <user>' to share admin!";
 
   ctx.fillText(msg, 30, canvas.height - 50);
 }
