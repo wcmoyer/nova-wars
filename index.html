@@ -187,7 +187,6 @@ canvas.addEventListener('touchmove', (e) => {
 canvas.addEventListener('touchend', () => mouse.down = false);
 
 // --- REALISTIC WEAPONS DATABASE ---
-// Standard weapons hit for 1 hit point; owner/infinite damage weapons deliver fatal hits
 const WEAPONS = {
   pistol: { name: 'Pistol', damage: 1, rate: 250, ammo: 15, maxAmmo: 15, speed: 20, cost: 0, ownerOnly: false },
   assault: { name: 'Assault Rifle', damage: 1, rate: 100, ammo: 30, maxAmmo: 30, speed: 22, cost: 300, ownerOnly: false },
@@ -232,7 +231,7 @@ class Character {
 
   update() {
     if (!this.isBot) {
-      // Movement with A/D, WASD, Arrow Keys
+      // Player Movement Controls
       const moveLeft = keys['a'] || keys['ArrowLeft'];
       const moveRight = keys['d'] || keys['ArrowRight'];
       const jumpKey = keys['w'] || keys[' '] || keys['ArrowUp'];
@@ -255,7 +254,7 @@ class Character {
         this.vy += 0.5; // Gravity
       }
     } else {
-      // Slower Bot Logic
+      // Active Bot Movement & Shooting Logic
       this.aiBehavior();
     }
 
@@ -313,10 +312,33 @@ class Character {
   }
 
   aiBehavior() {
-    this.vx *= 0.5;
+    if (!player) return;
+
+    // 1. Bot Tactical Positioning
+    const distToPlayer = player.x - this.x;
+    const absDist = Math.abs(distToPlayer);
+
+    // Maintain optimal distance (~350px away)
+    if (absDist > 400) {
+      this.vx = distToPlayer > 0 ? 2.5 : -2.5; // Move closer
+    } else if (absDist < 250) {
+      this.vx = distToPlayer > 0 ? -2.5 : 2.5; // Back away
+    } else {
+      // Strafe slightly back and forth
+      this.vx = Math.sin(Date.now() * 0.003) * 2;
+    }
+
+    // Gravity
     this.vy += 0.5;
 
-    if (player && Date.now() - this.lastShot > (this.weaponData.rate * 2.8)) {
+    // Random dodge jumps when close or being actively shot
+    if (this.grounded && Math.random() < 0.015) {
+      this.vy = -11;
+      this.grounded = false;
+    }
+
+    // 2. Active Shooting Logic
+    if (Date.now() - this.lastShot > this.weaponData.rate) {
       this.shoot();
     }
   }
@@ -331,6 +353,10 @@ class Character {
       this.vy = 0;
       this.grounded = true;
     }
+
+    // Canvas boundary constraints
+    if (this.x < 20) this.x = 20;
+    if (this.x > canvas.width - 20) this.x = canvas.width - 20;
   }
 
   takeDamage(amount) {
@@ -348,7 +374,7 @@ class Character {
         // Opponent got a kill
         opponentKills++;
         updateScoreboard();
-        // Respawn player grounded on their side of the floor with 30 health restored
+        // Respawn player grounded on left side with 30 health
         this.health = this.maxHealth;
         this.x = 150;
         this.y = canvas.height - 124;
@@ -401,7 +427,7 @@ class Character {
     ctx.stroke();
     ctx.restore();
 
-    // Overhead Health Bar (Tracks 30 total hits)
+    // Overhead Health Bar
     const barWidth = 40;
     const hpRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -465,7 +491,6 @@ function respawnOpponent() {
   const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper'];
   const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
 
-  // Spawn on opposite side (right side) on the solid floor
   opponent = new Character(canvas.width - 150, canvas.height - 124, true, "Opponent");
   opponent.equippedWeapon = randomWep;
   opponent.weaponData = { ...WEAPONS[randomWep] };
@@ -583,7 +608,7 @@ function renderTutorialOverlay() {
   let msg = "";
   if (tutorialStep === 1) msg = "TUTORIAL: Use WASD / Arrow Keys or screen buttons to move left/right and jump!";
   if (tutorialStep === 2) msg = "TUTORIAL: Click or touch the screen to aim and shoot your opponent!";
-  if (tutorialStep === 3) msg = "TUTORIAL: Land 30 hits to score a kill! Track scores on the top-right scoreboard!";
+  if (tutorialStep === 3) msg = "TUTORIAL: Land 30 hits to score a kill! Watch out, the bot will move and target you!";
 
   ctx.fillText(msg, 30, canvas.height - 50);
 }
@@ -609,7 +634,7 @@ function loop() {
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Render Solid Ground Floor across entire width
+  // Render Solid Ground Floor
   const floorY = canvas.height - 100;
   ctx.fillStyle = theme.floor;
   ctx.fillRect(0, floorY, canvas.width, 100);
@@ -633,7 +658,7 @@ function loop() {
     if (p.dead) projectiles.splice(idx, 1);
   });
 
-  // Update HUD (Tracks 30 hits)
+  // Update HUD
   document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, player.health)} / 30`;
   document.getElementById('creditsVal').innerText = credits;
   document.getElementById('weaponVal').innerText = player.weaponData.name;
