@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NOVA WARS - 1v1 Arena Shooter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Rival Ragdolls - 1v1 Arena Shooter</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background: #111; color: #fff; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #111; color: #fff; touch-action: none; }
     #gameContainer { position: relative; width: 100vw; height: 100vh; }
     canvas { display: block; background: #14141e; }
 
@@ -17,9 +17,9 @@
     .stat-label { font-size: 10px; text-transform: uppercase; color: #aaa; letter-spacing: 1px; }
     .stat-val { font-size: 18px; font-weight: bold; color: #00ffcc; }
 
-    #leaderboard { top: 15px; right: 15px; width: 220px; }
-    #leaderboard h3 { font-size: 14px; margin-bottom: 8px; text-align: center; color: #ffcc00; text-transform: uppercase; }
-    .lb-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.05); }
+    #scoreHud { top: 15px; right: 15px; text-align: center; width: 200px; }
+    #scoreHud h3 { font-size: 12px; color: #ffcc00; text-transform: uppercase; margin-bottom: 4px; }
+    #scoreVal { font-size: 22px; font-weight: bold; color: #fff; }
 
     /* Buttons */
     .btn { background: #00ffcc; color: #000; border: none; padding: 10px 18px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
@@ -27,14 +27,19 @@
     .btn-secondary { background: #333; color: #fff; border: 1px solid #555; }
     .btn-secondary:hover { background: #444; }
 
-    /* Quick Swap Controls */
+    /* Quick Controls */
     #quickControls { position: absolute; top: 80px; left: 15px; display: flex; gap: 10px; }
 
     /* Admin Console */
     #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 650px; max-width: 90vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
     #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 14px; border-radius: 6px; outline: none; }
-    
-    /* Menu & Shop Overlay */
+
+    /* Touch On-Screen Controls */
+    #touchOverlay { position: absolute; bottom: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 50; }
+    .touch-btn { width: 65px; height: 65px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; color: #fff; pointer-events: auto; backdrop-filter: blur(4px); }
+    .touch-group { display: flex; gap: 15px; }
+
+    /* Menu Overlay */
     .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 200; }
     .modal-content { background: #1c1d24; border: 2px solid #333; width: 750px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 25px; overflow-y: auto; color: #fff; }
     h2 { margin-bottom: 15px; color: #00ffcc; border-bottom: 2px solid #333; padding-bottom: 8px; }
@@ -42,7 +47,6 @@
     .shop-card { background: #252733; padding: 15px; border-radius: 8px; border: 1px solid #3d4052; text-align: center; }
     .shop-card h4 { color: #ffcc00; margin-bottom: 5px; }
 
-    /* Controls Hint */
     #controlsHint { position: absolute; bottom: 15px; left: 15px; font-size: 11px; color: #888; pointer-events: none; }
   </style>
 </head>
@@ -53,7 +57,7 @@
 
   <!-- HUD -->
   <div id="statsHud" class="hud-panel">
-    <div class="stat-box"><span class="stat-label">Health</span><span id="hpVal" class="stat-val" style="color:#ff4444">200 / 200</span></div>
+    <div class="stat-box"><span class="stat-label">Health</span><span id="hpVal" class="stat-val" style="color:#ff4444">30 / 30</span></div>
     <div class="stat-box"><span class="stat-label">Credits</span><span id="creditsVal" class="stat-val">0</span></div>
     <div class="stat-box"><span class="stat-label">Weapon</span><span id="weaponVal" class="stat-val" style="color:#fff">Pistol</span></div>
     <div class="stat-box"><span class="stat-label">Ammo</span><span id="ammoVal" class="stat-val">15/15</span></div>
@@ -64,13 +68,25 @@
     <button class="btn btn-secondary" onclick="toggleAdminConsole()">Admin Console [~]</button>
   </div>
 
-  <div id="leaderboard" class="hud-panel">
-    <h3>Leaderboard</h3>
-    <div id="lbList"></div>
+  <!-- Scoreboard -->
+  <div id="scoreHud" class="hud-panel">
+    <h3>Kills Scoreboard</h3>
+    <div id="scoreVal"><span style="color:#00ffcc;">You: 0</span> | <span style="color:#ff4444;">Bot: 0</span></div>
   </div>
 
   <div id="controlsHint">
-    [A/D] Move | [W/Space] Jump | [Mouse] Aim & Shoot | [R] Reload | [~] Admin Console
+    [WASD / Arrow Keys] Move & Jump | [Mouse / Touch] Aim & Shoot | [R] Reload | [~] Admin Console
+  </div>
+
+  <!-- On-Screen Touch Controls -->
+  <div id="touchOverlay">
+    <div class="touch-group">
+      <div class="touch-btn" id="btnLeft">◄</div>
+      <div class="touch-btn" id="btnRight">►</div>
+    </div>
+    <div class="touch-group">
+      <div class="touch-btn" id="btnJump">▲</div>
+    </div>
   </div>
 
   <!-- Admin Input Console -->
@@ -85,7 +101,7 @@
       <p>Select your weapon before entering the 1v1 arena!</p>
       
       <div style="margin: 15px 0;">
-        <h3>Select Arena</h3>
+        <h3>Select Arena Style</h3>
         <button class="btn btn-secondary" onclick="setMap('cyber')">Cyber Arena</button>
         <button class="btn btn-secondary" onclick="setMap('lava')">Lava Arena</button>
         <button class="btn btn-secondary" onclick="setMap('islands')">Floating Isles</button>
@@ -116,49 +132,85 @@ resize();
 
 // Global Game Variables
 let credits = 0;
-let kills = 0;
-let damageDealt = 0;
+let playerKills = 0;
+let opponentKills = 0;
 let currentMap = 'cyber';
 let isOwner = true;
 let tutorialActive = false;
 let tutorialStep = 0;
 
-// Input listeners
+// Inputs (Keyboard & Touch)
 const keys = {};
 const mouse = { x: 0, y: 0, down: false };
 
+// Keyboard Listeners (WASD + Arrow Keys)
 window.addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
-  if(e.key === '~' || e.key === '`') toggleAdminConsole();
-  if(e.key.toLowerCase() === 'r' && player) player.reload();
+  keys[e.key] = true;
+  if (e.key === '~' || e.key === '`') toggleAdminConsole();
+  if (e.key.toLowerCase() === 'r' && player) player.reload();
 });
-window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+window.addEventListener('keyup', e => {
+  keys[e.key.toLowerCase()] = false;
+  keys[e.key] = false;
+});
+
+// Pointer / Mouse / Touch Listeners
 window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-window.addEventListener('mousedown', () => mouse.down = true);
+window.addEventListener('mousedown', e => { mouse.down = true; mouse.x = e.clientX; mouse.y = e.clientY; });
 window.addEventListener('mouseup', () => mouse.down = false);
 
+// Touch Controls Bindings
+function bindTouch(id, keyName) {
+  const el = document.getElementById(id);
+  el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
+  el.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
+}
+bindTouch('btnLeft', 'ArrowLeft');
+bindTouch('btnRight', 'ArrowRight');
+bindTouch('btnJump', 'ArrowUp');
+
+// Canvas Touch Aim/Shoot
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length > 0) {
+    mouse.x = e.touches[0].clientX;
+    mouse.y = e.touches[0].clientY;
+    mouse.down = true;
+  }
+});
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length > 0) {
+    mouse.x = e.touches[0].clientX;
+    mouse.y = e.touches[0].clientY;
+  }
+});
+canvas.addEventListener('touchend', () => mouse.down = false);
+
 // --- REALISTIC WEAPONS DATABASE ---
+// Standard weapons hit for 1 hit point; owner/infinite damage weapons deliver fatal hits
 const WEAPONS = {
-  pistol: { name: 'Pistol', damage: 25, rate: 250, ammo: 15, maxAmmo: 15, speed: 20, cost: 0, ownerOnly: false },
-  assault: { name: 'Assault Rifle', damage: 22, rate: 100, ammo: 30, maxAmmo: 30, speed: 22, cost: 300, ownerOnly: false },
-  shotgun: { name: 'Shotgun', damage: 60, rate: 600, ammo: 6, maxAmmo: 6, speed: 18, cost: 500, ownerOnly: false },
-  sniper: { name: 'Sniper Rifle', damage: 110, rate: 850, ammo: 5, maxAmmo: 5, speed: 38, cost: 800, ownerOnly: false },
-  minigun: { name: 'Minigun', damage: 3, rate: 25, ammo: 300, maxAmmo: 300, speed: 24, cost: 1200, ownerOnly: false },
+  pistol: { name: 'Pistol', damage: 1, rate: 250, ammo: 15, maxAmmo: 15, speed: 20, cost: 0, ownerOnly: false },
+  assault: { name: 'Assault Rifle', damage: 1, rate: 100, ammo: 30, maxAmmo: 30, speed: 22, cost: 300, ownerOnly: false },
+  shotgun: { name: 'Shotgun', damage: 1, rate: 600, ammo: 6, maxAmmo: 6, speed: 18, cost: 500, ownerOnly: false },
+  sniper: { name: 'Sniper Rifle', damage: 1, rate: 850, ammo: 5, maxAmmo: 5, speed: 38, cost: 800, ownerOnly: false },
+  minigun: { name: 'Minigun', damage: 1, rate: 25, ammo: 300, maxAmmo: 300, speed: 24, cost: 1200, ownerOnly: false },
   // Owner Weapons
-  khopesh: { name: 'Owner Khopesh', damage: 99999, rate: 200, ammo: 999, maxAmmo: 999, speed: 0, cost: 0, ownerOnly: true },
-  flail: { name: 'Owner Flail', damage: 99999, rate: 15, ammo: 9999, maxAmmo: 9999, speed: 25, cost: 0, ownerOnly: true, special: 'purple' },
-  crook: { name: 'Owner Crook', damage: 15, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal' }
+  khopesh: { name: 'Owner Khopesh', damage: 30, rate: 200, ammo: 999, maxAmmo: 999, speed: 0, cost: 0, ownerOnly: true },
+  flail: { name: 'Owner Flail', damage: 30, rate: 15, ammo: 9999, maxAmmo: 9999, speed: 25, cost: 0, ownerOnly: true, special: 'purple' },
+  crook: { name: 'Owner Crook', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal' }
 };
 
-// --- JOINTED RAGDOLL CHARACTER CLASS ---
+// --- RAGDOLL CHARACTER CLASS ---
 class Character {
   constructor(x, y, isBot = false, name = "Player") {
+    this.startX = x;
+    this.startY = y;
     this.x = x;
     this.y = y;
     this.vx = 0;
     this.vy = 0;
-    this.health = 200;
-    this.maxHealth = 200;
+    this.health = 30; // 30 hits to die
+    this.maxHealth = 30;
     this.isBot = isBot;
     this.name = name;
     
@@ -168,9 +220,7 @@ class Character {
     this.lastShot = 0;
     this.reloading = false;
     
-    // Ragdoll Physics Joints
     this.limbAngle = 0;
-    this.armAngle = 0;
     
     // Admin toggles
     this.godMode = false;
@@ -182,26 +232,30 @@ class Character {
 
   update() {
     if (!this.isBot) {
-      // Player Movement
+      // Movement with A/D, WASD, Arrow Keys
+      const moveLeft = keys['a'] || keys['ArrowLeft'];
+      const moveRight = keys['d'] || keys['ArrowRight'];
+      const jumpKey = keys['w'] || keys[' '] || keys['ArrowUp'];
+
       if (this.flyMode) {
         this.vx = 0; this.vy = 0;
-        if (keys['a']) this.vx = -8;
-        if (keys['d']) this.vx = 8;
-        if (keys['w']) this.vy = -8;
-        if (keys['s']) this.vy = 8;
+        if (moveLeft) this.vx = -8;
+        if (moveRight) this.vx = 8;
+        if (jumpKey) this.vy = -8;
+        if (keys['s'] || keys['ArrowDown']) this.vy = 8;
       } else {
-        if (keys['a']) this.vx = -4;
-        else if (keys['d']) this.vx = 4;
+        if (moveLeft) this.vx = -4;
+        else if (moveRight) this.vx = 4;
         else this.vx *= 0.8;
 
-        if ((keys['w'] || keys[' ']) && this.grounded) {
+        if (jumpKey && this.grounded) {
           this.vy = -12;
           this.grounded = false;
         }
         this.vy += 0.5; // Gravity
       }
     } else {
-      // Slower Bot Logic (Ragdoll Archer Style)
+      // Slower Bot Logic
       this.aiBehavior();
     }
 
@@ -209,7 +263,6 @@ class Character {
     this.y += this.vy;
     this.checkCollisions();
 
-    // Physics Animation for Ragdoll Limbs
     this.limbAngle = Math.sin(Date.now() * 0.01) * (Math.abs(this.vx) > 0.5 ? 0.6 : 0.1);
 
     // Player Shooting
@@ -240,7 +293,7 @@ class Character {
     }
 
     const angle = this.getAimAngle();
-    const dmg = this.infiniteDamage ? 99999 : this.weaponData.damage;
+    const dmg = this.infiniteDamage ? 30 : this.weaponData.damage;
     const isPurple = this.weaponData.special === 'purple';
 
     projectiles.push(new Projectile(
@@ -260,11 +313,9 @@ class Character {
   }
 
   aiBehavior() {
-    // Slower pacing & steady aiming
     this.vx *= 0.5;
     this.vy += 0.5;
 
-    // Slower, deliberate shot timing
     if (player && Date.now() - this.lastShot > (this.weaponData.rate * 2.8)) {
       this.shoot();
     }
@@ -272,20 +323,13 @@ class Character {
 
   checkCollisions() {
     this.grounded = false;
-    const platforms = maps[currentMap].platforms;
+    const floorY = canvas.height - 100;
 
-    platforms.forEach(plat => {
-      if (this.x + 12 > plat.x && this.x - 12 < plat.x + plat.w) {
-        if (this.y + 24 <= plat.y && this.y + 24 + this.vy >= plat.y) {
-          this.y = plat.y - 24;
-          this.vy = 0;
-          this.grounded = true;
-        }
-      }
-    });
-
-    if (this.y > canvas.height + 100) {
-      this.takeDamage(999);
+    // Solid floor across entire map
+    if (this.y + 24 >= floorY) {
+      this.y = floorY - 24;
+      this.vy = 0;
+      this.grounded = true;
     }
   }
 
@@ -295,17 +339,19 @@ class Character {
 
     if (this.health <= 0) {
       if (this.isBot) {
-        // Opponent Defeated -> Award Credits & Spawn Next Opponent
+        // Player got a kill
         credits += 100;
-        kills++;
-        damageDealt += 200;
-        updateLeaderboard();
-        spawnNextOpponent();
+        playerKills++;
+        updateScoreboard();
+        respawnOpponent();
       } else {
-        // Player Defeated -> Instantly Respawn in Place (No Menu)
+        // Opponent got a kill
+        opponentKills++;
+        updateScoreboard();
+        // Respawn player grounded on their side of the floor with 30 health restored
         this.health = this.maxHealth;
-        this.x = 200;
-        this.y = 200;
+        this.x = 150;
+        this.y = canvas.height - 124;
         this.vx = 0;
         this.vy = 0;
       }
@@ -333,7 +379,7 @@ class Character {
     ctx.lineTo(this.x, this.y);
     ctx.stroke();
 
-    // 3. Legs (Dynamic Ragdoll Swing)
+    // 3. Legs
     ctx.beginPath();
     ctx.moveTo(this.x, this.y);
     ctx.lineTo(this.x + Math.sin(this.limbAngle) * 12, this.y + 18);
@@ -346,18 +392,16 @@ class Character {
     ctx.translate(this.x, this.y - 15);
     ctx.rotate(aimAngle);
     
-    // Weapon Draw
     ctx.fillStyle = this.weaponData.ownerOnly ? '#9900ff' : '#666';
     ctx.fillRect(5, -3, 18, 6);
 
-    // Arm Draw
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(12, 0);
     ctx.stroke();
     ctx.restore();
 
-    // Overhead Health Bar
+    // Overhead Health Bar (Tracks 30 total hits)
     const barWidth = 40;
     const hpRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -392,7 +436,7 @@ class Projectile {
       }
     });
 
-    if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+    if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height - 100) {
       this.dead = true;
     }
   }
@@ -405,55 +449,30 @@ class Projectile {
   }
 }
 
-// --- MAP DESIGNS ---
+// --- MAP THEMES ---
 const maps = {
-  cyber: {
-    background: '#12121c',
-    playerPlat: { x: 100, y: 500, w: 220, h: 25 },
-    enemyPlat: { x: 800, y: 500, w: 220, h: 25 }
-  },
-  lava: {
-    background: '#240a0a',
-    playerPlat: { x: 120, y: 480, w: 200, h: 25 },
-    enemyPlat: { x: 750, y: 420, w: 200, h: 25 }
-  },
-  islands: {
-    background: '#0a1d24',
-    playerPlat: { x: 150, y: 520, w: 180, h: 25 },
-    enemyPlat: { x: 850, y: 380, w: 180, h: 25 }
-  }
+  cyber: { bg: '#12121c', floor: '#2a2d42' },
+  lava: { bg: '#240a0a', floor: '#4a1515' },
+  islands: { bg: '#0a1d24', floor: '#1b3b48' }
 };
 
-function getActivePlatforms() {
-  const m = maps[currentMap];
-  return [
-    { x: m.playerPlat.x, y: m.playerPlat.y, w: m.playerPlat.w, h: m.playerPlat.h },
-    { x: m.enemyPlat.x, y: m.enemyPlat.y, w: m.enemyPlat.w, h: m.enemyPlat.h }
-  ];
-}
-
 // --- GAME INITIALIZATION ---
-let player = new Character(200, 300, false, "You");
+let player = new Character(150, canvas.height - 124, false, "You");
 let opponent = null;
 let projectiles = [];
 
-function spawnNextOpponent() {
-  const randomY = Math.floor(Math.random() * 200) + 350;
-  const randomX = Math.floor(Math.random() * 200) + (canvas.width - 400);
-  
-  maps[currentMap].enemyPlat = { x: randomX, y: randomY, w: 200, h: 25 };
-
-  opponent = new Character(randomX + 100, randomY - 50, true, "Opponent");
-  
+function respawnOpponent() {
   const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper'];
   const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
+
+  // Spawn on opposite side (right side) on the solid floor
+  opponent = new Character(canvas.width - 150, canvas.height - 124, true, "Opponent");
   opponent.equippedWeapon = randomWep;
   opponent.weaponData = { ...WEAPONS[randomWep] };
 }
 
 function setMap(mapKey) {
   currentMap = mapKey;
-  spawnNextOpponent();
   toggleMenu(false);
 }
 
@@ -470,7 +489,7 @@ function initShop() {
     card.className = 'shop-card';
     card.innerHTML = `
       <h4>${w.name} ${w.ownerOnly ? '(OWNER)' : ''}</h4>
-      <p>Damage: ${w.damage} | Ammo: ${w.maxAmmo}</p>
+      <p>Damage: ${w.damage} Hit | Ammo: ${w.maxAmmo}</p>
       <p style="margin-top:5px; font-weight:bold;">Cost: ${w.cost} Credits</p>
       <button class="btn" onclick="equipWeapon('${key}')">Equip Weapon</button>
     `;
@@ -541,11 +560,10 @@ function processCommand(cmd) {
   }
 }
 
-// --- LEADERBOARD & TUTORIAL ---
-function updateLeaderboard() {
-  document.getElementById('lbList').innerHTML = `
-    <div class="lb-row"><span>1. You</span><span>${kills} Kills</span></div>
-    <div class="lb-row"><span>Damage Dealt</span><span>${damageDealt}</span></div>
+// --- SCOREBOARD & TUTORIAL ---
+function updateScoreboard() {
+  document.getElementById('scoreVal').innerHTML = `
+    <span style="color:#00ffcc;">You: ${playerKills}</span> | <span style="color:#ff4444;">Bot: ${opponentKills}</span>
   `;
 }
 
@@ -563,9 +581,9 @@ function renderTutorialOverlay() {
   ctx.fillStyle = '#00ffcc';
   ctx.font = '18px sans-serif';
   let msg = "";
-  if (tutorialStep === 1) msg = "TUTORIAL: Aim with your mouse and click to shoot the opponent on the right platform!";
-  if (tutorialStep === 2) msg = "TUTORIAL: Defeat the opponent to gain 100 credits and spawn a new enemy platform!";
-  if (tutorialStep === 3) msg = "TUTORIAL: Use 'Change Weapon' on top left or tap 'Admin Console' to use commands!";
+  if (tutorialStep === 1) msg = "TUTORIAL: Use WASD / Arrow Keys or screen buttons to move left/right and jump!";
+  if (tutorialStep === 2) msg = "TUTORIAL: Click or touch the screen to aim and shoot your opponent!";
+  if (tutorialStep === 3) msg = "TUTORIAL: Land 30 hits to score a kill! Track scores on the top-right scoreboard!";
 
   ctx.fillText(msg, 30, canvas.height - 50);
 }
@@ -587,19 +605,20 @@ function startOrResumeGame() {
 
 // --- MAIN GAME LOOP ---
 function loop() {
-  ctx.fillStyle = maps[currentMap].background;
+  const theme = maps[currentMap];
+  ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Render Platforms
-  const currentPlats = getActivePlatforms();
-  maps[currentMap].platforms = currentPlats;
+  // Render Solid Ground Floor across entire width
+  const floorY = canvas.height - 100;
+  ctx.fillStyle = theme.floor;
+  ctx.fillRect(0, floorY, canvas.width, 100);
 
-  ctx.fillStyle = '#3a3d52';
-  currentPlats.forEach(plat => {
-    ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
-  });
+  // Floor accents
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.fillRect(0, floorY, canvas.width, 4);
 
-  // Updates & Draw
+  // Updates & Draw Entities
   player.update();
   player.draw();
 
@@ -614,8 +633,8 @@ function loop() {
     if (p.dead) projectiles.splice(idx, 1);
   });
 
-  // Update HUD
-  document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, player.health)} / 200`;
+  // Update HUD (Tracks 30 hits)
+  document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, player.health)} / 30`;
   document.getElementById('creditsVal').innerText = credits;
   document.getElementById('weaponVal').innerText = player.weaponData.name;
   document.getElementById('ammoVal').innerText = `${player.weaponData.ammo}/${player.weaponData.maxAmmo}`;
@@ -626,8 +645,8 @@ function loop() {
 
 // Start Game
 initShop();
-spawnNextOpponent();
-updateLeaderboard();
+respawnOpponent();
+updateScoreboard();
 loop();
 </script>
 </body>
