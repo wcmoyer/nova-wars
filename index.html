@@ -3,37 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rival Ragdolls - Arena Shooter</title>
+  <title>Rival Ragdolls - 1v1 Arena Shooter</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body, html { width: 100%; height: 100%; overflow: hidden; background: #111; color: #fff; }
     #gameContainer { position: relative; width: 100vw; height: 100vh; }
-    canvas { display: block; background: #1a1a24; }
+    canvas { display: block; background: #14141e; }
 
     /* UI Overlay */
-    .hud-panel { position: absolute; padding: 12px 20px; background: rgba(0,0,0,0.65); border-radius: 8px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1); }
+    .hud-panel { position: absolute; padding: 12px 20px; background: rgba(0,0,0,0.7); border-radius: 8px; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.15); }
     #statsHud { top: 15px; left: 15px; display: flex; gap: 20px; align-items: center; }
     .stat-box { display: flex; flex-direction: column; }
     .stat-label { font-size: 10px; text-transform: uppercase; color: #aaa; letter-spacing: 1px; }
-    .stat-val { font-size: 20px; font-weight: bold; color: #00ffcc; }
+    .stat-val { font-size: 18px; font-weight: bold; color: #00ffcc; }
 
     #leaderboard { top: 15px; right: 15px; width: 220px; }
     #leaderboard h3 { font-size: 14px; margin-bottom: 8px; text-align: center; color: #ffcc00; text-transform: uppercase; }
-    .lb-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; padding: 2px 4px; border-radius: 4px; background: rgba(255,255,255,0.05); }
+    .lb-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.05); }
+
+    /* Buttons */
+    .btn { background: #00ffcc; color: #000; border: none; padding: 10px 18px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+    .btn:hover { background: #00cca3; transform: scale(1.02); }
+    .btn-secondary { background: #333; color: #fff; border: 1px solid #555; }
+    .btn-secondary:hover { background: #444; }
+
+    /* Quick Swap Controls */
+    #quickControls { position: absolute; top: 80px; left: 15px; display: flex; gap: 10px; }
 
     /* Admin Console */
-    #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 600px; max-width: 90vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
+    #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 650px; max-width: 90vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
     #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 14px; border-radius: 6px; outline: none; }
     
     /* Menu & Shop Overlay */
     .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 200; }
-    .modal-content { background: #1c1d24; border: 2px solid #333; width: 700px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 25px; overflow-y: auto; color: #fff; }
+    .modal-content { background: #1c1d24; border: 2px solid #333; width: 750px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 25px; overflow-y: auto; color: #fff; }
     h2 { margin-bottom: 15px; color: #00ffcc; border-bottom: 2px solid #333; padding-bottom: 8px; }
-    .btn { background: #00ffcc; color: #000; border: none; padding: 10px 18px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
-    .btn:hover { background: #00cca3; transform: scale(1.02); }
-    .btn-secondary { background: #444; color: #fff; }
-    .btn-secondary:hover { background: #555; }
-    .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+    .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 15px; margin-top: 15px; }
     .shop-card { background: #252733; padding: 15px; border-radius: 8px; border: 1px solid #3d4052; text-align: center; }
     .shop-card h4 { color: #ffcc00; margin-bottom: 5px; }
 
@@ -48,10 +53,15 @@
 
   <!-- HUD -->
   <div id="statsHud" class="hud-panel">
-    <div class="stat-box"><span class="stat-label">Health</span><span id="hpVal" class="stat-val" style="color:#ff4444">200</span></div>
+    <div class="stat-box"><span class="stat-label">Health</span><span id="hpVal" class="stat-val" style="color:#ff4444">200 / 200</span></div>
     <div class="stat-box"><span class="stat-label">Credits</span><span id="creditsVal" class="stat-val">0</span></div>
-    <div class="stat-box"><span class="stat-label">Weapon</span><span id="weaponVal" class="stat-val" style="color:#fff">Default Rifle</span></div>
-    <div class="stat-box"><span class="stat-label">Ammo</span><span id="ammoVal" class="stat-val">30/30</span></div>
+    <div class="stat-box"><span class="stat-label">Weapon</span><span id="weaponVal" class="stat-val" style="color:#fff">Pistol</span></div>
+    <div class="stat-box"><span class="stat-label">Ammo</span><span id="ammoVal" class="stat-val">15/15</span></div>
+  </div>
+
+  <div id="quickControls">
+    <button class="btn" onclick="toggleMenu(true)">Change Weapon / Shop</button>
+    <button class="btn btn-secondary" onclick="toggleAdminConsole()">Admin Console [~]</button>
   </div>
 
   <div id="leaderboard" class="hud-panel">
@@ -60,43 +70,40 @@
   </div>
 
   <div id="controlsHint">
-    [A/D] Move | [W/Space] Jump | [Mouse] Aim/Shoot | [R] Reload | [T] Shop | [M] Map | [~] Admin Console
+    [A/D] Move | [W/Space] Jump | [Mouse] Aim & Shoot | [R] Reload | [~] Admin Console
   </div>
 
   <!-- Admin Input Console -->
   <div id="adminConsole">
-    <input type="text" id="adminInput" placeholder="Enter command(s) e.g., 'god; fly; aimbot; give minigun' (Press Enter)">
+    <input type="text" id="adminInput" placeholder="Enter commands (e.g. 'god; fly; aimbot; give minigun')">
   </div>
 
   <!-- Main Menu / Shop Modal -->
   <div id="menuModal" class="modal">
     <div class="modal-content">
-      <h2>Rival Ragdolls - Arena Hub</h2>
-      <p>Earn credits by eliminating opponents. Upgrade loadouts & outfits!</p>
+      <h2>Rival Ragdolls - Weapon Loadout</h2>
+      <p>Select your weapon before entering the 1v1 arena!</p>
       
       <div style="margin: 15px 0;">
-        <h3>Select Map / Arena</h3>
-        <button class="btn btn-secondary" onclick="setMap('cyber')">Cyber City</button>
-        <button class="btn btn-secondary" onclick="setMap('lava')">Lava Pit</button>
-        <button class="btn btn-secondary" onclick="setMap('islands')">Floating Islands</button>
+        <h3>Select Arena</h3>
+        <button class="btn btn-secondary" onclick="setMap('cyber')">Cyber Arena</button>
+        <button class="btn btn-secondary" onclick="setMap('lava')">Lava Arena</button>
+        <button class="btn btn-secondary" onclick="setMap('islands')">Floating Isles</button>
       </div>
 
       <h3>Weapon Arsenal</h3>
       <div class="shop-grid" id="weaponShop"></div>
 
-      <h3 style="margin-top:20px;">Outfit Colors</h3>
-      <div class="shop-grid" id="outfitShop"></div>
-
-      <div style="margin-top: 20px; display: flex; gap: 10px;">
-        <button class="btn" onclick="toggleMenu(false)">Resume Game</button>
-        <button class="btn btn-secondary" onclick="startTutorial()">Start Tutorial</button>
+      <div style="margin-top: 25px; display: flex; gap: 10px;">
+        <button class="btn" onclick="startOrResumeGame()">Battle Now</button>
+        <button class="btn btn-secondary" onclick="startTutorial()">Tutorial</button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-// --- GAME ENGINE & STATE ---
+// --- ENGINE SETUP ---
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -107,27 +114,22 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Global State
+// Global Game Variables
 let credits = 0;
 let kills = 0;
 let damageDealt = 0;
 let currentMap = 'cyber';
-let isOwner = true; // Set to true for the game creator
+let isOwner = true;
 let tutorialActive = false;
 let tutorialStep = 0;
 
-// Inputs
+// Input listeners
 const keys = {};
 const mouse = { x: 0, y: 0, down: false };
 
 window.addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
-  if(e.key === '~' || e.key === '`') {
-    const consoleEl = document.getElementById('adminConsole');
-    consoleEl.style.display = consoleEl.style.display === 'flex' ? 'none' : 'flex';
-    if(consoleEl.style.display === 'flex') document.getElementById('adminInput').focus();
-  }
-  if(e.key.toLowerCase() === 't') toggleMenu(true);
+  if(e.key === '~' || e.key === '`') toggleAdminConsole();
   if(e.key.toLowerCase() === 'r' && player) player.reload();
 });
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -135,21 +137,21 @@ window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.cli
 window.addEventListener('mousedown', () => mouse.down = true);
 window.addEventListener('mouseup', () => mouse.down = false);
 
-// --- WEAPONS DATABASE ---
+// --- REALISTIC WEAPONS DATABASE ---
 const WEAPONS = {
-  rifle: { name: 'Default Rifle', damage: 18, rate: 120, ammo: 30, maxAmmo: 30, speed: 18, cost: 0, ownerOnly: false },
-  scythe: { name: 'Death Scythe', damage: 65, rate: 500, ammo: 1, maxAmmo: 1, speed: 25, cost: 250, ownerOnly: false },
-  assault: { name: 'Assault Rifle', damage: 22, rate: 90, ammo: 40, maxAmmo: 40, speed: 20, cost: 400, ownerOnly: false },
-  sniper: { name: 'Sniper Rifle', damage: 110, rate: 800, ammo: 5, maxAmmo: 5, speed: 35, cost: 650, ownerOnly: false },
-  minigun: { name: 'Minigun', damage: 3, rate: 25, ammo: 300, maxAmmo: 300, speed: 22, cost: 1000, ownerOnly: false },
-  // Owner Exclusive
+  pistol: { name: 'Pistol', damage: 25, rate: 250, ammo: 15, maxAmmo: 15, speed: 20, cost: 0, ownerOnly: false },
+  assault: { name: 'Assault Rifle', damage: 22, rate: 100, ammo: 30, maxAmmo: 30, speed: 22, cost: 300, ownerOnly: false },
+  shotgun: { name: 'Shotgun', damage: 60, rate: 600, ammo: 6, maxAmmo: 6, speed: 18, cost: 500, ownerOnly: false },
+  sniper: { name: 'Sniper Rifle', damage: 110, rate: 850, ammo: 5, maxAmmo: 5, speed: 38, cost: 800, ownerOnly: false },
+  minigun: { name: 'Minigun', damage: 3, rate: 25, ammo: 300, maxAmmo: 300, speed: 24, cost: 1200, ownerOnly: false },
+  // Owner Weapons
   khopesh: { name: 'Owner Khopesh', damage: 99999, rate: 200, ammo: 999, maxAmmo: 999, speed: 0, cost: 0, ownerOnly: true },
   flail: { name: 'Owner Flail', damage: 99999, rate: 15, ammo: 9999, maxAmmo: 9999, speed: 25, cost: 0, ownerOnly: true, special: 'purple' },
   crook: { name: 'Owner Crook', damage: 15, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal' }
 };
 
-// --- PLAYER CLASS ---
-class Player {
+// --- PLAYER & OPPONENT CLASS ---
+class Character {
   constructor(x, y, isBot = false, name = "Player") {
     this.x = x;
     this.y = y;
@@ -162,14 +164,13 @@ class Player {
     this.isBot = isBot;
     this.name = name;
     
-    // Outfits & Customization
     this.color = isBot ? '#ff4444' : '#00ffcc';
-    this.equippedWeapon = 'rifle';
-    this.weaponData = { ...WEAPONS.rifle };
+    this.equippedWeapon = isBot ? 'pistol' : 'pistol';
+    this.weaponData = { ...WEAPONS[this.equippedWeapon] };
     this.lastShot = 0;
     this.reloading = false;
     
-    // Admin Abilities
+    // Admin toggles
     this.godMode = false;
     this.infiniteDamage = false;
     this.flyMode = false;
@@ -178,8 +179,8 @@ class Player {
   }
 
   update() {
-    // Movement Logic
     if (!this.isBot) {
+      // Player Controls
       if (this.flyMode) {
         this.vx = 0; this.vy = 0;
         if (keys['a']) this.vx = -8;
@@ -198,36 +199,23 @@ class Player {
         this.vy += 0.5; // Gravity
       }
     } else {
-      // Basic AI Bot Behavior
+      // SLOWER Bot Logic (1v1 Ragdoll Archer style)
       this.aiBehavior();
     }
 
-    // Apply Velocity & Map Collision
     this.x += this.vx;
     this.y += this.vy;
-    this.checkMapCollisions();
+    this.checkCollisions();
 
-    // Shooting Trigger
+    // Player Shooting
     if (!this.isBot && mouse.down && Date.now() - this.lastShot > this.weaponData.rate) {
       this.shoot();
     }
   }
 
   getAimAngle() {
-    if (!this.isBot && this.aimbot && bots.length > 0) {
-      // Lock on to nearest bot
-      let closestBot = null;
-      let minDist = Infinity;
-      bots.forEach(b => {
-        let dist = Math.hypot(b.x - this.x, b.y - this.y);
-        if (dist < minDist) {
-          minDist = dist;
-          closestBot = b;
-        }
-      });
-      if (closestBot) {
-        return Math.atan2(closestBot.y - this.y, closestBot.x - this.x);
-      }
+    if (!this.isBot && this.aimbot && opponent) {
+      return Math.atan2(opponent.y - this.y, opponent.x - this.x);
     }
     return this.isBot ? Math.atan2(player.y - this.y, player.x - this.x) : Math.atan2(mouse.y - this.y, mouse.x - this.x);
   }
@@ -242,10 +230,8 @@ class Player {
     if (this.equippedWeapon !== 'flail') this.weaponData.ammo--;
     this.lastShot = Date.now();
 
-    // Owner Crook Special: Heals user to infinite health
     if (this.equippedWeapon === 'crook') {
       this.health = Infinity;
-      this.maxHealth = Infinity;
     }
 
     const angle = this.getAimAngle();
@@ -269,18 +255,17 @@ class Player {
   }
 
   aiBehavior() {
-    // Simple bot tracking
-    if (player) {
-      if (player.x > this.x) this.vx = 2;
-      else this.vx = -2;
-      
-      this.vy += 0.5;
-      if (Math.random() < 0.02 && this.grounded) this.vy = -10;
-      if (Math.random() < 0.03 && Date.now() - this.lastShot > this.weaponData.rate) this.shoot();
+    // Slower pacing & steady aiming
+    this.vx *= 0.5; // Slower lateral movement
+    this.vy += 0.5;
+
+    // Slower, deliberate shot timing
+    if (player && Date.now() - this.lastShot > (this.weaponData.rate * 2.5)) {
+      this.shoot();
     }
   }
 
-  checkMapCollisions() {
+  checkCollisions() {
     this.grounded = false;
     const platforms = maps[currentMap].platforms;
 
@@ -294,7 +279,7 @@ class Player {
       }
     });
 
-    // Void Fall
+    // Void death
     if (this.y > canvas.height + 100) {
       this.takeDamage(999);
     }
@@ -303,26 +288,29 @@ class Player {
   takeDamage(amount) {
     if (this.godMode) return;
     this.health -= amount;
+
     if (this.health <= 0) {
-      this.respawn();
       if (this.isBot) {
-        credits += 50;
+        // Defeated Opponent -> Award Credits & Spawn Next Opponent
+        credits += 100;
         kills++;
-        updateLeaderboards();
+        damageDealt += 200;
+        updateLeaderboard();
+        spawnNextOpponent();
+      } else {
+        // Player Died -> Return to Weapon Selection Menu
+        alert("You were defeated! Return to weapon selection.");
+        this.health = 200;
+        this.x = 200; this.y = 200;
+        toggleMenu(true);
       }
     }
-  }
-
-  respawn() {
-    this.health = this.maxHealth;
-    this.x = Math.random() * (canvas.width - 200) + 100;
-    this.y = 100;
   }
 
   draw() {
     if (this.invisible && !this.isBot) ctx.globalAlpha = 0.3;
 
-    // Ragdoll / Stylized Body
+    // Body
     ctx.fillStyle = this.color;
     ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
 
@@ -332,20 +320,28 @@ class Player {
     ctx.arc(this.x, this.y - this.height/2 - 10, 10, 0, Math.PI * 2);
     ctx.fill();
 
-    // Weapon rendering (directional pointing)
+    // Overhead Health Bar
+    const barWidth = 40;
+    const hpRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(this.x - barWidth/2, this.y - this.height/2 - 30, barWidth, 6);
+    ctx.fillStyle = this.isBot ? '#ff4444' : '#00ffcc';
+    ctx.fillRect(this.x - barWidth/2, this.y - this.height/2 - 30, barWidth * (this.health === Infinity ? 1 : hpRatio), 6);
+
+    // Weapon Direction
     const angle = this.getAimAngle();
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(angle);
     ctx.fillStyle = this.weaponData.ownerOnly ? '#9900ff' : '#666';
-    ctx.fillRect(5, -3, 20, 6);
+    ctx.fillRect(5, -3, 18, 6);
     ctx.restore();
 
     ctx.globalAlpha = 1.0;
   }
 }
 
-// --- PROJECTILE SYSTEM ---
+// --- PROJECTILE CLASS ---
 class Projectile {
   constructor(x, y, vx, vy, damage, owner, isPurple = false) {
     this.x = x; this.y = y;
@@ -360,12 +356,10 @@ class Projectile {
     this.x += this.vx;
     this.y += this.vy;
 
-    // Check hit targets
-    const targets = [player, ...bots];
+    const targets = [player, opponent].filter(Boolean);
     targets.forEach(target => {
       if (target !== this.owner && Math.hypot(target.x - this.x, target.y - this.y) < target.width/2 + this.radius) {
         target.takeDamage(this.damage);
-        if (this.owner === player) damageDealt += this.damage;
         this.dead = true;
       }
     });
@@ -387,53 +381,66 @@ class Projectile {
 const maps = {
   cyber: {
     background: '#12121c',
-    platforms: [
-      { x: 100, y: 550, w: canvas.width - 200, h: 40 },
-      { x: 250, y: 400, w: 200, h: 20 },
-      { x: canvas.width - 450, y: 400, w: 200, h: 20 },
-      { x: canvas.width/2 - 100, y: 280, w: 200, h: 20 }
-    ]
+    playerPlat: { x: 100, y: 500, w: 220, h: 25 },
+    enemyPlat: { x: 800, y: 500, w: 220, h: 25 }
   },
   lava: {
     background: '#240a0a',
-    platforms: [
-      { x: 150, y: 500, w: 300, h: 30 },
-      { x: canvas.width - 450, y: 500, w: 300, h: 30 },
-      { x: canvas.width/2 - 150, y: 350, w: 300, h: 30 }
-    ]
+    playerPlat: { x: 120, y: 480, w: 200, h: 25 },
+    enemyPlat: { x: 750, y: 420, w: 200, h: 25 }
   },
   islands: {
     background: '#0a1d24',
-    platforms: [
-      { x: 100, y: 450, w: 180, h: 20 },
-      { x: 400, y: 520, w: 180, h: 20 },
-      { x: 700, y: 380, w: 180, h: 20 },
-      { x: 1000, y: 480, w: 180, h: 20 }
-    ]
+    playerPlat: { x: 150, y: 520, w: 180, h: 25 },
+    enemyPlat: { x: 850, y: 380, w: 180, h: 25 }
   }
 };
 
+// Convert maps into active platforms array
+function getActivePlatforms() {
+  const m = maps[currentMap];
+  return [
+    { x: m.playerPlat.x, y: m.playerPlat.y, w: m.playerPlat.w, h: m.playerPlat.h },
+    { x: m.enemyPlat.x, y: m.enemyPlat.y, w: m.enemyPlat.w, h: m.enemyPlat.h }
+  ];
+}
+
+// --- GAME INITIALIZATION ---
+let player = new Character(200, 300, false, "You");
+let opponent = null;
+let projectiles = [];
+
+function spawnNextOpponent() {
+  // Randomize opponent platform position
+  const randomY = Math.floor(Math.random() * 200) + 350;
+  const randomX = Math.floor(Math.random() * 200) + (canvas.width - 400);
+  
+  maps[currentMap].enemyPlat = { x: randomX, y: randomY, w: 200, h: 25 };
+
+  // Create single opponent
+  opponent = new Character(randomX + 100, randomY - 50, true, "Opponent");
+  
+  // Randomize opponent weapon
+  const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper'];
+  const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
+  opponent.equippedWeapon = randomWep;
+  opponent.weaponData = { ...WEAPONS[randomWep] };
+}
+
 function setMap(mapKey) {
   currentMap = mapKey;
+  spawnNextOpponent();
   toggleMenu(false);
 }
 
-// --- INITIALIZATION ---
-let player = new Player(200, 300, false, "You");
-let bots = [
-  new Player(600, 300, true, "RivalBot_Alpha"),
-  new Player(800, 300, true, "RivalBot_Beta")
-];
-let projectiles = [];
-
-// --- SHOP SYSTEM ---
+// --- WEAPON SHOP & CHANGE MENU ---
 function initShop() {
   const wShop = document.getElementById('weaponShop');
   wShop.innerHTML = '';
   
   Object.keys(WEAPONS).forEach(key => {
     const w = WEAPONS[key];
-    if (w.ownerOnly && !isOwner) return; // Hide owner weapons from non-owners
+    if (w.ownerOnly && !isOwner) return;
 
     const card = document.createElement('div');
     card.className = 'shop-card';
@@ -441,17 +448,15 @@ function initShop() {
       <h4>${w.name} ${w.ownerOnly ? '(OWNER)' : ''}</h4>
       <p>Damage: ${w.damage} | Ammo: ${w.maxAmmo}</p>
       <p style="margin-top:5px; font-weight:bold;">Cost: ${w.cost} Credits</p>
-      <button class="btn" onclick="buyWeapon('${key}')">Equip / Buy</button>
-      <button class="btn btn-secondary" onclick="giftWeapon('${key}')" style="margin-top:5px; font-size:11px;">Gift to Bot</button>
+      <button class="btn" onclick="equipWeapon('${key}')">Equip Weapon</button>
     `;
     wShop.appendChild(card);
   });
 }
 
-function buyWeapon(key) {
+function equipWeapon(key) {
   const w = WEAPONS[key];
   if (credits >= w.cost || w.ownerOnly) {
-    if (!w.ownerOnly) credits -= w.cost;
     player.equippedWeapon = key;
     player.weaponData = { ...w };
     alert(`Equipped ${w.name}!`);
@@ -460,32 +465,18 @@ function buyWeapon(key) {
   }
 }
 
-function giftWeapon(key) {
-  if (bots.length > 0) {
-    bots[0].equippedWeapon = key;
-    bots[0].weaponData = { ...WEAPONS[key] };
-    alert(`Gifting ${WEAPONS[key].name} to ${bots[0].name}!`);
-  }
+// --- ADMIN COMMAND SYSTEM ---
+function toggleAdminConsole() {
+  const consoleEl = document.getElementById('adminConsole');
+  consoleEl.style.display = consoleEl.style.display === 'flex' ? 'none' : 'flex';
+  if (consoleEl.style.display === 'flex') document.getElementById('adminInput').focus();
 }
 
-// --- LEADERBOARD & HUD ---
-function updateLeaderboards() {
-  const lb = document.getElementById('lbList');
-  lb.innerHTML = `
-    <div class="lb-row"><span>1. You</span><span>${kills} Kills</span></div>
-    <div class="lb-row"><span>2. RivalBot_Alpha</span><span>${Math.floor(kills*0.4)} Kills</span></div>
-    <div class="lb-row"><span>3. RivalBot_Beta</span><span>${Math.floor(kills*0.2)} Kills</span></div>
-    <div style="margin-top:8px; font-size:11px; text-align:center; color:#aaa;">Total Damage: ${damageDealt}</div>
-  `;
-}
-
-// --- MULTI-ADMIN COMMAND PARSER ---
 document.getElementById('adminInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     const rawInput = e.target.value;
     e.target.value = '';
     
-    // Split multi-commands using ';'
     const cmds = rawInput.split(';');
     cmds.forEach(cmdStr => processCommand(cmdStr.trim()));
   }
@@ -499,42 +490,41 @@ function processCommand(cmd) {
     case 'god':
     case 'invincible':
       player.godMode = !player.godMode;
-      alert(`Godmode set to: ${player.godMode}`);
+      alert(`Godmode: ${player.godMode}`);
       break;
     case 'fly':
       player.flyMode = !player.flyMode;
-      alert(`Flymode set to: ${player.flyMode}`);
+      alert(`Flymode: ${player.flyMode}`);
       break;
     case 'invis':
-    case 'invisibility':
       player.invisible = !player.invisible;
-      alert(`Invisibility set to: ${player.invisible}`);
+      alert(`Invisibility: ${player.invisible}`);
       break;
     case 'aimbot':
-    case 'aim':
       player.aimbot = !player.aimbot;
-      alert(`Aimbot set to: ${player.aimbot}`);
+      alert(`Aimbot: ${player.aimbot}`);
       break;
     case 'give':
       if (parts[1] && WEAPONS[parts[1]]) {
         player.equippedWeapon = parts[1];
         player.weaponData = { ...WEAPONS[parts[1]] };
-        alert(`Gave player ${parts[1]}`);
+        alert(`Gave ${parts[1]}`);
       }
-      break;
-    case 'infinite_damage':
-      player.infiniteDamage = !player.infiniteDamage;
-      alert(`Infinite Damage set to: ${player.infiniteDamage}`);
       break;
     case 'credits':
       credits += parseInt(parts[1] || 1000);
       break;
-    default:
-      console.log('Unknown admin command');
   }
 }
 
-// --- TUTORIAL SYSTEM ---
+// --- LEADERBOARD & TUTORIAL ---
+function updateLeaderboard() {
+  document.getElementById('lbList').innerHTML = `
+    <div class="lb-row"><span>1. You</span><span>${kills} Kills</span></div>
+    <div class="lb-row"><span>Damage Dealt</span><span>${damageDealt}</span></div>
+  `;
+}
+
 function startTutorial() {
   tutorialActive = true;
   tutorialStep = 1;
@@ -544,20 +534,16 @@ function startTutorial() {
 function renderTutorialOverlay() {
   if (!tutorialActive) return;
   ctx.fillStyle = 'rgba(0,0,0,0.7)';
-  ctx.fillRect(0, canvas.height - 120, canvas.width, 120);
+  ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
 
   ctx.fillStyle = '#00ffcc';
-  ctx.font = '20px sans-serif';
-
+  ctx.font = '18px sans-serif';
   let msg = "";
-  if (tutorialStep === 1) msg = "TUTORIAL: Use A and D keys to move left and right, and Space to Jump!";
-  if (tutorialStep === 2) msg = "TUTORIAL: Aim with your MOUSE and LEFT-CLICK to shoot targets!";
-  if (tutorialStep === 3) msg = "TUTORIAL: Press ~ to open Admin Commands or T to open the Weapon Shop!";
+  if (tutorialStep === 1) msg = "TUTORIAL: Aim with your mouse and click to shoot the opponent on the right platform!";
+  if (tutorialStep === 2) msg = "TUTORIAL: Defeat the opponent to gain 100 credits and spawn a new enemy platform!";
+  if (tutorialStep === 3) msg = "TUTORIAL: Use 'Change Weapon' on the top left or press ~ to open Admin Commands!";
 
-  ctx.fillText(msg, 40, canvas.height - 60);
-  ctx.font = '14px sans-serif';
-  ctx.fillStyle = '#fff';
-  ctx.fillText("Click anywhere to progress tutorial...", 40, canvas.height - 30);
+  ctx.fillText(msg, 30, canvas.height - 50);
 }
 
 window.addEventListener('click', () => {
@@ -567,31 +553,36 @@ window.addEventListener('click', () => {
   }
 });
 
-// --- MENU TOGGLE ---
 function toggleMenu(show) {
   document.getElementById('menuModal').style.display = show ? 'flex' : 'none';
 }
 
-// --- GAME LOOP ---
+function startOrResumeGame() {
+  toggleMenu(false);
+}
+
+// --- MAIN LOOP ---
 function loop() {
-  // Clear Frame
   ctx.fillStyle = maps[currentMap].background;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Draw Map Platforms
-  ctx.fillStyle = '#33344a';
-  maps[currentMap].platforms.forEach(plat => {
+  // Render Platforms
+  const currentPlats = getActivePlatforms();
+  maps[currentMap].platforms = currentPlats;
+
+  ctx.fillStyle = '#3a3d52';
+  currentPlats.forEach(plat => {
     ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
   });
 
-  // Update & Draw Entities
+  // Updates & Draw
   player.update();
   player.draw();
 
-  bots.forEach(bot => {
-    bot.update();
-    bot.draw();
-  });
+  if (opponent) {
+    opponent.update();
+    opponent.draw();
+  }
 
   projectiles.forEach((p, idx) => {
     p.update();
@@ -599,8 +590,8 @@ function loop() {
     if (p.dead) projectiles.splice(idx, 1);
   });
 
-  // UI HUD Updates
-  document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : Math.max(0, player.health);
+  // Update HUD
+  document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, player.health)} / 200`;
   document.getElementById('creditsVal').innerText = credits;
   document.getElementById('weaponVal').innerText = player.weaponData.name;
   document.getElementById('ammoVal').innerText = `${player.weaponData.ammo}/${player.weaponData.maxAmmo}`;
@@ -609,9 +600,10 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// Launch
+// Start Game
 initShop();
-updateLeaderboards();
+spawnNextOpponent();
+updateLeaderboard();
 loop();
 </script>
 </body>
