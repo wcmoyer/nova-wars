@@ -75,7 +75,7 @@
 
   <!-- Admin Input Console -->
   <div id="adminConsole">
-    <input type="text" id="adminInput" placeholder="Enter commands (e.g. 'god; fly; aimbot; give minigun')">
+    <input type="text" id="adminInput" placeholder="Enter commands e.g. 'god; fly; aimbot; give minigun; credits 5000'">
   </div>
 
   <!-- Main Menu / Shop Modal -->
@@ -150,25 +150,27 @@ const WEAPONS = {
   crook: { name: 'Owner Crook', damage: 15, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal' }
 };
 
-// --- PLAYER & OPPONENT CLASS ---
+// --- JOINTED RAGDOLL CHARACTER CLASS ---
 class Character {
   constructor(x, y, isBot = false, name = "Player") {
     this.x = x;
     this.y = y;
     this.vx = 0;
     this.vy = 0;
-    this.width = 24;
-    this.height = 48;
     this.health = 200;
     this.maxHealth = 200;
     this.isBot = isBot;
     this.name = name;
     
     this.color = isBot ? '#ff4444' : '#00ffcc';
-    this.equippedWeapon = isBot ? 'pistol' : 'pistol';
-    this.weaponData = { ...WEAPONS[this.equippedWeapon] };
+    this.equippedWeapon = 'pistol';
+    this.weaponData = { ...WEAPONS.pistol };
     this.lastShot = 0;
     this.reloading = false;
+    
+    // Ragdoll Physics Joints
+    this.limbAngle = 0;
+    this.armAngle = 0;
     
     // Admin toggles
     this.godMode = false;
@@ -180,7 +182,7 @@ class Character {
 
   update() {
     if (!this.isBot) {
-      // Player Controls
+      // Player Movement
       if (this.flyMode) {
         this.vx = 0; this.vy = 0;
         if (keys['a']) this.vx = -8;
@@ -188,8 +190,8 @@ class Character {
         if (keys['w']) this.vy = -8;
         if (keys['s']) this.vy = 8;
       } else {
-        if (keys['a']) this.vx = -4.5;
-        else if (keys['d']) this.vx = 4.5;
+        if (keys['a']) this.vx = -4;
+        else if (keys['d']) this.vx = 4;
         else this.vx *= 0.8;
 
         if ((keys['w'] || keys[' ']) && this.grounded) {
@@ -199,13 +201,16 @@ class Character {
         this.vy += 0.5; // Gravity
       }
     } else {
-      // SLOWER Bot Logic (1v1 Ragdoll Archer style)
+      // Slower Bot Logic (Ragdoll Archer Style)
       this.aiBehavior();
     }
 
     this.x += this.vx;
     this.y += this.vy;
     this.checkCollisions();
+
+    // Physics Animation for Ragdoll Limbs
+    this.limbAngle = Math.sin(Date.now() * 0.01) * (Math.abs(this.vx) > 0.5 ? 0.6 : 0.1);
 
     // Player Shooting
     if (!this.isBot && mouse.down && Date.now() - this.lastShot > this.weaponData.rate) {
@@ -239,7 +244,7 @@ class Character {
     const isPurple = this.weaponData.special === 'purple';
 
     projectiles.push(new Projectile(
-      this.x, this.y, 
+      this.x, this.y - 10, 
       Math.cos(angle) * this.weaponData.speed, 
       Math.sin(angle) * this.weaponData.speed, 
       dmg, this, isPurple
@@ -256,11 +261,11 @@ class Character {
 
   aiBehavior() {
     // Slower pacing & steady aiming
-    this.vx *= 0.5; // Slower lateral movement
+    this.vx *= 0.5;
     this.vy += 0.5;
 
     // Slower, deliberate shot timing
-    if (player && Date.now() - this.lastShot > (this.weaponData.rate * 2.5)) {
+    if (player && Date.now() - this.lastShot > (this.weaponData.rate * 2.8)) {
       this.shoot();
     }
   }
@@ -270,16 +275,15 @@ class Character {
     const platforms = maps[currentMap].platforms;
 
     platforms.forEach(plat => {
-      if (this.x + this.width/2 > plat.x && this.x - this.width/2 < plat.x + plat.w) {
-        if (this.y + this.height/2 <= plat.y && this.y + this.height/2 + this.vy >= plat.y) {
-          this.y = plat.y - this.height/2;
+      if (this.x + 12 > plat.x && this.x - 12 < plat.x + plat.w) {
+        if (this.y + 24 <= plat.y && this.y + 24 + this.vy >= plat.y) {
+          this.y = plat.y - 24;
           this.vy = 0;
           this.grounded = true;
         }
       }
     });
 
-    // Void death
     if (this.y > canvas.height + 100) {
       this.takeDamage(999);
     }
@@ -291,14 +295,14 @@ class Character {
 
     if (this.health <= 0) {
       if (this.isBot) {
-        // Defeated Opponent -> Award Credits & Spawn Next Opponent
+        // Opponent Defeated -> Award Credits & Spawn Next Opponent
         credits += 100;
         kills++;
         damageDealt += 200;
         updateLeaderboard();
         spawnNextOpponent();
       } else {
-        // Player Died -> Return to Weapon Selection Menu
+        // Player Defeated -> Return to Weapon Loadout Menu
         alert("You were defeated! Return to weapon selection.");
         this.health = 200;
         this.x = 200; this.y = 200;
@@ -310,32 +314,55 @@ class Character {
   draw() {
     if (this.invisible && !this.isBot) ctx.globalAlpha = 0.3;
 
-    // Body
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
 
-    // Head
+    const aimAngle = this.getAimAngle();
+
+    // 1. Head
     ctx.fillStyle = '#ffe0bd';
     ctx.beginPath();
-    ctx.arc(this.x, this.y - this.height/2 - 10, 10, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y - 30, 8, 0, Math.PI * 2);
     ctx.fill();
+
+    // 2. Torso
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y - 22);
+    ctx.lineTo(this.x, this.y);
+    ctx.stroke();
+
+    // 3. Legs (Dynamic Ragdoll Swing)
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);
+    ctx.lineTo(this.x + Math.sin(this.limbAngle) * 12, this.y + 18);
+    ctx.moveTo(this.x, this.y);
+    ctx.lineTo(this.x - Math.sin(this.limbAngle) * 12, this.y + 18);
+    ctx.stroke();
+
+    // 4. Arms & Weapon
+    ctx.save();
+    ctx.translate(this.x, this.y - 15);
+    ctx.rotate(aimAngle);
+    
+    // Weapon Draw
+    ctx.fillStyle = this.weaponData.ownerOnly ? '#9900ff' : '#666';
+    ctx.fillRect(5, -3, 18, 6);
+
+    // Arm Draw
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(12, 0);
+    ctx.stroke();
+    ctx.restore();
 
     // Overhead Health Bar
     const barWidth = 40;
     const hpRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(this.x - barWidth/2, this.y - this.height/2 - 30, barWidth, 6);
+    ctx.fillRect(this.x - barWidth/2, this.y - 48, barWidth, 6);
     ctx.fillStyle = this.isBot ? '#ff4444' : '#00ffcc';
-    ctx.fillRect(this.x - barWidth/2, this.y - this.height/2 - 30, barWidth * (this.health === Infinity ? 1 : hpRatio), 6);
-
-    // Weapon Direction
-    const angle = this.getAimAngle();
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate(angle);
-    ctx.fillStyle = this.weaponData.ownerOnly ? '#9900ff' : '#666';
-    ctx.fillRect(5, -3, 18, 6);
-    ctx.restore();
+    ctx.fillRect(this.x - barWidth/2, this.y - 48, barWidth * (this.health === Infinity ? 1 : hpRatio), 6);
 
     ctx.globalAlpha = 1.0;
   }
@@ -358,7 +385,7 @@ class Projectile {
 
     const targets = [player, opponent].filter(Boolean);
     targets.forEach(target => {
-      if (target !== this.owner && Math.hypot(target.x - this.x, target.y - this.y) < target.width/2 + this.radius) {
+      if (target !== this.owner && Math.hypot(target.x - this.x, target.y - this.y) < 18 + this.radius) {
         target.takeDamage(this.damage);
         this.dead = true;
       }
@@ -396,7 +423,6 @@ const maps = {
   }
 };
 
-// Convert maps into active platforms array
 function getActivePlatforms() {
   const m = maps[currentMap];
   return [
@@ -411,16 +437,13 @@ let opponent = null;
 let projectiles = [];
 
 function spawnNextOpponent() {
-  // Randomize opponent platform position
   const randomY = Math.floor(Math.random() * 200) + 350;
   const randomX = Math.floor(Math.random() * 200) + (canvas.width - 400);
   
   maps[currentMap].enemyPlat = { x: randomX, y: randomY, w: 200, h: 25 };
 
-  // Create single opponent
   opponent = new Character(randomX + 100, randomY - 50, true, "Opponent");
   
-  // Randomize opponent weapon
   const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper'];
   const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
   opponent.equippedWeapon = randomWep;
@@ -433,7 +456,7 @@ function setMap(mapKey) {
   toggleMenu(false);
 }
 
-// --- WEAPON SHOP & CHANGE MENU ---
+// --- WEAPON SHOP SYSTEM ---
 function initShop() {
   const wShop = document.getElementById('weaponShop');
   wShop.innerHTML = '';
@@ -541,7 +564,7 @@ function renderTutorialOverlay() {
   let msg = "";
   if (tutorialStep === 1) msg = "TUTORIAL: Aim with your mouse and click to shoot the opponent on the right platform!";
   if (tutorialStep === 2) msg = "TUTORIAL: Defeat the opponent to gain 100 credits and spawn a new enemy platform!";
-  if (tutorialStep === 3) msg = "TUTORIAL: Use 'Change Weapon' on the top left or press ~ to open Admin Commands!";
+  if (tutorialStep === 3) msg = "TUTORIAL: Use 'Change Weapon' on top left or tap 'Admin Console' to use commands!";
 
   ctx.fillText(msg, 30, canvas.height - 50);
 }
@@ -561,7 +584,7 @@ function startOrResumeGame() {
   toggleMenu(false);
 }
 
-// --- MAIN LOOP ---
+// --- MAIN GAME LOOP ---
 function loop() {
   ctx.fillStyle = maps[currentMap].background;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
