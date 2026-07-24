@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NOVA WARS - 1v1 Arena Shooter</title>
+  <title>Rival Ragdolls - 1v1 Arena Shooter</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body, html { width: 100%; height: 100%; overflow: hidden; background: #111; color: #fff; touch-action: none; }
@@ -11,33 +12,37 @@
     canvas { display: block; background: #14141e; }
 
     /* UI Overlay */
-    .hud-panel { position: absolute; padding: 12px 20px; background: rgba(0,0,0,0.7); border-radius: 8px; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.15); }
-    #statsHud { top: 15px; left: 15px; display: flex; gap: 20px; align-items: center; }
+    .hud-panel { position: absolute; padding: 10px 16px; background: rgba(0,0,0,0.7); border-radius: 8px; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.15); }
+    #statsHud { top: 15px; left: 15px; display: flex; gap: 15px; align-items: center; }
     .stat-box { display: flex; flex-direction: column; }
-    .stat-label { font-size: 10px; text-transform: uppercase; color: #aaa; letter-spacing: 1px; }
-    .stat-val { font-size: 18px; font-weight: bold; color: #00ffcc; }
+    .stat-label { font-size: 9px; text-transform: uppercase; color: #aaa; letter-spacing: 1px; }
+    .stat-val { font-size: 16px; font-weight: bold; color: #00ffcc; }
 
     #scoreHud { top: 15px; right: 15px; text-align: center; width: 220px; }
-    #scoreHud h3 { font-size: 12px; color: #ffcc00; text-transform: uppercase; margin-bottom: 4px; }
-    #scoreVal { font-size: 18px; font-weight: bold; color: #fff; }
+    #scoreHud h3 { font-size: 11px; color: #ffcc00; text-transform: uppercase; margin-bottom: 2px; }
+    #scoreVal { font-size: 16px; font-weight: bold; color: #fff; }
+
+    /* Difficulty Select Styling */
+    .hud-select { background: #111; color: #ffcc00; border: 1px solid #555; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 13px; outline: none; cursor: pointer; }
 
     /* Buttons */
-    .btn { background: #00ffcc; color: #000; border: none; padding: 10px 18px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+    .btn { background: #00ffcc; color: #000; border: none; padding: 8px 14px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 12px; }
     .btn:hover { background: #00cca3; transform: scale(1.02); }
     .btn-secondary { background: #333; color: #fff; border: 1px solid #555; }
     .btn-secondary:hover { background: #444; }
 
     /* Quick Controls */
-    #quickControls { position: absolute; top: 80px; left: 15px; display: flex; gap: 10px; }
+    #quickControls { position: absolute; top: 75px; left: 15px; display: flex; gap: 8px; flex-wrap: wrap; }
 
     /* Admin Console */
     #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 650px; max-width: 90vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
     #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 14px; border-radius: 6px; outline: none; }
 
-    /* Touch On-Screen Controls */
+    /* Touch Controls Overlay */
     #touchOverlay { position: absolute; bottom: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 50; }
-    .touch-btn { width: 65px; height: 65px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; color: #fff; pointer-events: auto; backdrop-filter: blur(4px); }
-    .touch-group { display: flex; gap: 15px; }
+    .touch-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: #fff; pointer-events: auto; backdrop-filter: blur(4px); }
+    .touch-group { display: flex; gap: 12px; align-items: center; }
+    #shootBtn { width: 70px; height: 70px; background: rgba(255, 68, 68, 0.4); border-color: #ff4444; font-size: 14px; }
 
     /* Modal / Overlay UI */
     .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 200; }
@@ -48,9 +53,9 @@
     .shop-card h4 { color: #ffcc00; margin-bottom: 5px; }
     .shop-card .tier-tag { font-size: 11px; color: #00ffcc; text-transform: uppercase; margin-bottom: 8px; }
 
-    /* Username Input Box */
-    #usernameBox { display: flex; flex-direction: column; gap: 15px; width: 320px; text-align: center; }
-    #usernameInput { padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #555; background: #111; color: #fff; text-align: center; outline: none; }
+    /* Username & Room Box */
+    #loginBox { display: flex; flex-direction: column; gap: 12px; width: 340px; text-align: center; }
+    .input-field { padding: 12px; font-size: 15px; border-radius: 6px; border: 1px solid #555; background: #111; color: #fff; text-align: center; outline: none; }
 
     #controlsHint { position: absolute; bottom: 15px; left: 15px; font-size: 11px; color: #888; pointer-events: none; }
   </style>
@@ -66,22 +71,31 @@
     <div class="stat-box"><span class="stat-label">Health</span><span id="hpVal" class="stat-val" style="color:#ff4444">30 / 30</span></div>
     <div class="stat-box"><span class="stat-label">Credits</span><span id="creditsVal" class="stat-val">0</span></div>
     <div class="stat-box"><span class="stat-label">Weapon</span><span id="weaponVal" class="stat-val" style="color:#fff">Pistol</span></div>
-    <div class="stat-box"><span class="stat-label">Ammo</span><span id="ammoVal" class="stat-val">15/15</span></div>
+    <div class="stat-box">
+      <span class="stat-label">AI Difficulty</span>
+      <select id="diffSelect" class="hud-select" onchange="changeDifficulty(this.value)">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+        <option value="admin">ADMIN AI ⚡</option>
+      </select>
+    </div>
   </div>
 
   <div id="quickControls">
-    <button class="btn" onclick="toggleMenu(true)">Change Weapon / Shop</button>
+    <button class="btn" onclick="toggleMenu(true)">Weapon Shop</button>
+    <button class="btn btn-secondary" id="moveToggleBtn" onclick="toggleMovementMode()">Movement: Manual</button>
     <button class="btn btn-secondary" id="adminBtn" style="display:none;" onclick="toggleAdminConsole()">Admin Console [~]</button>
   </div>
 
   <!-- Scoreboard -->
   <div id="scoreHud" class="hud-panel">
     <h3>Kills Scoreboard</h3>
-    <div id="scoreVal"><span id="sbPlayerLabel" style="color:#00ffcc;">Player: 0</span> | <span style="color:#ff4444;">Opponent: 0</span></div>
+    <div id="scoreVal"><span id="sbPlayerLabel" style="color:#00ffcc;">You: 0</span> | <span id="sbEnemyLabel" style="color:#ff4444;">Enemy: 0</span></div>
   </div>
 
   <div id="controlsHint">
-    [WASD / Arrow Keys] Move & Jump | [Mouse / Touch] Aim & Shoot | [R] Reload | [~] Admin Console
+    [WASD / Arrows] Move & Jump | [Mouse / Touch] Aim & Shoot | [R] Reload | [~] Admin Console
   </div>
 
   <!-- On-Screen Touch Controls -->
@@ -89,9 +103,10 @@
     <div class="touch-group">
       <div class="touch-btn" id="btnLeft">◄</div>
       <div class="touch-btn" id="btnRight">►</div>
+      <div class="touch-btn" id="btnJump">▲</div>
     </div>
     <div class="touch-group">
-      <div class="touch-btn" id="btnJump">▲</div>
+      <div class="touch-btn" id="shootBtn">FIRE</div>
     </div>
   </div>
 
@@ -100,13 +115,14 @@
     <input type="text" id="adminInput" placeholder="Commands: god, fly, invis, aimbot, give <weapon>, credits <amt>, grant <user>, revoke <user>">
   </div>
 
-  <!-- Username Modal -->
+  <!-- Username & Lobby Login Modal -->
   <div id="usernameModal" class="modal">
-    <div id="usernameBox" class="modal-content">
-      <h2>Enter Your Name</h2>
-      <p style="font-size: 13px; color: #aaa;">Create a username to start fighting in the 1v1 arena!</p>
-      <input type="text" id="usernameInput" maxlength="16" placeholder="Username..." value="Player1">
-      <button class="btn" onclick="confirmUsername()">Enter Game</button>
+    <div id="loginBox" class="modal-content">
+      <h2>1v1 Arena Login</h2>
+      <p style="font-size: 12px; color: #aaa;">Enter your name and join a 1v1 Room Code to duel real players online!</p>
+      <input type="text" id="usernameInput" class="input-field" maxlength="16" placeholder="Username..." value="Player1">
+      <input type="text" id="roomInput" class="input-field" maxlength="12" placeholder="1v1 Room Code (e.g. Arena123)" value="Arena1">
+      <button class="btn" onclick="confirmLogin()">Enter Game</button>
     </div>
   </div>
 
@@ -128,7 +144,6 @@
 
       <div style="margin-top: 25px; display: flex; gap: 10px;">
         <button class="btn" onclick="startOrResumeGame()">Battle Now</button>
-        <button class="btn btn-secondary" onclick="startTutorial()">Tutorial</button>
       </div>
     </div>
   </div>
@@ -148,37 +163,33 @@ resize();
 
 // Global Game Variables
 let playerName = "Player";
+let roomCode = "Arena1";
 let credits = 0;
 let playerKills = 0;
 let opponentKills = 0;
 let currentMap = 'cyber';
-let tutorialActive = false;
-let tutorialStep = 0;
+let autoMoveDisabled = false;
+let aiDifficulty = 'medium';
 
-// Creator Username Constant
+// Multiplayer WebRTC PeerJS State
+let peer = null;
+let conn = null;
+let isMultiplayer = false;
+
 const OWNER_USERNAME = "NovaWarsDevW";
-
-// Admin Registry (NovaWarsDevW starts with admin rights)
 const adminUsers = new Set([OWNER_USERNAME]);
 
-function hasAdmin(user) {
-  return adminUsers.has(user);
-}
+function hasAdmin(user) { return adminUsers.has(user); }
+function isOwnerUser(user) { return user === OWNER_USERNAME; }
 
-function isOwnerUser(user) {
-  return user === OWNER_USERNAME;
-}
-
-// Inputs (Keyboard & Touch)
+// Input Management
 const keys = {};
 const mouse = { x: 0, y: 0, down: false };
 
 window.addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true;
   keys[e.key] = true;
-  if ((e.key === '~' || e.key === '`') && player && hasAdmin(player.name)) {
-    toggleAdminConsole();
-  }
+  if ((e.key === '~' || e.key === '`') && player && hasAdmin(player.name)) toggleAdminConsole();
   if (e.key.toLowerCase() === 'r' && player) player.reload();
 });
 window.addEventListener('keyup', e => {
@@ -186,12 +197,11 @@ window.addEventListener('keyup', e => {
   keys[e.key] = false;
 });
 
-// Pointer / Mouse / Touch Listeners
 window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 window.addEventListener('mousedown', e => { mouse.down = true; mouse.x = e.clientX; mouse.y = e.clientY; });
 window.addEventListener('mouseup', () => mouse.down = false);
 
-// Touch Controls Bindings
+// Touch Controls
 function bindTouch(id, keyName) {
   const el = document.getElementById(id);
   el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
@@ -200,6 +210,9 @@ function bindTouch(id, keyName) {
 bindTouch('btnLeft', 'ArrowLeft');
 bindTouch('btnRight', 'ArrowRight');
 bindTouch('btnJump', 'ArrowUp');
+
+document.getElementById('shootBtn').addEventListener('touchstart', (e) => { e.preventDefault(); mouse.down = true; });
+document.getElementById('shootBtn').addEventListener('touchend', (e) => { e.preventDefault(); mouse.down = false; });
 
 canvas.addEventListener('touchstart', (e) => {
   if (e.touches.length > 0) {
@@ -216,14 +229,14 @@ canvas.addEventListener('touchmove', (e) => {
 });
 canvas.addEventListener('touchend', () => mouse.down = false);
 
-// --- TIERED WEAPONS DATABASE ---
+// --- WEAPONS DATABASE ---
 const WEAPONS = {
   pistol: { name: 'Pistol', tier: 'Basic Tier', damage: 1, rate: 280, ammo: 15, maxAmmo: 15, speed: 20, cost: 0, ownerOnly: false, multishot: 1 },
   assault: { name: 'Assault Rifle', tier: 'Tier 1 - Fast Fire', damage: 1, rate: 110, ammo: 30, maxAmmo: 30, speed: 22, cost: 200, ownerOnly: false, multishot: 1 },
   shotgun: { name: 'Shotgun', tier: 'Tier 2 - Burst Spread', damage: 1, rate: 550, ammo: 8, maxAmmo: 8, speed: 18, cost: 400, ownerOnly: false, multishot: 3 },
   sniper: { name: 'Sniper Rifle', tier: 'Tier 3 - High Speed', damage: 3, rate: 700, ammo: 6, maxAmmo: 6, speed: 40, cost: 700, ownerOnly: false, multishot: 1 },
   minigun: { name: 'Minigun', tier: 'Tier 4 - Ultra Rapid', damage: 1, rate: 30, ammo: 250, maxAmmo: 250, speed: 24, cost: 1200, ownerOnly: false, multishot: 1 },
-  // Owner Weapons (NovaWarsDevW Exclusive)
+  // Owner Weapons
   khopesh: { name: 'Owner Khopesh', tier: 'Owner Weapon', damage: 30, rate: 200, ammo: 999, maxAmmo: 999, speed: 0, cost: 0, ownerOnly: true, multishot: 1 },
   flail: { name: 'Owner Flail', tier: 'Owner Weapon', damage: 30, rate: 15, ammo: 9999, maxAmmo: 9999, speed: 25, cost: 0, ownerOnly: true, special: 'purple', multishot: 1 },
   crook: { name: 'Owner Crook', tier: 'Owner Weapon', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal', multishot: 1 }
@@ -232,13 +245,11 @@ const WEAPONS = {
 // --- RAGDOLL CHARACTER CLASS ---
 class Character {
   constructor(x, y, isBot = false, name = "Player") {
-    this.startX = x;
-    this.startY = y;
     this.x = x;
     this.y = y;
     this.vx = 0;
     this.vy = 0;
-    this.health = 30; // 30 hits to die
+    this.health = 30;
     this.maxHealth = 30;
     this.isBot = isBot;
     this.name = name;
@@ -248,7 +259,6 @@ class Character {
     this.weaponData = { ...WEAPONS.pistol };
     this.lastShot = 0;
     this.reloading = false;
-    
     this.limbAngle = 0;
     
     // Admin toggles
@@ -257,34 +267,40 @@ class Character {
     this.flyMode = false;
     this.invisible = false;
     this.aimbot = false;
+
+    // Admin AI Timer
+    this.adminTimer = 0;
   }
 
   update() {
     if (!this.isBot) {
-      // Player Movement
-      const moveLeft = keys['a'] || keys['ArrowLeft'];
-      const moveRight = keys['d'] || keys['ArrowRight'];
-      const jumpKey = keys['w'] || keys[' '] || keys['ArrowUp'];
+      if (!autoMoveDisabled) {
+        const moveLeft = keys['a'] || keys['ArrowLeft'];
+        const moveRight = keys['d'] || keys['ArrowRight'];
+        const jumpKey = keys['w'] || keys[' '] || keys['ArrowUp'];
 
-      if (this.flyMode) {
-        this.vx = 0; this.vy = 0;
-        if (moveLeft) this.vx = -8;
-        if (moveRight) this.vx = 8;
-        if (jumpKey) this.vy = -8;
-        if (keys['s'] || keys['ArrowDown']) this.vy = 8;
-      } else {
-        if (moveLeft) this.vx = -4;
-        else if (moveRight) this.vx = 4;
-        else this.vx *= 0.8;
+        if (this.flyMode) {
+          this.vx = 0; this.vy = 0;
+          if (moveLeft) this.vx = -8;
+          if (moveRight) this.vx = 8;
+          if (jumpKey) this.vy = -8;
+          if (keys['s'] || keys['ArrowDown']) this.vy = 8;
+        } else {
+          if (moveLeft) this.vx = -4;
+          else if (moveRight) this.vx = 4;
+          else this.vx *= 0.8;
 
-        if (jumpKey && this.grounded) {
-          this.vy = -12;
-          this.grounded = false;
+          if (jumpKey && this.grounded) {
+            this.vy = -12;
+            this.grounded = false;
+          }
+          this.vy += 0.5;
         }
-        this.vy += 0.5; // Gravity
+      } else {
+        this.vx = 0;
+        this.vy += 0.5;
       }
     } else {
-      // Active Bot AI (Opponent)
       this.aiBehavior();
     }
 
@@ -294,17 +310,29 @@ class Character {
 
     this.limbAngle = Math.sin(Date.now() * 0.01) * (Math.abs(this.vx) > 0.5 ? 0.6 : 0.1);
 
-    // Player Shooting
     if (!this.isBot && mouse.down && Date.now() - this.lastShot > this.weaponData.rate) {
       this.shoot();
     }
   }
 
   getAimAngle() {
-    if (!this.isBot && this.aimbot && opponent) {
+    if (this.isBot) {
+      if (aiDifficulty === 'admin' && this.aimbot && player && !player.invisible) {
+        return Math.atan2(player.y - this.y, player.x - this.x);
+      }
+      if (player && !player.invisible) {
+        let errorSpread = 0;
+        if (aiDifficulty === 'easy') errorSpread = (Math.random() - 0.5) * 0.8;
+        if (aiDifficulty === 'medium') errorSpread = (Math.random() - 0.5) * 0.3;
+        return Math.atan2(player.y - this.y, player.x - this.x) + errorSpread;
+      }
+      return Math.random() * Math.PI * 2;
+    }
+
+    if (this.aimbot && opponent) {
       return Math.atan2(opponent.y - this.y, opponent.x - this.x);
     }
-    return this.isBot ? Math.atan2(player.y - this.y, player.x - this.x) : Math.atan2(mouse.y - this.y, mouse.x - this.x);
+    return Math.atan2(mouse.y - this.y, mouse.x - this.x);
   }
 
   shoot() {
@@ -348,29 +376,70 @@ class Character {
   aiBehavior() {
     if (!player) return;
 
-    // 1. Move Forward / Backward to Stay in Fighting Range
+    // --- ADMIN AI MODE LOGIC ---
+    if (aiDifficulty === 'admin') {
+      if (Date.now() - this.adminTimer > 4000) {
+        this.adminTimer = Date.now();
+        const adminCmds = ['god', 'invis', 'aimbot', 'give_minigun', 'give_sniper', 'inf_dmg'];
+        const chosen = adminCmds[Math.floor(Math.random() * adminCmds.length)];
+        
+        if (chosen === 'god') {
+          this.godMode = true;
+          setTimeout(() => this.godMode = false, 3000);
+        } else if (chosen === 'invis') {
+          this.invisible = true;
+          setTimeout(() => this.invisible = false, 2500);
+        } else if (chosen === 'aimbot') {
+          this.aimbot = true;
+        } else if (chosen === 'inf_dmg') {
+          this.infiniteDamage = true;
+          setTimeout(() => this.infiniteDamage = false, 2000);
+        } else if (chosen === 'give_minigun') {
+          this.equippedWeapon = 'minigun';
+          this.weaponData = { ...WEAPONS.minigun };
+        } else if (chosen === 'give_sniper') {
+          this.equippedWeapon = 'sniper';
+          this.weaponData = { ...WEAPONS.sniper };
+        }
+      }
+    }
+
+    // --- INVISIBILITY BOT REACTION ---
+    if (player.invisible) {
+      this.vx = Math.sin(Date.now() * 0.002) * 2;
+      this.vy += 0.5;
+      if (Date.now() - this.lastShot > (this.weaponData.rate * 2)) {
+        const randomAngle = Math.random() * Math.PI * 2;
+        projectiles.push(new Projectile(this.x, this.y - 10, Math.cos(randomAngle) * 15, Math.sin(randomAngle) * 15, 1, this, false));
+        this.lastShot = Date.now();
+      }
+      return;
+    }
+
+    // --- MOVEMENT & FIRING BY DIFFICULTY ---
     const distToPlayer = player.x - this.x;
     const absDist = Math.abs(distToPlayer);
 
-    if (absDist > 380) {
-      this.vx = distToPlayer > 0 ? 3.2 : -3.2; // Move forward towards player
-    } else if (absDist < 200) {
-      this.vx = distToPlayer > 0 ? -3.2 : 3.2; // Back away if too close
-    } else {
-      // Strafe back and forth constantly
-      this.vx = Math.sin(Date.now() * 0.005) * 3;
-    }
+    let speedMult = 2.0;
+    let jumpProb = 0.01;
+    let fireDelayMult = 1.8;
 
-    this.vy += 0.5; // Gravity
+    if (aiDifficulty === 'easy') { speedMult = 1.2; jumpProb = 0.005; fireDelayMult = 2.5; }
+    if (aiDifficulty === 'medium') { speedMult = 2.8; jumpProb = 0.02; fireDelayMult = 1.3; }
+    if (aiDifficulty === 'hard' || aiDifficulty === 'admin') { speedMult = 4.2; jumpProb = 0.04; fireDelayMult = 0.8; }
 
-    // 2. Jump to Dodge Shots & Movement
-    if (this.grounded && Math.random() < 0.025) {
+    if (absDist > 380) this.vx = distToPlayer > 0 ? speedMult : -speedMult;
+    else if (absDist < 200) this.vx = distToPlayer > 0 ? -speedMult : speedMult;
+    else this.vx = Math.sin(Date.now() * 0.005) * speedMult;
+
+    this.vy += 0.5;
+
+    if (this.grounded && Math.random() < jumpProb) {
       this.vy = -12;
       this.grounded = false;
     }
 
-    // 3. Almost Constant Shooting Stream
-    if (Date.now() - this.lastShot > (this.weaponData.rate * 1.1)) {
+    if (Date.now() - this.lastShot > (this.weaponData.rate * fireDelayMult)) {
       this.shoot();
     }
   }
@@ -390,33 +459,31 @@ class Character {
   }
 
   takeDamage(amount) {
-    if (this.godMode || this.invisible) return; // Invisibility protects from hits
+    if (this.godMode || this.invisible) return;
     this.health -= amount;
 
     if (this.health <= 0) {
-      if (this.isBot) {
-        // Player defeated Opponent -> Award 100 Credits & Increase Kill Counter
-        credits += 100;
-        playerKills++;
-        updateScoreboard();
-        respawnOpponent();
-      } else {
-        // Opponent defeated Player
-        opponentKills++;
-        updateScoreboard();
-        this.health = this.maxHealth;
-        this.x = 150;
-        this.y = canvas.height - 124;
-        this.vx = 0;
-        this.vy = 0;
+      if (this.isBot || isMultiplayer) {
+        if (this !== player) {
+          credits += 100;
+          playerKills++;
+          updateScoreboard();
+          respawnOpponent();
+        } else {
+          opponentKills++;
+          updateScoreboard();
+          this.health = this.maxHealth;
+          this.x = 150;
+          this.y = canvas.height - 124;
+        }
       }
     }
   }
 
   draw() {
     if (this.invisible) {
-      if (!this.isBot) ctx.globalAlpha = 0.25; // Semi-transparent for player when invisible
-      else return; // Completely hide if bot was invisible
+      if (this === player) ctx.globalAlpha = 0.25; 
+      else return;
     }
 
     ctx.strokeStyle = this.color;
@@ -424,6 +491,14 @@ class Character {
     ctx.lineCap = 'round';
 
     const aimAngle = this.getAimAngle();
+
+    // Godmode Glow Aura
+    if (this.godMode) {
+      ctx.fillStyle = 'rgba(255, 204, 0, 0.3)';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y - 15, 30, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // 1. Head
     ctx.fillStyle = '#ffe0bd';
@@ -437,7 +512,7 @@ class Character {
     ctx.lineTo(this.x, this.y);
     ctx.stroke();
 
-    // 3. Legs (Ragdoll Animation)
+    // 3. Legs
     ctx.beginPath();
     ctx.moveTo(this.x, this.y);
     ctx.lineTo(this.x + Math.sin(this.limbAngle) * 12, this.y + 18);
@@ -463,7 +538,7 @@ class Character {
     ctx.fillStyle = '#fff';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(this.name, this.x, this.y - 56);
+    ctx.fillText(`${this.name} ${this.godMode ? '🛡️' : ''}`, this.x, this.y - 56);
 
     const barWidth = 40;
     const hpRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
@@ -519,27 +594,94 @@ const maps = {
   islands: { bg: '#0a1d24', floor: '#1b3b48' }
 };
 
-// --- GAME INITIALIZATION ---
+// --- GAME INITIALIZATION & MULTIPLAYER ---
 let player = new Character(150, canvas.height - 124, false, "Player");
 let opponent = null;
 let projectiles = [];
 
-function confirmUsername() {
-  const input = document.getElementById('usernameInput').value.trim();
-  if (input.length > 0) playerName = input;
+function changeDifficulty(val) {
+  aiDifficulty = val;
+}
+
+function confirmLogin() {
+  const pInput = document.getElementById('usernameInput').value.trim();
+  const rInput = document.getElementById('roomInput').value.trim();
+  
+  if (pInput.length > 0) playerName = pInput;
+  if (rInput.length > 0) roomCode = rInput;
+
   player.name = playerName;
   document.getElementById('playerNameVal').innerText = playerName;
   document.getElementById('usernameModal').style.display = 'none';
 
-  // Toggle Admin UI visibility based on permissions
   const isAdmin = hasAdmin(player.name);
   document.getElementById('adminBtn').style.display = isAdmin ? 'inline-block' : 'none';
 
+  initMultiplayer();
   initShop();
   updateScoreboard();
 }
 
+function initMultiplayer() {
+  const peerId = `rival-ragdolls-${roomCode.toLowerCase()}`;
+  peer = new Peer(peerId);
+
+  peer.on('open', id => {
+    respawnOpponent();
+  });
+
+  peer.on('error', err => {
+    if (err.type === 'unavailable-id') {
+      conn = peer.connect(peerId);
+      setupPeerConnection(conn);
+    }
+  });
+
+  peer.on('connection', connection => {
+    conn = connection;
+    setupPeerConnection(conn);
+  });
+}
+
+function setupPeerConnection(connection) {
+  isMultiplayer = true;
+  opponent = new Character(canvas.width - 150, canvas.height - 124, false, "Opponent");
+
+  connection.on('data', data => {
+    if (data.type === 'state' && opponent) {
+      opponent.x = data.x;
+      opponent.y = data.y;
+      opponent.vx = data.vx;
+      opponent.vy = data.vy;
+      opponent.name = data.name;
+      opponent.health = data.health;
+      opponent.invisible = data.invisible;
+    }
+  });
+}
+
+function broadcastState() {
+  if (conn && conn.open && player) {
+    conn.send({
+      type: 'state',
+      x: player.x,
+      y: player.y,
+      vx: player.vx,
+      vy: player.vy,
+      name: player.name,
+      health: player.health,
+      invisible: player.invisible
+    });
+  }
+}
+
+function toggleMovementMode() {
+  autoMoveDisabled = !autoMoveDisabled;
+  document.getElementById('moveToggleBtn').innerText = autoMoveDisabled ? "Movement: Static" : "Movement: Manual";
+}
+
 function respawnOpponent() {
+  if (isMultiplayer) return;
   const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper'];
   const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
 
@@ -557,8 +699,6 @@ function setMap(mapKey) {
 function initShop() {
   const wShop = document.getElementById('weaponShop');
   wShop.innerHTML = '';
-  
-  // Owner weapons strictly restricted to username "NovaWarsDevW"
   const isOwner = player && isOwnerUser(player.name);
 
   Object.keys(WEAPONS).forEach(key => {
@@ -571,10 +711,10 @@ function initShop() {
       <div>
         <h4>${w.name} ${w.ownerOnly ? '(OWNER)' : ''}</h4>
         <div class="tier-tag">${w.tier}</div>
-        <p style="font-size: 12px;">Ammo: ${w.maxAmmo} | Speed: ${w.speed}</p>
-        <p style="margin-top:5px; font-weight:bold; color: #00ffcc;">Cost: ${w.cost} Credits</p>
+        <p style="font-size: 11px;">Ammo: ${w.maxAmmo} | Speed: ${w.speed}</p>
+        <p style="margin-top:4px; font-weight:bold; color: #00ffcc;">Cost: ${w.cost} Credits</p>
       </div>
-      <button class="btn" style="margin-top: 10px;" onclick="equipWeapon('${key}')">Equip Weapon</button>
+      <button class="btn" style="margin-top: 8px;" onclick="equipWeapon('${key}')">Equip</button>
     `;
     wShop.appendChild(card);
   });
@@ -585,7 +725,7 @@ function equipWeapon(key) {
   const isOwner = player && isOwnerUser(player.name);
 
   if (w.ownerOnly && !isOwner) {
-    alert("Access Denied: Owner weapons are strictly reserved for username NovaWarsDevW.");
+    alert("Access Denied: Owner weapons are strictly reserved for NovaWarsDevW.");
     return;
   }
 
@@ -594,7 +734,7 @@ function equipWeapon(key) {
     player.weaponData = { ...w };
     alert(`Equipped ${w.name}!`);
   } else {
-    alert("Not enough credits! Earn 100 Credits per kill.");
+    alert("Not enough credits!");
   }
 }
 
@@ -610,7 +750,6 @@ document.getElementById('adminInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     const rawInput = e.target.value;
     e.target.value = '';
-    
     const cmds = rawInput.split(';');
     cmds.forEach(cmdStr => processCommand(cmdStr.trim()));
   }
@@ -649,7 +788,7 @@ function processCommand(cmd) {
       if (parts[1] && WEAPONS[parts[1]]) {
         const targetWep = WEAPONS[parts[1]];
         if (targetWep.ownerOnly && !isOwnerUser(player.name)) {
-          alert("Access Denied: Owner weapons are strictly reserved for username NovaWarsDevW.");
+          alert("Access Denied: Owner weapons reserved for NovaWarsDevW.");
           return;
         }
         player.equippedWeapon = parts[1];
@@ -665,60 +804,27 @@ function processCommand(cmd) {
       if (targetUser) {
         adminUsers.add(targetUser);
         alert(`Granted admin privileges to "${targetUser}"`);
-      } else {
-        alert("Usage: grant <username>");
       }
       break;
     case 'revoke':
     case 'removeadmin':
       if (targetUser) {
-        if (targetUser === OWNER_USERNAME) {
-          alert("Cannot revoke owner admin status!");
-        } else {
+        if (targetUser === OWNER_USERNAME) alert("Cannot revoke owner admin status!");
+        else {
           adminUsers.delete(targetUser);
           alert(`Revoked admin privileges from "${targetUser}"`);
         }
-      } else {
-        alert("Usage: revoke <username>");
       }
       break;
   }
 }
 
-// --- SCOREBOARD & TUTORIAL ---
+// --- SCOREBOARD ---
 function updateScoreboard() {
   document.getElementById('scoreVal').innerHTML = `
     <span style="color:#00ffcc;">${playerName}: ${playerKills}</span> | <span style="color:#ff4444;">Opponent: ${opponentKills}</span>
   `;
 }
-
-function startTutorial() {
-  tutorialActive = true;
-  tutorialStep = 1;
-  toggleMenu(false);
-}
-
-function renderTutorialOverlay() {
-  if (!tutorialActive) return;
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
-  ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
-
-  ctx.fillStyle = '#00ffcc';
-  ctx.font = '18px sans-serif';
-  let msg = "";
-  if (tutorialStep === 1) msg = "TUTORIAL: Use WASD / Arrow Keys or screen buttons to move & jump!";
-  if (tutorialStep === 2) msg = "TUTORIAL: Click or touch to fire! Each kill earns +100 credits for shop weapons!";
-  if (tutorialStep === 3) msg = "TUTORIAL: NovaWarsDevW owns special weapons & admin controls! Use 'grant <user>' to share admin!";
-
-  ctx.fillText(msg, 30, canvas.height - 50);
-}
-
-window.addEventListener('click', () => {
-  if (tutorialActive) {
-    tutorialStep++;
-    if (tutorialStep > 3) tutorialActive = false;
-  }
-});
 
 function toggleMenu(show) {
   document.getElementById('menuModal').style.display = show ? 'flex' : 'none';
@@ -734,16 +840,13 @@ function loop() {
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Render Solid Ground Floor
   const floorY = canvas.height - 100;
   ctx.fillStyle = theme.floor;
   ctx.fillRect(0, floorY, canvas.width, 100);
 
-  // Floor accents
   ctx.fillStyle = 'rgba(255,255,255,0.1)';
   ctx.fillRect(0, floorY, canvas.width, 4);
 
-  // Updates & Draw Entities
   player.update();
   player.draw();
 
@@ -758,17 +861,17 @@ function loop() {
     if (p.dead) projectiles.splice(idx, 1);
   });
 
+  broadcastState();
+
   // Update HUD
   document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, player.health)} / 30`;
   document.getElementById('creditsVal').innerText = credits;
   document.getElementById('weaponVal').innerText = player.weaponData.name;
-  document.getElementById('ammoVal').innerText = `${player.weaponData.ammo}/${player.weaponData.maxAmmo}`;
 
-  renderTutorialOverlay();
   requestAnimationFrame(loop);
 }
 
-// Start Game Engine
+// Start Engine
 respawnOpponent();
 loop();
 </script>
