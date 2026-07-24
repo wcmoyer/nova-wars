@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NOVA WARS - 1v1 Arena Shooter</title>
+  <title>Rival Ragdolls - 1v1 Arena Shooter</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -38,20 +38,16 @@
     #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 650px; max-width: 90vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
     #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 14px; border-radius: 6px; outline: none; }
 
-    /* High-Positioned Touch Controls Overlay */
+    /* Touch Controls Overlay */
     #touchOverlay { position: absolute; bottom: 100px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; z-index: 50; }
     
     /* Joy-Con Joystick Containers */
-    .joy-container { width: 100px; height: 100px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: relative; pointer-events: auto; backdrop-filter: blur(4px); touch-action: none; }
-    .joy-stick { width: 40px; height: 40px; border-radius: 50%; position: absolute; top: 28px; left: 28px; pointer-events: none; transition: 0.05s ease-out; }
+    .joy-container { width: 110px; height: 110px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: relative; pointer-events: auto; backdrop-filter: blur(4px); touch-action: none; display: flex; justify-content: center; align-items: center; }
+    .joy-stick { width: 45px; height: 45px; border-radius: 50%; position: absolute; pointer-events: none; transition: 0.05s ease-out; }
     #moveStick { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.5); }
-    #aimStick { background: #ffcc00; box-shadow: 0 0 10px rgba(255,204,0,0.5); }
+    #aimShootStick { background: #ff4444; box-shadow: 0 0 12px rgba(255,68,68,0.6); }
 
-    .right-touch-group { display: flex; gap: 15px; align-items: center; }
-
-    /* Raised Fire Button */
-    #shootBtn { width: 80px; height: 80px; background: rgba(255, 68, 68, 0.5); border: 3px solid #ff4444; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 15px; font-weight: bold; color: #fff; pointer-events: auto; backdrop-filter: blur(4px); box-shadow: 0 0 12px rgba(255,68,68,0.4); }
-    #shootBtn:active { background: rgba(255, 68, 68, 0.8); transform: scale(0.95); }
+    .joy-label { position: absolute; top: -20px; font-size: 10px; font-weight: bold; letter-spacing: 1px; color: #aaa; text-transform: uppercase; pointer-events: none; }
 
     /* Modal / Overlay UI */
     .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 200; }
@@ -104,19 +100,18 @@
   </div>
 
   <div id="controlsHint">
-    [WASD / Arrows] Move & Jump | [Mouse / Touch / Aim Joystick] Aim & Shoot | [R] Reload | [~] Admin Console
+    [WASD / Arrows] Move & Jump | [Mouse / Right Joy-Con] Aim & Hold/Tap to Fire | [R] Reload | [~] Admin Console
   </div>
 
-  <!-- Raised On-Screen Joy-Cons & Shoot Controls -->
+  <!-- On-Screen Dual Joy-Cons -->
   <div id="touchOverlay">
     <div id="moveContainer" class="joy-container">
+      <span class="joy-label">Move</span>
       <div id="moveStick" class="joy-stick"></div>
     </div>
-    <div class="right-touch-group">
-      <div id="aimContainer" class="joy-container">
-        <div id="aimStick" class="joy-stick"></div>
-      </div>
-      <div id="shootBtn">FIRE</div>
+    <div id="aimShootContainer" class="joy-container">
+      <span class="joy-label" style="color: #ff4444;">Aim & Fire</span>
+      <div id="aimShootStick" class="joy-stick"></div>
     </div>
   </div>
 
@@ -149,7 +144,7 @@
         <button class="btn btn-secondary" onclick="setMap('islands')">Floating Isles</button>
       </div>
 
-      <h3>Weapon Shop (Earn Credits Per Kill)</h3>
+      <h3>Weapon Shop (Earn 50 Credits Per Kill)</h3>
       <div class="shop-grid" id="weaponShop"></div>
 
       <div style="margin-top: 25px; display: flex; gap: 10px;">
@@ -214,7 +209,7 @@ window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.cli
 window.addEventListener('mousedown', e => { mouse.down = true; mouse.x = e.clientX; mouse.y = e.clientY; });
 window.addEventListener('mouseup', () => mouse.down = false);
 
-// --- JOY-CON JOYSTICK 1: MOVEMENT ---
+// --- JOYSTICK 1: MOVEMENT ---
 const moveContainer = document.getElementById('moveContainer');
 const moveStick = document.getElementById('moveStick');
 let moveActive = false;
@@ -232,7 +227,7 @@ function handleMoveMove(e) {
   let deltaX = touch.clientX - (rect.left + rect.width / 2);
   let deltaY = touch.clientY - (rect.top + rect.height / 2);
   const distance = Math.hypot(deltaX, deltaY);
-  const maxRadius = 30;
+  const maxRadius = 32;
 
   if (distance > maxRadius) {
     deltaX = (deltaX / distance) * maxRadius;
@@ -249,41 +244,51 @@ function handleMoveEnd(e) {
   keys['ArrowLeft'] = false; keys['ArrowRight'] = false; keys['ArrowUp'] = false;
 }
 
-// --- JOY-CON JOYSTICK 2: EASY TOUCH AIMING ---
-const aimContainer = document.getElementById('aimContainer');
-const aimStick = document.getElementById('aimStick');
-let aimActive = false;
+// --- JOYSTICK 2: COMBINED AIM & SHOOT JOY-CON ---
+const aimShootContainer = document.getElementById('aimShootContainer');
+const aimShootStick = document.getElementById('aimShootStick');
+let aimShootActive = false;
 
-aimContainer.addEventListener('touchstart', handleAimStart, { passive: false });
-aimContainer.addEventListener('touchmove', handleAimMove, { passive: false });
-aimContainer.addEventListener('touchend', handleAimEnd, { passive: false });
+aimShootContainer.addEventListener('touchstart', handleAimShootStart, { passive: false });
+aimShootContainer.addEventListener('touchmove', handleAimShootMove, { passive: false });
+aimShootContainer.addEventListener('touchend', handleAimShootEnd, { passive: false });
 
-function handleAimStart(e) { e.preventDefault(); aimActive = true; handleAimMove(e); }
-function handleAimMove(e) {
-  if (!aimActive) return;
+function handleAimShootStart(e) {
   e.preventDefault();
-  const rect = aimContainer.getBoundingClientRect();
+  aimShootActive = true;
+  mouse.down = true;
+  handleAimShootMove(e);
+}
+
+function handleAimShootMove(e) {
+  if (!aimShootActive) return;
+  e.preventDefault();
+  const rect = aimShootContainer.getBoundingClientRect();
   const touch = e.touches[0];
   let deltaX = touch.clientX - (rect.left + rect.width / 2);
   let deltaY = touch.clientY - (rect.top + rect.height / 2);
   const distance = Math.hypot(deltaX, deltaY);
-  const maxRadius = 30;
+  const maxRadius = 32;
 
   if (distance > maxRadius) {
     deltaX = (deltaX / distance) * maxRadius;
     deltaY = (deltaY / distance) * maxRadius;
   }
-  aimStick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-  if (Math.hypot(deltaX, deltaY) > 5) {
+  aimShootStick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+  
+  if (distance > 3) {
     touchAimAngle = Math.atan2(deltaY, deltaX);
   }
-}
-function handleAimEnd(e) {
-  aimActive = false;
-  aimStick.style.transform = `translate(0px, 0px)`;
+  mouse.down = true;
 }
 
-// Canvas Direct-Touch Aiming
+function handleAimShootEnd(e) {
+  aimShootActive = false;
+  mouse.down = false;
+  aimShootStick.style.transform = `translate(0px, 0px)`;
+}
+
+// Canvas Direct-Touch Support
 canvas.addEventListener('touchstart', (e) => {
   if (e.touches.length > 0) {
     mouse.x = e.touches[0].clientX;
@@ -300,10 +305,6 @@ canvas.addEventListener('touchmove', (e) => {
   }
 });
 canvas.addEventListener('touchend', () => mouse.down = false);
-
-const shootBtn = document.getElementById('shootBtn');
-shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); mouse.down = true; });
-shootBtn.addEventListener('touchend', (e) => { e.preventDefault(); mouse.down = false; });
 
 // --- WEAPONS DATABASE ---
 const WEAPONS = {
@@ -540,7 +541,7 @@ class Character {
     if (this.health <= 0) {
       if (this === opponent) {
         playerKills++;
-        credits += 100;
+        credits += 50;
       } else {
         opponentKills++;
       }
@@ -671,20 +672,29 @@ function changeDifficulty(val) {
   aiDifficulty = val;
 }
 
+// Full Health & Opposite Side Respawn Logic
 function resetMatchPositions() {
   projectiles = [];
+  
+  // Respawn Player on Left Side with Full Health & Ammo
   player.health = player.maxHealth;
   player.x = 150;
   player.y = canvas.height - 124;
   player.vx = 0;
   player.vy = 0;
+  player.weaponData.ammo = player.weaponData.maxAmmo;
+  player.reloading = false;
 
+  // Respawn Opponent on Opposite Right Side with Full Health & Ammo
   if (opponent) {
     opponent.health = opponent.maxHealth;
     opponent.x = canvas.width - 150;
     opponent.y = canvas.height - 124;
     opponent.vx = 0;
     opponent.vy = 0;
+    opponent.weaponData.ammo = opponent.weaponData.maxAmmo;
+    opponent.reloading = false;
+
     if (opponent.isBot) {
       const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper'];
       const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
