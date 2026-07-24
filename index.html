@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NOVA WARS - 1v1 Arena Shooter</title>
+  <title>Rival Ragdolls - 1v1 Arena Shooter</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -38,11 +38,16 @@
     #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 650px; max-width: 90vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
     #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 14px; border-radius: 6px; outline: none; }
 
-    /* Touch Controls Overlay */
-    #touchOverlay { position: absolute; bottom: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 50; }
-    .touch-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: #fff; pointer-events: auto; backdrop-filter: blur(4px); }
-    .touch-group { display: flex; gap: 12px; align-items: center; }
-    #shootBtn { width: 70px; height: 70px; background: rgba(255, 68, 68, 0.4); border-color: #ff4444; font-size: 14px; }
+    /* High-Positioned Touch Controls Overlay */
+    #touchOverlay { position: absolute; bottom: 110px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; z-index: 50; }
+    
+    /* Joy-Con Joystick Container */
+    #joyContainer { width: 110px; height: 110px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: relative; pointer-events: auto; backdrop-filter: blur(4px); touch-action: none; }
+    #joyStick { width: 45px; height: 45px; background: #00ffcc; border-radius: 50%; position: absolute; top: 32.5px; left: 32.5px; box-shadow: 0 0 10px rgba(0,255,204,0.5); pointer-events: none; transition: 0.05s ease-out; }
+
+    /* Raised Fire Button */
+    #shootBtn { width: 85px; height: 85px; background: rgba(255, 68, 68, 0.5); border: 3px solid #ff4444; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 16px; font-weight: bold; color: #fff; pointer-events: auto; backdrop-filter: blur(4px); box-shadow: 0 0 12px rgba(255,68,68,0.4); }
+    #shootBtn:active { background: rgba(255, 68, 68, 0.8); transform: scale(0.95); }
 
     /* Modal / Overlay UI */
     .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 200; }
@@ -98,16 +103,12 @@
     [WASD / Arrows] Move & Jump | [Mouse / Touch] Aim & Shoot | [R] Reload | [~] Admin Console
   </div>
 
-  <!-- On-Screen Touch Controls -->
+  <!-- Raised On-Screen Joy-Con & Shoot Controls -->
   <div id="touchOverlay">
-    <div class="touch-group">
-      <div class="touch-btn" id="btnLeft">◄</div>
-      <div class="touch-btn" id="btnRight">►</div>
-      <div class="touch-btn" id="btnJump">▲</div>
+    <div id="joyContainer">
+      <div id="joyStick"></div>
     </div>
-    <div class="touch-group">
-      <div class="touch-btn" id="shootBtn">FIRE</div>
-    </div>
+    <div id="shootBtn">FIRE</div>
   </div>
 
   <!-- Admin Input Console -->
@@ -201,18 +202,59 @@ window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.cli
 window.addEventListener('mousedown', e => { mouse.down = true; mouse.x = e.clientX; mouse.y = e.clientY; });
 window.addEventListener('mouseup', () => mouse.down = false);
 
-// Touch Controls
-function bindTouch(id, keyName) {
-  const el = document.getElementById(id);
-  el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[keyName] = true; });
-  el.addEventListener('touchend', (e) => { e.preventDefault(); keys[keyName] = false; });
-}
-bindTouch('btnLeft', 'ArrowLeft');
-bindTouch('btnRight', 'ArrowRight');
-bindTouch('btnJump', 'ArrowUp');
+// --- JOY-CON JOYSTICK CONTROLLER LOGIC ---
+const joyContainer = document.getElementById('joyContainer');
+const joyStick = document.getElementById('joyStick');
+let joyActive = false;
 
-document.getElementById('shootBtn').addEventListener('touchstart', (e) => { e.preventDefault(); mouse.down = true; });
-document.getElementById('shootBtn').addEventListener('touchend', (e) => { e.preventDefault(); mouse.down = false; });
+joyContainer.addEventListener('touchstart', handleJoyStart, { passive: false });
+joyContainer.addEventListener('touchmove', handleJoyMove, { passive: false });
+joyContainer.addEventListener('touchend', handleJoyEnd, { passive: false });
+
+function handleJoyStart(e) {
+  e.preventDefault();
+  joyActive = true;
+  handleJoyMove(e);
+}
+
+function handleJoyMove(e) {
+  if (!joyActive) return;
+  e.preventDefault();
+  const rect = joyContainer.getBoundingClientRect();
+  const touch = e.touches[0];
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  
+  let deltaX = touch.clientX - centerX;
+  let deltaY = touch.clientY - centerY;
+  const distance = Math.hypot(deltaX, deltaY);
+  const maxRadius = 35;
+
+  if (distance > maxRadius) {
+    deltaX = (deltaX / distance) * maxRadius;
+    deltaY = (deltaY / distance) * maxRadius;
+  }
+
+  joyStick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+  // Map Joystick direction to Virtual Keys
+  keys['ArrowLeft'] = deltaX < -12;
+  keys['ArrowRight'] = deltaX > 12;
+  keys['ArrowUp'] = deltaY < -18;
+}
+
+function handleJoyEnd(e) {
+  joyActive = false;
+  joyStick.style.transform = `translate(0px, 0px)`;
+  keys['ArrowLeft'] = false;
+  keys['ArrowRight'] = false;
+  keys['ArrowUp'] = false;
+}
+
+// Raised Shoot Button Touch Handling
+const shootBtn = document.getElementById('shootBtn');
+shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); mouse.down = true; });
+shootBtn.addEventListener('touchend', (e) => { e.preventDefault(); mouse.down = false; });
 
 canvas.addEventListener('touchstart', (e) => {
   if (e.touches.length > 0) {
@@ -268,7 +310,6 @@ class Character {
     this.invisible = false;
     this.aimbot = false;
 
-    // Admin AI Timer
     this.adminTimer = 0;
   }
 
@@ -376,7 +417,6 @@ class Character {
   aiBehavior() {
     if (!player) return;
 
-    // --- ADMIN AI MODE LOGIC ---
     if (aiDifficulty === 'admin') {
       if (Date.now() - this.adminTimer > 4000) {
         this.adminTimer = Date.now();
@@ -404,7 +444,6 @@ class Character {
       }
     }
 
-    // --- INVISIBILITY BOT REACTION ---
     if (player.invisible) {
       this.vx = Math.sin(Date.now() * 0.002) * 2;
       this.vy += 0.5;
@@ -416,7 +455,6 @@ class Character {
       return;
     }
 
-    // --- MOVEMENT & FIRING BY DIFFICULTY ---
     const distToPlayer = player.x - this.x;
     const absDist = Math.abs(distToPlayer);
 
@@ -492,7 +530,6 @@ class Character {
 
     const aimAngle = this.getAimAngle();
 
-    // Godmode Glow Aura
     if (this.godMode) {
       ctx.fillStyle = 'rgba(255, 204, 0, 0.3)';
       ctx.beginPath();
