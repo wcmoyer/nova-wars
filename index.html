@@ -35,7 +35,7 @@
     #quickControls { position: absolute; top: 75px; left: 15px; display: flex; gap: 8px; flex-wrap: wrap; }
 
     /* Admin Console */
-    #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 780px; max-width: 95vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
+    #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 800px; max-width: 95vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
     #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 13px; border-radius: 6px; outline: none; }
 
     /* Touch Controls Overlay */
@@ -117,7 +117,7 @@
 
   <!-- Admin Input Console -->
   <div id="adminConsole">
-    <input type="text" id="adminInput" placeholder="Commands: ALL ADMIN, god, fly, invis, aimbot, heal, shield, nuke, speed <mult>, size <mult>, give <weapon>, credits <amt>, grant <user>, revoke <user>, kill <user>, freeze <user>, kick <user>, reset">
+    <input type="text" id="adminInput" placeholder="Commands: ALL ADMIN, stop all admin, freeze <user>, nuke, god, fly, invis, aimbot, heal, shield, speed <mult>, size <mult>, give <weapon>, credits <amt>, grant <user>, revoke <user>, kill <user>, kick <user>">
   </div>
 
   <!-- Username & Lobby Login Modal -->
@@ -178,6 +178,9 @@ let aiDifficulty = 'medium';
 
 // Touch Aim Joystick Angle Override
 let touchAimAngle = null;
+
+// Visual FX
+let screenFlashTimer = 0;
 
 // Multiplayer WebRTC PeerJS State
 let peer = null;
@@ -827,6 +830,7 @@ function setupPeerConnection(connection) {
         }
       }
       if (data.cmd === 'nuke') {
+        screenFlashTimer = 15;
         player.takeDamage(999);
       }
     }
@@ -937,12 +941,27 @@ function processCommand(cmd) {
     return;
   }
 
+  const cleanCmd = cmd.toLowerCase().trim();
   const parts = cmd.split(' ');
   const action = parts[0].toLowerCase();
   const targetUser = parts[1];
 
-  // ALL ADMIN Execution (Excludes grant/revoke)
-  if (cmd.toLowerCase() === 'all admin' || cmd.toLowerCase() === 'alladmin' || (action === 'all' && targetUser && targetUser.toLowerCase() === 'admin')) {
+  // 1. STOP ALL ADMIN COMMAND
+  if (cleanCmd === 'stop all admin' || cleanCmd === 'stopalladmin' || cleanCmd === 'stop admin') {
+    player.godMode = false;
+    player.flyMode = false;
+    player.invisible = false;
+    player.aimbot = false;
+    player.shieldActive = false;
+    player.speedMult = 1.0;
+    player.scaleMult = 1.0;
+    player.frozen = false;
+    alert("STOPPED ALL ACTIVE ADMIN COMMANDS!");
+    return;
+  }
+
+  // 2. ALL ADMIN COMMAND (Excludes Grant/Revoke)
+  if (cleanCmd === 'all admin' || cleanCmd === 'alladmin' || (action === 'all' && targetUser && targetUser.toLowerCase() === 'admin')) {
     player.godMode = true;
     player.flyMode = true;
     player.invisible = true;
@@ -1007,15 +1026,18 @@ function processCommand(cmd) {
       }
       alert(`Scale updated!`);
       break;
-    case 'giantsize':
-      player.scaleMult = 2.2;
-      alert("Giant mode activated!");
-      break;
-    case 'tinysize':
-      player.scaleMult = 0.5;
-      alert("Tiny mode activated!");
+    case 'freeze':
+      if (opponent) {
+        opponent.frozen = true;
+        setTimeout(() => { if (opponent) opponent.frozen = false; }, 5000);
+      }
+      if (conn && conn.open) {
+        conn.send({ type: 'admin_cmd', cmd: 'freeze', target: targetUser || (opponent ? opponent.name : '') });
+      }
+      alert(`Freezing opponent for 5 seconds!`);
       break;
     case 'nuke':
+      screenFlashTimer = 15;
       if (opponent) opponent.takeDamage(999);
       if (conn && conn.open) {
         conn.send({ type: 'admin_cmd', cmd: 'nuke' });
@@ -1087,14 +1109,6 @@ function processCommand(cmd) {
         opponent.takeDamage(999);
       }
       break;
-    case 'freeze':
-      if (targetUser && opponent && opponent.name.toLowerCase() === targetUser.toLowerCase()) {
-        opponent.frozen = true;
-        setTimeout(() => opponent.frozen = false, 5000);
-      } else if (conn && conn.open) {
-        conn.send({ type: 'admin_cmd', cmd: 'freeze', target: targetUser });
-      }
-      break;
     case 'kick':
       if (targetUser && opponent && opponent.name.toLowerCase() === targetUser.toLowerCase()) {
         opponent = null;
@@ -1150,6 +1164,13 @@ function loop() {
     p.draw();
     if (p.dead) projectiles.splice(idx, 1);
   });
+
+  // Render Nuke Flash Effect
+  if (screenFlashTimer > 0) {
+    ctx.fillStyle = `rgba(255, 255, 255, ${screenFlashTimer / 15})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    screenFlashTimer--;
+  }
 
   broadcastState();
 
