@@ -35,7 +35,7 @@
     #quickControls { position: absolute; top: 75px; left: 15px; display: flex; gap: 8px; flex-wrap: wrap; }
 
     /* Admin Console */
-    #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 800px; max-width: 95vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
+    #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 820px; max-width: 95vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
     #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 13px; border-radius: 6px; outline: none; }
 
     /* Touch Controls Overlay */
@@ -59,8 +59,11 @@
     .shop-card .tier-tag { font-size: 11px; color: #00ffcc; text-transform: uppercase; margin-bottom: 8px; }
 
     /* Username & Room Box */
-    #loginBox { display: flex; flex-direction: column; gap: 12px; width: 340px; text-align: center; }
-    .input-field { padding: 12px; font-size: 15px; border-radius: 6px; border: 1px solid #555; background: #111; color: #fff; text-align: center; outline: none; }
+    #loginBox { display: flex; flex-direction: column; gap: 12px; width: 380px; text-align: center; }
+    .input-field { padding: 12px; font-size: 14px; border-radius: 6px; border: 1px solid #555; background: #111; color: #fff; text-align: center; outline: none; }
+    .mode-tab-group { display: flex; gap: 10px; margin-bottom: 5px; }
+    .mode-tab { flex: 1; padding: 10px; background: #222; border: 1px solid #444; color: #aaa; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
+    .mode-tab.active { background: #00ffcc; color: #000; border-color: #00ffcc; }
 
     #controlsHint { position: absolute; bottom: 15px; left: 15px; font-size: 11px; color: #888; pointer-events: none; }
   </style>
@@ -76,7 +79,7 @@
     <div class="stat-box"><span class="stat-label">Health</span><span id="hpVal" class="stat-val" style="color:#ff4444">30 / 30</span></div>
     <div class="stat-box"><span class="stat-label">Credits</span><span id="creditsVal" class="stat-val">0</span></div>
     <div class="stat-box"><span class="stat-label">Weapon</span><span id="weaponVal" class="stat-val" style="color:#fff">Pistol</span></div>
-    <div class="stat-box">
+    <div class="stat-box" id="aiDiffBox">
       <span class="stat-label">AI Difficulty</span>
       <select id="diffSelect" class="hud-select" onchange="changeDifficulty(this.value)">
         <option value="easy">Easy</option>
@@ -95,7 +98,7 @@
 
   <!-- Scoreboard -->
   <div id="scoreHud" class="hud-panel">
-    <h3>Kills Scoreboard</h3>
+    <h3>First to 5 Kills Wins</h3>
     <div id="scoreVal"><span id="sbPlayerLabel" style="color:#00ffcc;">You: 0</span> | <span id="sbEnemyLabel" style="color:#ff4444;">Enemy: 0</span></div>
   </div>
 
@@ -117,17 +120,36 @@
 
   <!-- Admin Input Console -->
   <div id="adminConsole">
-    <input type="text" id="adminInput" placeholder="Commands: ALL ADMIN, stop all admin, freeze <user>, nuke, god, fly, invis, aimbot, heal, shield, speed <mult>, size <mult>, give <weapon>, credits <amt>, grant <user>, revoke <user>, kill <user>, kick <user>">
+    <input type="text" id="adminInput" placeholder="Commands: grant <user> admin, revoke <user>, ALL ADMIN, stop all admin, freeze <user>, nuke, god, fly, invis, aimbot, heal, shield, speed <mult>, size <mult>, give <weapon>, credits <amt>, kill <user>, kick <user>">
   </div>
 
-  <!-- Username & Lobby Login Modal -->
+  <!-- Game Win/Loss Modal -->
+  <div id="victoryModal" class="modal" style="display:none;">
+    <div id="loginBox" class="modal-content">
+      <h2 id="victoryTitle" style="color: #00ffcc;">VICTORY!</h2>
+      <p id="victoryText">You reached 5 kills first!</p>
+      <button class="btn" onclick="restartMatch()">Play Again</button>
+    </div>
+  </div>
+
+  <!-- Username & Mode Selection Login Modal -->
   <div id="usernameModal" class="modal">
     <div id="loginBox" class="modal-content">
-      <h2>1v1 Arena Login</h2>
-      <p style="font-size: 12px; color: #aaa;">Enter your name and join a 1v1 Room Code to duel real players online!</p>
-      <input type="text" id="usernameInput" class="input-field" maxlength="16" placeholder="Username..." value="Player1">
-      <input type="text" id="roomInput" class="input-field" maxlength="12" placeholder="1v1 Room Code (e.g. Arena123)" value="Arena1">
-      <button class="btn" onclick="confirmLogin()">Enter Game</button>
+      <h2>1v1 Arena Launcher</h2>
+      <p style="font-size: 11px; color: #aaa;">Your progress and username save automatically.</p>
+      
+      <input type="text" id="usernameInput" class="input-field" maxlength="16" placeholder="Enter Username..." value="Player1">
+
+      <div class="mode-tab-group">
+        <button id="tabAi" class="mode-tab active" onclick="selectMode('ai')">VS Bot AI</button>
+        <button id="tabOnline" class="mode-tab" onclick="selectMode('online')">VS Online Player</button>
+      </div>
+
+      <div id="onlineSearchBox" style="display:none; flex-direction:column; gap:8px;">
+        <input type="text" id="targetPlayerInput" class="input-field" placeholder="Search Target Username (or Leave Blank for Auto)">
+      </div>
+
+      <button class="btn" onclick="confirmLogin()">Start Match</button>
     </div>
   </div>
 
@@ -168,7 +190,7 @@ resize();
 
 // Global Game Variables
 let playerName = "Player";
-let roomCode = "Arena1";
+let selectedGameMode = 'ai'; // 'ai' or 'online'
 let credits = 0;
 let playerKills = 0;
 let opponentKills = 0;
@@ -192,6 +214,26 @@ const adminUsers = new Set([OWNER_USERNAME]);
 
 function hasAdmin(user) { return adminUsers.has(user); }
 function isOwnerUser(user) { return user === OWNER_USERNAME; }
+
+// --- PERSISTENCE SYSTEM ---
+function loadSavedProgress() {
+  const savedName = localStorage.getItem('rr_username');
+  const savedCredits = localStorage.getItem('rr_credits');
+  const savedKills = localStorage.getItem('rr_kills');
+
+  if (savedName) {
+    playerName = savedName;
+    document.getElementById('usernameInput').value = savedName;
+  }
+  if (savedCredits !== null) credits = parseInt(savedCredits, 10);
+  if (savedKills !== null) playerKills = parseInt(savedKills, 10);
+}
+
+function saveProgress() {
+  localStorage.setItem('rr_username', playerName);
+  localStorage.setItem('rr_credits', credits);
+  localStorage.setItem('rr_kills', playerKills);
+}
 
 function refreshAdminUI() {
   const isAdmin = player && hasAdmin(player.name);
@@ -361,6 +403,7 @@ class Character {
     this.scaleMult = 1.0;
 
     this.adminTimer = 0;
+    this.matchKills = 0;
   }
 
   update() {
@@ -567,13 +610,23 @@ class Character {
 
     if (this.health <= 0) {
       if (this === opponent) {
+        player.matchKills++;
         playerKills++;
         credits += 50;
+        saveProgress();
       } else {
-        opponentKills++;
+        if (opponent) opponent.matchKills++;
       }
       updateScoreboard();
-      resetMatchPositions();
+
+      // Check First-to-5-Kills Victory Condition
+      if (player.matchKills >= 5) {
+        showVictoryModal("VICTORY!", "You reached 5 kills first!");
+      } else if (opponent && opponent.matchKills >= 5) {
+        showVictoryModal("DEFEAT!", `${opponent.name} reached 5 kills first.`);
+      } else {
+        resetMatchPositions();
+      }
     }
   }
 
@@ -715,6 +768,14 @@ let player = new Character(150, canvas.height - 124, false, "Player");
 let opponent = null;
 let projectiles = [];
 
+function selectMode(mode) {
+  selectedGameMode = mode;
+  document.getElementById('tabAi').className = `mode-tab ${mode === 'ai' ? 'active' : ''}`;
+  document.getElementById('tabOnline').className = `mode-tab ${mode === 'online' ? 'active' : ''}`;
+  document.getElementById('onlineSearchBox').style.display = mode === 'online' ? 'flex' : 'none';
+  document.getElementById('aiDiffBox').style.display = mode === 'ai' ? 'flex' : 'none';
+}
+
 function changeDifficulty(val) {
   aiDifficulty = val;
 }
@@ -750,36 +811,58 @@ function resetMatchPositions() {
   }
 }
 
-function confirmLogin() {
-  const pInput = document.getElementById('usernameInput').value.trim();
-  const rInput = document.getElementById('roomInput').value.trim();
-  
-  if (pInput.length > 0) playerName = pInput;
-  if (rInput.length > 0) roomCode = rInput;
+function showVictoryModal(title, text) {
+  document.getElementById('victoryTitle').innerText = title;
+  document.getElementById('victoryTitle').style.color = title === "VICTORY!" ? "#00ffcc" : "#ff4444";
+  document.getElementById('victoryText').innerText = text;
+  document.getElementById('victoryModal').style.display = 'flex';
+}
 
-  player.name = playerName;
-  document.getElementById('playerNameVal').innerText = playerName;
-  document.getElementById('usernameModal').style.display = 'none';
-
-  refreshAdminUI();
-  initMultiplayer();
-  initShop();
+function restartMatch() {
+  player.matchKills = 0;
+  if (opponent) opponent.matchKills = 0;
+  document.getElementById('victoryModal').style.display = 'none';
+  resetMatchPositions();
   updateScoreboard();
 }
 
-function initMultiplayer() {
-  const peerId = `rival-ragdolls-${roomCode.toLowerCase()}`;
-  peer = new Peer(peerId);
+function confirmLogin() {
+  const pInput = document.getElementById('usernameInput').value.trim();
+  if (pInput.length > 0) playerName = pInput;
+
+  player.name = playerName;
+  document.getElementById('playerNameVal').innerText = playerName;
+  saveProgress();
+  document.getElementById('usernameModal').style.display = 'none';
+
+  refreshAdminUI();
+
+  if (selectedGameMode === 'online') {
+    const targetPeerUser = document.getElementById('targetPlayerInput').value.trim();
+    initMultiplayer(targetPeerUser);
+  } else {
+    isMultiplayer = false;
+    respawnOpponent();
+  }
+  updateScoreboard();
+}
+
+function initMultiplayer(targetUsername) {
+  const myPeerId = `rr-user-${playerName.toLowerCase().replace(/\s+/g, '')}`;
+  peer = new Peer(myPeerId);
 
   peer.on('open', id => {
-    respawnOpponent();
+    if (targetUsername && targetUsername.length > 0) {
+      const targetId = `rr-user-${targetUsername.toLowerCase().replace(/\s+/g, '')}`;
+      conn = peer.connect(targetId);
+      setupPeerConnection(conn);
+    } else {
+      respawnOpponent();
+    }
   });
 
   peer.on('error', err => {
-    if (err.type === 'unavailable-id') {
-      conn = peer.connect(peerId);
-      setupPeerConnection(conn);
-    }
+    respawnOpponent();
   });
 
   peer.on('connection', connection => {
@@ -807,7 +890,7 @@ function setupPeerConnection(connection) {
     } else if (data.type === 'admin_grant') {
       adminUsers.add(data.target);
       refreshAdminUI();
-      if (data.target === player.name) alert("Admin permissions granted by owner!");
+      if (data.target === player.name) alert("Admin permissions granted by room owner!");
     } else if (data.type === 'admin_revoke') {
       if (data.target !== OWNER_USERNAME) {
         adminUsers.delete(data.target);
@@ -815,6 +898,9 @@ function setupPeerConnection(connection) {
         if (data.target === player.name) alert("Admin permissions revoked!");
       }
     } else if (data.type === 'admin_cmd') {
+      // Guard: Block targets if player is NovaWarsDevW
+      if (player.name === OWNER_USERNAME) return;
+
       if (data.target === player.name || !data.target) {
         if (data.cmd === 'kill') player.takeDamage(999);
         if (data.cmd === 'freeze') {
@@ -865,7 +951,7 @@ function respawnOpponent() {
   const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper'];
   const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
 
-  opponent = new Character(canvas.width - 150, canvas.height - 124, true, "Opponent");
+  opponent = new Character(canvas.width - 150, canvas.height - 124, true, "Opponent AI");
   opponent.equippedWeapon = randomWep;
   opponent.weaponData = { ...WEAPONS[randomWep] };
 }
@@ -942,9 +1028,31 @@ function processCommand(cmd) {
   }
 
   const cleanCmd = cmd.toLowerCase().trim();
-  const parts = cmd.split(' ');
-  const action = parts[0].toLowerCase();
-  const targetUser = parts[1];
+  const parts = cmd.trim().split(/\s+/);
+  const action = parts[0] ? parts[0].toLowerCase() : '';
+
+  function extractTargetUser() {
+    let t = '';
+    if (action === 'grant' || action === 'revoke') {
+      t = parts[1] || '';
+      if (t.toLowerCase() === 'admin' && parts[2]) t = parts[2];
+    } else if (action === 'give' && parts[1] && parts[1].toLowerCase() === 'admin') {
+      t = parts[2] || '';
+    } else if (action === 'giveadmin' || action === 'removeadmin') {
+      t = parts[1] || '';
+    }
+    if (t.toLowerCase() === 'admin') t = '';
+    return t;
+  }
+
+  // Guard Helper: Stop admins from targeting NovaWarsDevW
+  function isGuardedOwner(target) {
+    if (target && target.toLowerCase() === OWNER_USERNAME.toLowerCase() && player.name !== OWNER_USERNAME) {
+      alert("PROTECTION ACTIVE: Admin commands cannot be used against NovaWarsDevW.");
+      return true;
+    }
+    return false;
+  }
 
   // 1. STOP ALL ADMIN COMMAND
   if (cleanCmd === 'stop all admin' || cleanCmd === 'stopalladmin' || cleanCmd === 'stop admin') {
@@ -960,8 +1068,8 @@ function processCommand(cmd) {
     return;
   }
 
-  // 2. ALL ADMIN COMMAND (Excludes Grant/Revoke)
-  if (cleanCmd === 'all admin' || cleanCmd === 'alladmin' || (action === 'all' && targetUser && targetUser.toLowerCase() === 'admin')) {
+  // 2. ALL ADMIN COMMAND
+  if (cleanCmd === 'all admin' || cleanCmd === 'alladmin' || (action === 'all' && parts[1] && parts[1].toLowerCase() === 'admin')) {
     player.godMode = true;
     player.flyMode = true;
     player.invisible = true;
@@ -971,6 +1079,7 @@ function processCommand(cmd) {
     player.speedMult = 2.5;
     player.scaleMult = 1.5;
     credits += 10000;
+    saveProgress();
     
     if (isOwnerUser(player.name)) {
       player.equippedWeapon = 'flail';
@@ -982,7 +1091,53 @@ function processCommand(cmd) {
     alert("ACTIVATED ALL ADMIN PERKS! (Grant/Revoke Excluded)");
     return;
   }
-  
+
+  // 3. GRANT ADMIN COMMAND
+  if (action === 'grant' || action === 'giveadmin' || (action === 'give' && parts[1] && parts[1].toLowerCase() === 'admin')) {
+    let target = extractTargetUser();
+    if (!target && opponent) target = opponent.name;
+
+    if (target) {
+      adminUsers.add(target);
+      if (opponent && opponent.name.toLowerCase() === target.toLowerCase()) {
+        adminUsers.add(opponent.name);
+      }
+      if (conn && conn.open) {
+        conn.send({ type: 'admin_grant', target: target });
+      }
+      refreshAdminUI();
+      alert(`Granted admin privileges to "${target}"!`);
+    } else {
+      alert("Usage: grant <username> admin");
+    }
+    return;
+  }
+
+  // 4. REVOKE ADMIN COMMAND
+  if (action === 'revoke' || action === 'removeadmin') {
+    let target = extractTargetUser();
+    if (!target && opponent) target = opponent.name;
+
+    if (target) {
+      if (isGuardedOwner(target)) return;
+      adminUsers.delete(target);
+      if (opponent && opponent.name.toLowerCase() === target.toLowerCase()) {
+        adminUsers.delete(opponent.name);
+      }
+      if (conn && conn.open) {
+        conn.send({ type: 'admin_revoke', target: target });
+      }
+      refreshAdminUI();
+      alert(`Revoked admin privileges from "${target}"!`);
+    } else {
+      alert("Usage: revoke <username>");
+    }
+    return;
+  }
+
+  const targetUser = parts[1];
+  if (isGuardedOwner(targetUser)) return;
+
   switch(action) {
     case 'god':
     case 'invincible':
@@ -1069,36 +1224,7 @@ function processCommand(cmd) {
       break;
     case 'credits':
       credits += parseInt(parts[1] || 1000);
-      break;
-    case 'grant':
-    case 'giveadmin':
-      if (targetUser) {
-        adminUsers.add(targetUser);
-        refreshAdminUI();
-        if (conn && conn.open) {
-          conn.send({ type: 'admin_grant', target: targetUser });
-        }
-        alert(`Granted admin privileges to "${targetUser}"`);
-      } else {
-        alert("Usage: grant <username>");
-      }
-      break;
-    case 'revoke':
-    case 'removeadmin':
-      if (targetUser) {
-        if (targetUser === OWNER_USERNAME) {
-          alert("Cannot revoke owner admin status!");
-        } else {
-          adminUsers.delete(targetUser);
-          refreshAdminUI();
-          if (conn && conn.open) {
-            conn.send({ type: 'admin_revoke', target: targetUser });
-          }
-          alert(`Revoked admin privileges from "${targetUser}"`);
-        }
-      } else {
-        alert("Usage: revoke <username>");
-      }
+      saveProgress();
       break;
     case 'kill':
       if (targetUser && opponent && opponent.name.toLowerCase() === targetUser.toLowerCase()) {
@@ -1125,8 +1251,10 @@ function processCommand(cmd) {
 // --- SCOREBOARD ---
 function updateScoreboard() {
   const enemyLabel = (opponent && opponent.name) ? opponent.name : "Opponent";
+  const pScore = player ? player.matchKills : 0;
+  const eScore = opponent ? opponent.matchKills : 0;
   document.getElementById('scoreVal').innerHTML = `
-    <span style="color:#00ffcc;">${playerName}: ${playerKills}</span> | <span style="color:#ff4444;">${enemyLabel}: ${opponentKills}</span>
+    <span style="color:#00ffcc;">${playerName}: ${pScore} / 5</span> | <span style="color:#ff4444;">${enemyLabel}: ${eScore} / 5</span>
   `;
 }
 
@@ -1182,7 +1310,8 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// Start Engine
+// Load Persistent Save Data & Start Engine
+loadSavedProgress();
 respawnOpponent();
 loop();
 </script>
