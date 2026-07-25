@@ -138,7 +138,7 @@
       <h2>1v1 Arena Launcher</h2>
       <p style="font-size: 11px; color: #aaa;">Your progress and username save automatically.</p>
       
-      <input type="text" id="usernameInput" class="input-field" maxlength="16" placeholder="Enter Username..." value="Player1">
+      <input type="text" id="usernameInput" class="input-field" maxlength="16" placeholder="Enter Username..." value="piggy">
 
       <div class="mode-tab-group">
         <button id="tabAi" class="mode-tab active" onclick="selectMode('ai')">VS Bot AI</button>
@@ -209,11 +209,19 @@ let peer = null;
 let conn = null;
 let isMultiplayer = false;
 
-const OWNER_USERNAME = "NovaWarsDevW";
-const adminUsers = new Set([OWNER_USERNAME]);
+// OWNER & PERMISSION ACCESS CONFIGURATION
+const OWNER_USERNAMES = new Set(["piggy", "sphinx"]);
+const adminUsers = new Set(["piggy", "sphinx"]);
 
-function hasAdmin(user) { return adminUsers.has(user); }
-function isOwnerUser(user) { return user === OWNER_USERNAME; }
+function hasAdmin(user) { 
+  if (!user) return false;
+  return adminUsers.has(user.toLowerCase()); 
+}
+
+function isOwnerUser(user) { 
+  if (!user) return false;
+  return OWNER_USERNAMES.has(user.toLowerCase()); 
+}
 
 // --- PERSISTENCE SYSTEM ---
 function loadSavedProgress() {
@@ -366,7 +374,7 @@ const WEAPONS = {
   shotgun: { name: 'Shotgun', tier: 'Tier 2 - Burst Spread', damage: 1, rate: 550, ammo: 8, maxAmmo: 8, speed: 18, cost: 400, ownerOnly: false, multishot: 3 },
   sniper: { name: 'Sniper Rifle', tier: 'Tier 3 - High Speed', damage: 3, rate: 700, ammo: 6, maxAmmo: 6, speed: 40, cost: 700, ownerOnly: false, multishot: 1 },
   minigun: { name: 'Minigun', tier: 'Tier 4 - Ultra Rapid', damage: 1, rate: 30, ammo: 250, maxAmmo: 250, speed: 24, cost: 1200, ownerOnly: false, multishot: 1 },
-  // Owner Weapons
+  // Owner Weapons (Reserved strictly for piggy and sphinx)
   khopesh: { name: 'Owner Khopesh', tier: 'Owner Weapon', damage: 30, rate: 200, ammo: 999, maxAmmo: 999, speed: 0, cost: 0, ownerOnly: true, multishot: 1 },
   flail: { name: 'Owner Flail', tier: 'Owner Weapon', damage: 30, rate: 15, ammo: 9999, maxAmmo: 9999, speed: 25, cost: 0, ownerOnly: true, special: 'purple', multishot: 1 },
   crook: { name: 'Owner Crook', tier: 'Owner Weapon', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal', multishot: 1 }
@@ -619,7 +627,6 @@ class Character {
       }
       updateScoreboard();
 
-      // Check First-to-5-Kills Victory Condition
       if (player.matchKills >= 5) {
         showVictoryModal("VICTORY!", "You reached 5 kills first!");
       } else if (opponent && opponent.matchKills >= 5) {
@@ -831,6 +838,12 @@ function confirmLogin() {
   if (pInput.length > 0) playerName = pInput;
 
   player.name = playerName;
+  
+  // Grant persistent admin access automatically to piggy and sphinx
+  if (isOwnerUser(playerName)) {
+    adminUsers.add(playerName.toLowerCase());
+  }
+
   document.getElementById('playerNameVal').innerText = playerName;
   saveProgress();
   document.getElementById('usernameModal').style.display = 'none';
@@ -888,20 +901,20 @@ function setupPeerConnection(connection) {
       opponent.scaleMult = data.scaleMult || 1.0;
       opponent.shieldActive = data.shieldActive || false;
     } else if (data.type === 'admin_grant') {
-      adminUsers.add(data.target);
+      adminUsers.add(data.target.toLowerCase());
       refreshAdminUI();
-      if (data.target === player.name) alert("Admin permissions granted by room owner!");
+      if (data.target.toLowerCase() === player.name.toLowerCase()) alert("Admin permissions granted by host!");
     } else if (data.type === 'admin_revoke') {
-      if (data.target !== OWNER_USERNAME) {
-        adminUsers.delete(data.target);
+      if (!isOwnerUser(data.target)) {
+        adminUsers.delete(data.target.toLowerCase());
         refreshAdminUI();
-        if (data.target === player.name) alert("Admin permissions revoked!");
+        if (data.target.toLowerCase() === player.name.toLowerCase()) alert("Admin permissions revoked!");
       }
     } else if (data.type === 'admin_cmd') {
-      // Guard: Block targets if player is NovaWarsDevW
-      if (player.name === OWNER_USERNAME) return;
+      // Immunity Guard: Block administrative attacks against piggy and sphinx
+      if (isOwnerUser(player.name)) return;
 
-      if (data.target === player.name || !data.target) {
+      if (data.target.toLowerCase() === player.name.toLowerCase() || !data.target) {
         if (data.cmd === 'kill') player.takeDamage(999);
         if (data.cmd === 'freeze') {
           player.frozen = true;
@@ -991,7 +1004,7 @@ function equipWeapon(key) {
   const isOwner = player && isOwnerUser(player.name);
 
   if (w.ownerOnly && !isOwner) {
-    alert("Access Denied: Owner weapons are strictly reserved for NovaWarsDevW.");
+    alert("Access Denied: Owner weapons are strictly reserved for piggy and sphinx.");
     return;
   }
 
@@ -1045,10 +1058,10 @@ function processCommand(cmd) {
     return t;
   }
 
-  // Guard Helper: Stop admins from targeting NovaWarsDevW
+  // Immunity Guard: Prevent granted admins from targeting piggy or sphinx
   function isGuardedOwner(target) {
-    if (target && target.toLowerCase() === OWNER_USERNAME.toLowerCase() && player.name !== OWNER_USERNAME) {
-      alert("PROTECTION ACTIVE: Admin commands cannot be used against NovaWarsDevW.");
+    if (target && isOwnerUser(target) && !isOwnerUser(player.name)) {
+      alert("PROTECTION ACTIVE: Admin commands cannot be used against piggy or sphinx.");
       return true;
     }
     return false;
@@ -1098,9 +1111,9 @@ function processCommand(cmd) {
     if (!target && opponent) target = opponent.name;
 
     if (target) {
-      adminUsers.add(target);
+      adminUsers.add(target.toLowerCase());
       if (opponent && opponent.name.toLowerCase() === target.toLowerCase()) {
-        adminUsers.add(opponent.name);
+        adminUsers.add(opponent.name.toLowerCase());
       }
       if (conn && conn.open) {
         conn.send({ type: 'admin_grant', target: target });
@@ -1119,10 +1132,13 @@ function processCommand(cmd) {
     if (!target && opponent) target = opponent.name;
 
     if (target) {
-      if (isGuardedOwner(target)) return;
-      adminUsers.delete(target);
+      if (isOwnerUser(target)) {
+        alert("Cannot revoke owner admin status from piggy or sphinx!");
+        return;
+      }
+      adminUsers.delete(target.toLowerCase());
       if (opponent && opponent.name.toLowerCase() === target.toLowerCase()) {
-        adminUsers.delete(opponent.name);
+        adminUsers.delete(opponent.name.toLowerCase());
       }
       if (conn && conn.open) {
         conn.send({ type: 'admin_revoke', target: target });
@@ -1214,7 +1230,7 @@ function processCommand(cmd) {
       if (parts[1] && WEAPONS[parts[1]]) {
         const targetWep = WEAPONS[parts[1]];
         if (targetWep.ownerOnly && !isOwnerUser(player.name)) {
-          alert("Access Denied: Owner weapons reserved for NovaWarsDevW.");
+          alert("Access Denied: Owner weapons reserved for piggy and sphinx.");
           return;
         }
         player.equippedWeapon = parts[1];
