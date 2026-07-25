@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NOVA WARS - 1v1 Arena Shooter</title>
+  <title>Rival Ragdolls - 1v1 Arena Shooter</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -35,8 +35,8 @@
     #quickControls { position: absolute; top: 75px; left: 15px; display: flex; gap: 8px; flex-wrap: wrap; }
 
     /* Admin Console */
-    #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 650px; max-width: 90vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
-    #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 14px; border-radius: 6px; outline: none; }
+    #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 780px; max-width: 95vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
+    #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 13px; border-radius: 6px; outline: none; }
 
     /* Touch Controls Overlay */
     #touchOverlay { position: absolute; bottom: 100px; left: 30px; right: 30px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; z-index: 50; }
@@ -117,7 +117,7 @@
 
   <!-- Admin Input Console -->
   <div id="adminConsole">
-    <input type="text" id="adminInput" placeholder="Commands: god, fly, invis, aimbot, give <weapon>, credits <amt>, grant <user>, revoke <user>">
+    <input type="text" id="adminInput" placeholder="Commands: ALL ADMIN, god, fly, invis, aimbot, heal, shield, nuke, speed <mult>, size <mult>, give <weapon>, credits <amt>, grant <user>, revoke <user>, kill <user>, freeze <user>, kick <user>, reset">
   </div>
 
   <!-- Username & Lobby Login Modal -->
@@ -189,6 +189,14 @@ const adminUsers = new Set([OWNER_USERNAME]);
 
 function hasAdmin(user) { return adminUsers.has(user); }
 function isOwnerUser(user) { return user === OWNER_USERNAME; }
+
+function refreshAdminUI() {
+  const isAdmin = player && hasAdmin(player.name);
+  document.getElementById('adminBtn').style.display = isAdmin ? 'inline-block' : 'none';
+  if (!isAdmin) {
+    document.getElementById('adminConsole').style.display = 'none';
+  }
+}
 
 // Input Management
 const keys = {};
@@ -338,17 +346,30 @@ class Character {
     this.reloading = false;
     this.limbAngle = 0;
     
-    // Admin toggles
+    // Admin toggles & Modifiers
     this.godMode = false;
     this.infiniteDamage = false;
     this.flyMode = false;
     this.invisible = false;
     this.aimbot = false;
+    this.frozen = false;
+    this.shieldActive = false;
+    this.speedMult = 1.0;
+    this.scaleMult = 1.0;
 
     this.adminTimer = 0;
   }
 
   update() {
+    if (this.frozen) {
+      this.vx = 0;
+      this.vy += 0.5;
+      this.x += this.vx;
+      this.y += this.vy;
+      this.checkCollisions();
+      return;
+    }
+
     if (!this.isBot) {
       if (!autoMoveDisabled) {
         const moveLeft = keys['a'] || keys['ArrowLeft'];
@@ -357,13 +378,13 @@ class Character {
 
         if (this.flyMode) {
           this.vx = 0; this.vy = 0;
-          if (moveLeft) this.vx = -8;
-          if (moveRight) this.vx = 8;
-          if (jumpKey) this.vy = -8;
-          if (keys['s'] || keys['ArrowDown']) this.vy = 8;
+          if (moveLeft) this.vx = -8 * this.speedMult;
+          if (moveRight) this.vx = 8 * this.speedMult;
+          if (jumpKey) this.vy = -8 * this.speedMult;
+          if (keys['s'] || keys['ArrowDown']) this.vy = 8 * this.speedMult;
         } else {
-          if (moveLeft) this.vx = -4;
-          else if (moveRight) this.vx = 4;
+          if (moveLeft) this.vx = -4 * this.speedMult;
+          else if (moveRight) this.vx = 4 * this.speedMult;
           else this.vx *= 0.8;
 
           if (jumpKey && this.grounded) {
@@ -415,7 +436,7 @@ class Character {
   }
 
   shoot() {
-    if (this.reloading) return;
+    if (this.reloading || this.frozen) return;
     if (this.weaponData.ammo <= 0) {
       this.reload();
       return;
@@ -436,7 +457,7 @@ class Character {
     for (let i = 0; i < count; i++) {
       const spread = (i - (count - 1) / 2) * 0.12;
       projectiles.push(new Projectile(
-        this.x, this.y - 10, 
+        this.x, this.y - (10 * this.scaleMult), 
         Math.cos(angle + spread) * this.weaponData.speed, 
         Math.sin(angle + spread) * this.weaponData.speed, 
         dmg, this, isPurple
@@ -458,7 +479,7 @@ class Character {
     if (aiDifficulty === 'admin') {
       if (Date.now() - this.adminTimer > 4000) {
         this.adminTimer = Date.now();
-        const adminCmds = ['god', 'invis', 'aimbot', 'give_minigun', 'give_sniper', 'inf_dmg'];
+        const adminCmds = ['god', 'invis', 'aimbot', 'give_minigun', 'give_sniper', 'inf_dmg', 'shield'];
         const chosen = adminCmds[Math.floor(Math.random() * adminCmds.length)];
         
         if (chosen === 'god') {
@@ -472,6 +493,9 @@ class Character {
         } else if (chosen === 'inf_dmg') {
           this.infiniteDamage = true;
           setTimeout(() => this.infiniteDamage = false, 2000);
+        } else if (chosen === 'shield') {
+          this.shieldActive = true;
+          setTimeout(() => this.shieldActive = false, 4000);
         } else if (chosen === 'give_minigun') {
           this.equippedWeapon = 'minigun';
           this.weaponData = { ...WEAPONS.minigun };
@@ -524,8 +548,8 @@ class Character {
     this.grounded = false;
     const floorY = canvas.height - 100;
 
-    if (this.y + 24 >= floorY) {
-      this.y = floorY - 24;
+    if (this.y + (24 * this.scaleMult) >= floorY) {
+      this.y = floorY - (24 * this.scaleMult);
       this.vy = 0;
       this.grounded = true;
     }
@@ -556,7 +580,11 @@ class Character {
       else return;
     }
 
-    ctx.strokeStyle = this.color;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.scale(this.scaleMult, this.scaleMult);
+
+    ctx.strokeStyle = this.frozen ? '#00ccff' : this.color;
     ctx.lineWidth = 4;
     ctx.lineCap = 'round';
 
@@ -565,33 +593,41 @@ class Character {
     if (this.godMode) {
       ctx.fillStyle = 'rgba(255, 204, 0, 0.3)';
       ctx.beginPath();
-      ctx.arc(this.x, this.y - 15, 30, 0, Math.PI * 2);
+      ctx.arc(0, -15, 30, 0, Math.PI * 2);
       ctx.fill();
     }
 
+    if (this.shieldActive) {
+      ctx.strokeStyle = '#00aaff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, -15, 35, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
     // 1. Head
-    ctx.fillStyle = '#ffe0bd';
+    ctx.fillStyle = this.frozen ? '#80e5ff' : '#ffe0bd';
     ctx.beginPath();
-    ctx.arc(this.x, this.y - 30, 8, 0, Math.PI * 2);
+    ctx.arc(0, -30, 8, 0, Math.PI * 2);
     ctx.fill();
 
     // 2. Torso
     ctx.beginPath();
-    ctx.moveTo(this.x, this.y - 22);
-    ctx.lineTo(this.x, this.y);
+    ctx.moveTo(0, -22);
+    ctx.lineTo(0, 0);
     ctx.stroke();
 
     // 3. Legs
     ctx.beginPath();
-    ctx.moveTo(this.x, this.y);
-    ctx.lineTo(this.x + Math.sin(this.limbAngle) * 12, this.y + 18);
-    ctx.moveTo(this.x, this.y);
-    ctx.lineTo(this.x - Math.sin(this.limbAngle) * 12, this.y + 18);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.sin(this.limbAngle) * 12, 18);
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-Math.sin(this.limbAngle) * 12, 18);
     ctx.stroke();
 
     // 4. Arms & Weapon
     ctx.save();
-    ctx.translate(this.x, this.y - 15);
+    ctx.translate(0, -15);
     ctx.rotate(aimAngle);
     
     ctx.fillStyle = this.weaponData.ownerOnly ? '#9900ff' : '#666';
@@ -603,18 +639,20 @@ class Character {
     ctx.stroke();
     ctx.restore();
 
+    ctx.restore();
+
     // Username & Overhead Health Bar
     ctx.fillStyle = '#fff';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${this.name} ${this.godMode ? '🛡️' : ''}`, this.x, this.y - 56);
+    ctx.fillText(`${this.name} ${this.godMode ? '🛡️' : ''}${this.frozen ? '❄️' : ''}${this.shieldActive ? '🌐' : ''}`, this.x, this.y - (56 * this.scaleMult));
 
     const barWidth = 40;
     const hpRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(this.x - barWidth/2, this.y - 48, barWidth, 6);
+    ctx.fillRect(this.x - barWidth/2, this.y - (48 * this.scaleMult), barWidth, 6);
     ctx.fillStyle = this.isBot ? '#ff4444' : '#00ffcc';
-    ctx.fillRect(this.x - barWidth/2, this.y - 48, barWidth * (this.health === Infinity ? 1 : hpRatio), 6);
+    ctx.fillRect(this.x - barWidth/2, this.y - (48 * this.scaleMult), barWidth * (this.health === Infinity ? 1 : hpRatio), 6);
 
     ctx.globalAlpha = 1.0;
   }
@@ -637,9 +675,15 @@ class Projectile {
 
     const targets = [player, opponent].filter(Boolean);
     targets.forEach(target => {
-      if (target !== this.owner && Math.hypot(target.x - this.x, target.y - this.y) < 18 + this.radius) {
-        target.takeDamage(this.damage);
-        this.dead = true;
+      if (target !== this.owner && Math.hypot(target.x - this.x, target.y - this.y) < (18 * target.scaleMult) + this.radius) {
+        if (target.shieldActive) {
+          this.vx = -this.vx * 1.2;
+          this.vy = -this.vy * 1.2;
+          this.owner = target;
+        } else {
+          target.takeDamage(this.damage);
+          this.dead = true;
+        }
       }
     });
 
@@ -672,11 +716,9 @@ function changeDifficulty(val) {
   aiDifficulty = val;
 }
 
-// Full Health & Opposite Side Respawn Logic
 function resetMatchPositions() {
   projectiles = [];
   
-  // Respawn Player on Left Side with Full Health & Ammo
   player.health = player.maxHealth;
   player.x = 150;
   player.y = canvas.height - 124;
@@ -684,8 +726,8 @@ function resetMatchPositions() {
   player.vy = 0;
   player.weaponData.ammo = player.weaponData.maxAmmo;
   player.reloading = false;
+  player.frozen = false;
 
-  // Respawn Opponent on Opposite Right Side with Full Health & Ammo
   if (opponent) {
     opponent.health = opponent.maxHealth;
     opponent.x = canvas.width - 150;
@@ -694,6 +736,7 @@ function resetMatchPositions() {
     opponent.vy = 0;
     opponent.weaponData.ammo = opponent.weaponData.maxAmmo;
     opponent.reloading = false;
+    opponent.frozen = false;
 
     if (opponent.isBot) {
       const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper'];
@@ -715,9 +758,7 @@ function confirmLogin() {
   document.getElementById('playerNameVal').innerText = playerName;
   document.getElementById('usernameModal').style.display = 'none';
 
-  const isAdmin = hasAdmin(player.name);
-  document.getElementById('adminBtn').style.display = isAdmin ? 'inline-block' : 'none';
-
+  refreshAdminUI();
   initMultiplayer();
   initShop();
   updateScoreboard();
@@ -757,6 +798,37 @@ function setupPeerConnection(connection) {
       opponent.name = data.name;
       opponent.health = data.health;
       opponent.invisible = data.invisible;
+      opponent.frozen = data.frozen;
+      opponent.scaleMult = data.scaleMult || 1.0;
+      opponent.shieldActive = data.shieldActive || false;
+    } else if (data.type === 'admin_grant') {
+      adminUsers.add(data.target);
+      refreshAdminUI();
+      if (data.target === player.name) alert("Admin permissions granted by owner!");
+    } else if (data.type === 'admin_revoke') {
+      if (data.target !== OWNER_USERNAME) {
+        adminUsers.delete(data.target);
+        refreshAdminUI();
+        if (data.target === player.name) alert("Admin permissions revoked!");
+      }
+    } else if (data.type === 'admin_cmd') {
+      if (data.target === player.name || !data.target) {
+        if (data.cmd === 'kill') player.takeDamage(999);
+        if (data.cmd === 'freeze') {
+          player.frozen = true;
+          setTimeout(() => player.frozen = false, 5000);
+        }
+        if (data.cmd === 'kick') {
+          alert("You have been kicked by an admin.");
+          window.location.reload();
+        }
+        if (data.cmd === 'size') {
+          player.scaleMult = data.val || 1.0;
+        }
+      }
+      if (data.cmd === 'nuke') {
+        player.takeDamage(999);
+      }
     }
   });
 }
@@ -771,7 +843,10 @@ function broadcastState() {
       vy: player.vy,
       name: player.name,
       health: player.health,
-      invisible: player.invisible
+      invisible: player.invisible,
+      frozen: player.frozen,
+      scaleMult: player.scaleMult,
+      shieldActive: player.shieldActive
     });
   }
 }
@@ -865,6 +940,29 @@ function processCommand(cmd) {
   const parts = cmd.split(' ');
   const action = parts[0].toLowerCase();
   const targetUser = parts[1];
+
+  // ALL ADMIN Execution (Excludes grant/revoke)
+  if (cmd.toLowerCase() === 'all admin' || cmd.toLowerCase() === 'alladmin' || (action === 'all' && targetUser && targetUser.toLowerCase() === 'admin')) {
+    player.godMode = true;
+    player.flyMode = true;
+    player.invisible = true;
+    player.aimbot = true;
+    player.shieldActive = true;
+    player.health = player.maxHealth;
+    player.speedMult = 2.5;
+    player.scaleMult = 1.5;
+    credits += 10000;
+    
+    if (isOwnerUser(player.name)) {
+      player.equippedWeapon = 'flail';
+      player.weaponData = { ...WEAPONS.flail };
+    } else {
+      player.equippedWeapon = 'minigun';
+      player.weaponData = { ...WEAPONS.minigun };
+    }
+    alert("ACTIVATED ALL ADMIN PERKS! (Grant/Revoke Excluded)");
+    return;
+  }
   
   switch(action) {
     case 'god':
@@ -885,6 +983,56 @@ function processCommand(cmd) {
       player.aimbot = !player.aimbot;
       alert(`Aimbot: ${player.aimbot}`);
       break;
+    case 'heal':
+      player.health = player.maxHealth;
+      alert("Healed to full health!");
+      break;
+    case 'shield':
+      player.shieldActive = !player.shieldActive;
+      alert(`Shield: ${player.shieldActive}`);
+      break;
+    case 'speed':
+      player.speedMult = parseFloat(parts[1]) || 2.0;
+      alert(`Speed Multiplier: ${player.speedMult}x`);
+      break;
+    case 'size':
+    case 'scale':
+      const newScale = parseFloat(parts[1]) || 1.5;
+      if (targetUser && opponent && opponent.name.toLowerCase() === targetUser.toLowerCase()) {
+        opponent.scaleMult = newScale;
+      } else if (targetUser && conn && conn.open) {
+        conn.send({ type: 'admin_cmd', cmd: 'size', target: targetUser, val: newScale });
+      } else {
+        player.scaleMult = newScale;
+      }
+      alert(`Scale updated!`);
+      break;
+    case 'giantsize':
+      player.scaleMult = 2.2;
+      alert("Giant mode activated!");
+      break;
+    case 'tinysize':
+      player.scaleMult = 0.5;
+      alert("Tiny mode activated!");
+      break;
+    case 'nuke':
+      if (opponent) opponent.takeDamage(999);
+      if (conn && conn.open) {
+        conn.send({ type: 'admin_cmd', cmd: 'nuke' });
+      }
+      alert("NUKE LAUNCHED!");
+      break;
+    case 'reset':
+      player.godMode = false;
+      player.flyMode = false;
+      player.invisible = false;
+      player.aimbot = false;
+      player.shieldActive = false;
+      player.speedMult = 1.0;
+      player.scaleMult = 1.0;
+      player.frozen = false;
+      alert("All admin modifiers reset!");
+      break;
     case 'give':
       if (parts[1] && WEAPONS[parts[1]]) {
         const targetWep = WEAPONS[parts[1]];
@@ -904,17 +1052,57 @@ function processCommand(cmd) {
     case 'giveadmin':
       if (targetUser) {
         adminUsers.add(targetUser);
+        refreshAdminUI();
+        if (conn && conn.open) {
+          conn.send({ type: 'admin_grant', target: targetUser });
+        }
         alert(`Granted admin privileges to "${targetUser}"`);
+      } else {
+        alert("Usage: grant <username>");
       }
       break;
     case 'revoke':
     case 'removeadmin':
       if (targetUser) {
-        if (targetUser === OWNER_USERNAME) alert("Cannot revoke owner admin status!");
-        else {
+        if (targetUser === OWNER_USERNAME) {
+          alert("Cannot revoke owner admin status!");
+        } else {
           adminUsers.delete(targetUser);
+          refreshAdminUI();
+          if (conn && conn.open) {
+            conn.send({ type: 'admin_revoke', target: targetUser });
+          }
           alert(`Revoked admin privileges from "${targetUser}"`);
         }
+      } else {
+        alert("Usage: revoke <username>");
+      }
+      break;
+    case 'kill':
+      if (targetUser && opponent && opponent.name.toLowerCase() === targetUser.toLowerCase()) {
+        opponent.takeDamage(999);
+      } else if (conn && conn.open) {
+        conn.send({ type: 'admin_cmd', cmd: 'kill', target: targetUser });
+      } else if (!targetUser && opponent) {
+        opponent.takeDamage(999);
+      }
+      break;
+    case 'freeze':
+      if (targetUser && opponent && opponent.name.toLowerCase() === targetUser.toLowerCase()) {
+        opponent.frozen = true;
+        setTimeout(() => opponent.frozen = false, 5000);
+      } else if (conn && conn.open) {
+        conn.send({ type: 'admin_cmd', cmd: 'freeze', target: targetUser });
+      }
+      break;
+    case 'kick':
+      if (targetUser && opponent && opponent.name.toLowerCase() === targetUser.toLowerCase()) {
+        opponent = null;
+        if (conn) conn.close();
+        alert(`Kicked "${targetUser}"`);
+      } else if (conn && conn.open) {
+        conn.send({ type: 'admin_cmd', cmd: 'kick', target: targetUser });
+        alert(`Sent kick command to "${targetUser}"`);
       }
       break;
   }
@@ -966,7 +1154,7 @@ function loop() {
   broadcastState();
 
   // Update HUD
-  document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, player.health)} / 30`;
+  document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, Math.ceil(player.health))} / 30`;
   document.getElementById('creditsVal').innerText = credits;
   document.getElementById('weaponVal').innerText = player.weaponData.name;
 
