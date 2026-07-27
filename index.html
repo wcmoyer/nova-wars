@@ -7,20 +7,24 @@
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background: #111; color: #fff; touch-action: none; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: #0c0d12; color: #fff; touch-action: none; }
     #gameContainer { position: relative; width: 100vw; height: 100vh; }
     canvas { display: block; background: #14141e; }
 
     /* UI Overlay */
-    .hud-panel { position: absolute; padding: 10px 16px; background: rgba(0,0,0,0.7); border-radius: 8px; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.15); }
+    .hud-panel { position: absolute; padding: 10px 16px; background: rgba(0,0,0,0.75); border-radius: 8px; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.15); }
     #statsHud { top: 15px; left: 15px; display: flex; gap: 15px; align-items: center; }
     .stat-box { display: flex; flex-direction: column; }
     .stat-label { font-size: 9px; text-transform: uppercase; color: #aaa; letter-spacing: 1px; }
     .stat-val { font-size: 16px; font-weight: bold; color: #00ffcc; }
 
-    #scoreHud { top: 15px; right: 15px; text-align: center; width: 220px; }
+    #scoreHud { top: 15px; right: 15px; text-align: center; width: 250px; }
     #scoreHud h3 { font-size: 11px; color: #ffcc00; text-transform: uppercase; margin-bottom: 2px; }
     #scoreVal { font-size: 16px; font-weight: bold; color: #fff; }
+
+    /* Sudden Death Banner */
+    #suddenDeathBanner { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 900; color: #ff0055; text-shadow: 0 0 12px #ff0055, 0 0 24px #ff0000; letter-spacing: 3px; display: none; z-index: 80; animation: pulse 0.8s infinite alternate; }
+    @keyframes pulse { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.1); } }
 
     /* Difficulty Select Styling */
     .hud-select { background: #111; color: #ffcc00; border: 1px solid #555; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 13px; outline: none; cursor: pointer; }
@@ -30,12 +34,13 @@
     .btn:hover { background: #00cca3; transform: scale(1.02); }
     .btn-secondary { background: #333; color: #fff; border: 1px solid #555; }
     .btn-secondary:hover { background: #444; }
+    .btn-danger { background: #ff4444; color: #fff; }
 
     /* Quick Controls */
-    #quickControls { position: absolute; top: 75px; left: 15px; display: flex; gap: 8px; flex-wrap: wrap; }
+    #quickControls { position: absolute; top: 80px; left: 15px; display: flex; gap: 8px; flex-wrap: wrap; }
 
     /* Admin Console */
-    #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 820px; max-width: 95vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
+    #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 850px; max-width: 95vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
     #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 13px; border-radius: 6px; outline: none; }
 
     /* Touch Controls Overlay */
@@ -49,23 +54,33 @@
 
     .joy-label { position: absolute; top: -20px; font-size: 10px; font-weight: bold; letter-spacing: 1px; color: #aaa; text-transform: uppercase; pointer-events: none; }
 
+    /* Action Buttons on Touch */
+    #touchActions { position: absolute; bottom: 20px; right: 160px; display: flex; gap: 10px; pointer-events: auto; z-index: 60; }
+
     /* Modal / Overlay UI */
-    .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 200; }
-    .modal-content { background: #1c1d24; border: 2px solid #333; width: 750px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 25px; overflow-y: auto; color: #fff; }
+    .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); display: flex; justify-content: center; align-items: center; z-index: 200; }
+    .modal-content { background: #1c1d24; border: 2px solid #333; width: 800px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 25px; overflow-y: auto; color: #fff; }
     h2 { margin-bottom: 15px; color: #00ffcc; border-bottom: 2px solid #333; padding-bottom: 8px; }
+    
     .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 15px; margin-top: 15px; }
     .shop-card { background: #252733; padding: 15px; border-radius: 8px; border: 1px solid #3d4052; text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
     .shop-card h4 { color: #ffcc00; margin-bottom: 5px; }
     .shop-card .tier-tag { font-size: 11px; color: #00ffcc; text-transform: uppercase; margin-bottom: 8px; }
 
-    /* Username & Room Box */
-    #loginBox { display: flex; flex-direction: column; gap: 12px; width: 380px; text-align: center; }
+    /* Leaderboard Tables */
+    .lb-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    .lb-table th, .lb-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #333; }
+    .lb-table th { color: #00ffcc; text-transform: uppercase; font-size: 10px; }
+
+    /* Lobby Login Box */
+    #loginBox { display: flex; flex-direction: column; gap: 12px; width: 420px; text-align: center; }
     .input-field { padding: 12px; font-size: 14px; border-radius: 6px; border: 1px solid #555; background: #111; color: #fff; text-align: center; outline: none; }
     .mode-tab-group { display: flex; gap: 10px; margin-bottom: 5px; }
     .mode-tab { flex: 1; padding: 10px; background: #222; border: 1px solid #444; color: #aaa; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
     .mode-tab.active { background: #00ffcc; color: #000; border-color: #00ffcc; }
 
     #controlsHint { position: absolute; bottom: 15px; left: 15px; font-size: 11px; color: #888; pointer-events: none; }
+    .verified-badge { color: #00ffcc; font-weight: bold; margin-left: 3px; text-shadow: 0 0 6px rgba(0,255,204,0.8); }
   </style>
 </head>
 <body>
@@ -73,12 +88,16 @@
 <div id="gameContainer">
   <canvas id="gameCanvas"></canvas>
 
+  <!-- Sudden Death Alert -->
+  <div id="suddenDeathBanner">⚡ SUDDEN DEATH (50 HP) ⚡</div>
+
   <!-- HUD -->
   <div id="statsHud" class="hud-panel">
     <div class="stat-box"><span class="stat-label">Player</span><span id="playerNameVal" class="stat-val" style="color:#00ffcc">Player</span></div>
-    <div class="stat-box"><span class="stat-label">Health</span><span id="hpVal" class="stat-val" style="color:#ff4444">30 / 30</span></div>
+    <div class="stat-box"><span class="stat-label">Health</span><span id="hpVal" class="stat-val" style="color:#ff4444">50 / 50</span></div>
     <div class="stat-box"><span class="stat-label">Credits</span><span id="creditsVal" class="stat-val">0</span></div>
     <div class="stat-box"><span class="stat-label">Weapon</span><span id="weaponVal" class="stat-val" style="color:#fff">Pistol</span></div>
+    <div class="stat-box"><span class="stat-label">Ammo</span><span id="ammoVal" class="stat-val" style="color:#ffcc00">15 / 15</span></div>
     <div class="stat-box" id="aiDiffBox">
       <span class="stat-label">AI Difficulty</span>
       <select id="diffSelect" class="hud-select" onchange="changeDifficulty(this.value)">
@@ -92,6 +111,7 @@
 
   <div id="quickControls">
     <button class="btn" onclick="toggleMenu(true)">Weapon Shop</button>
+    <button class="btn btn-secondary" onclick="toggleLobbyModal(true)">Lobby & Leaderboards</button>
     <button class="btn btn-secondary" id="moveToggleBtn" onclick="toggleMovementMode()">Movement: Manual</button>
     <button class="btn btn-secondary" id="adminBtn" style="display:none;" onclick="toggleAdminConsole()">Admin Console [~]</button>
   </div>
@@ -103,7 +123,7 @@
   </div>
 
   <div id="controlsHint">
-    [WASD / Arrows] Move & Jump | [Mouse / Right Joy-Con] Aim & Hold/Tap to Fire | [R] Reload | [~] Admin Console
+    [WASD/Arrows] Move/Jump | [Mouse/Right Joy-Con] Aim & Fire | [R] Reload | [G] Throw Bomb | [~] Admin Console
   </div>
 
   <!-- On-Screen Dual Joy-Cons -->
@@ -118,9 +138,15 @@
     </div>
   </div>
 
+  <!-- On-Screen Action Buttons -->
+  <div id="touchActions">
+    <button class="btn btn-secondary" onclick="if(player) player.reload();">RELOAD [R]</button>
+    <button class="btn btn-danger" onclick="if(player) player.throwBomb();">BOMB [G]</button>
+  </div>
+
   <!-- Admin Input Console -->
   <div id="adminConsole">
-    <input type="text" id="adminInput" placeholder="Commands: grant <user> admin, revoke <user>, ALL ADMIN, stop all admin, freeze <user>, nuke, god, fly, invis, aimbot, heal, shield, speed <mult>, size <mult>, give <weapon>, credits <amt>, kill <user>, kick <user>">
+    <input type="text" id="adminInput" placeholder="Commands: grant <user>, revoke <user>, verify <user>, unverify <user>, ALL ADMIN, stop all admin, freeze <user>, nuke, god, fly, invis, aimbot, heal, shield, speed <mult>, size <mult>, give <weapon>, credits <amt>, kill <user>, kick <user>">
   </div>
 
   <!-- Game Win/Loss Modal -->
@@ -132,11 +158,11 @@
     </div>
   </div>
 
-  <!-- Username & Mode Selection Login Modal -->
+  <!-- Main Lobby & Leaderboards Modal -->
   <div id="usernameModal" class="modal">
     <div id="loginBox" class="modal-content">
-      <h2>1v1 Arena Launcher</h2>
-      <p style="font-size: 11px; color: #aaa;">Your progress and username save automatically.</p>
+      <h2>Rival Ragdolls Hub</h2>
+      <p style="font-size: 11px; color: #aaa;">Enter your unique username and choose game mode.</p>
       
       <input type="text" id="usernameInput" class="input-field" maxlength="16" placeholder="Enter Username..." value="piggy">
 
@@ -146,18 +172,36 @@
       </div>
 
       <div id="onlineSearchBox" style="display:none; flex-direction:column; gap:8px;">
-        <input type="text" id="targetPlayerInput" class="input-field" placeholder="Search Target Username (or Leave Blank for Auto)">
+        <input type="text" id="targetPlayerInput" class="input-field" placeholder="Search Target Username to Duel">
       </div>
 
-      <button class="btn" onclick="confirmLogin()">Start Match</button>
+      <button class="btn" onclick="confirmLogin()">Enter Arena</button>
+
+      <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
+
+      <h3>Global Leaderboards</h3>
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Kills</th>
+            <th>Credits</th>
+            <th>Damage</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboardBody">
+          <!-- Populated dynamically -->
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <!-- Main Menu / Shop Modal -->
+  <!-- Weapon Shop Modal -->
   <div id="menuModal" class="modal" style="display:none;">
     <div class="modal-content">
-      <h2>Rival Ragdolls - Weapon Loadout</h2>
-      <p>Select your weapon or buy upgrades with your earned credits!</p>
+      <h2>Weapon Loadout & Shop</h2>
+      <p>Select or purchase weapons using your earned credits!</p>
       
       <div style="margin: 15px 0;">
         <h3>Select Arena Style</h3>
@@ -166,11 +210,11 @@
         <button class="btn btn-secondary" onclick="setMap('islands')">Floating Isles</button>
       </div>
 
-      <h3>Weapon Shop (Earn 50 Credits Per Kill)</h3>
+      <h3>Weapon Arsenal</h3>
       <div class="shop-grid" id="weaponShop"></div>
 
       <div style="margin-top: 25px; display: flex; gap: 10px;">
-        <button class="btn" onclick="startOrResumeGame()">Battle Now</button>
+        <button class="btn" onclick="toggleMenu(false)">Resume Battle</button>
       </div>
     </div>
   </div>
@@ -189,29 +233,31 @@ window.addEventListener('resize', resize);
 resize();
 
 // Global Game Variables
-let playerName = "Player";
-let selectedGameMode = 'ai'; // 'ai' or 'online'
+let playerName = "piggy";
+let selectedGameMode = 'ai';
 let credits = 0;
 let playerKills = 0;
-let opponentKills = 0;
+let totalDamageDealt = 0;
 let currentMap = 'cyber';
 let autoMoveDisabled = false;
 let aiDifficulty = 'medium';
+let isSuddenDeath = false;
 
-// Touch Aim Joystick Angle Override
+// Touch Aim Joystick Override
 let touchAimAngle = null;
 
-// Visual FX
+// Visual Effects
 let screenFlashTimer = 0;
 
-// Multiplayer WebRTC PeerJS State
+// WebRTC State
 let peer = null;
 let conn = null;
 let isMultiplayer = false;
 
-// OWNER & PERMISSION ACCESS CONFIGURATION
+// PERMISSION & MASTER PROTECTION SETTINGS
 const OWNER_USERNAMES = new Set(["piggy", "sphinx"]);
 const adminUsers = new Set(["piggy", "sphinx"]);
+const verifiedUsers = new Set(["piggy", "sphinx"]);
 
 function hasAdmin(user) { 
   if (!user) return false;
@@ -223,11 +269,17 @@ function isOwnerUser(user) {
   return OWNER_USERNAMES.has(user.toLowerCase()); 
 }
 
-// --- PERSISTENCE SYSTEM ---
+function isVerified(user) {
+  if (!user) return false;
+  return verifiedUsers.has(user.toLowerCase());
+}
+
+// --- PERSISTENCE & LEADERBOARD SYSTEM ---
 function loadSavedProgress() {
   const savedName = localStorage.getItem('rr_username');
   const savedCredits = localStorage.getItem('rr_credits');
   const savedKills = localStorage.getItem('rr_kills');
+  const savedDmg = localStorage.getItem('rr_dmg');
 
   if (savedName) {
     playerName = savedName;
@@ -235,12 +287,48 @@ function loadSavedProgress() {
   }
   if (savedCredits !== null) credits = parseInt(savedCredits, 10);
   if (savedKills !== null) playerKills = parseInt(savedKills, 10);
+  if (savedDmg !== null) totalDamageDealt = parseInt(savedDmg, 10);
+
+  updateLeaderboardUI();
 }
 
 function saveProgress() {
   localStorage.setItem('rr_username', playerName);
   localStorage.setItem('rr_credits', credits);
   localStorage.setItem('rr_kills', playerKills);
+  localStorage.setItem('rr_dmg', totalDamageDealt);
+  updateLeaderboardUI();
+}
+
+function updateLeaderboardUI() {
+  const lbBody = document.getElementById('leaderboardBody');
+  lbBody.innerHTML = '';
+
+  const entries = [
+    { name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt },
+    { name: "sphinx", kills: 142, credits: 8500, dmg: 4200 },
+    { name: "piggy", kills: 135, credits: 7900, dmg: 3950 },
+    { name: "ArenaBotX", kills: 48, credits: 1200, dmg: 1400 },
+    { name: "ShadowRival", kills: 29, credits: 850, dmg: 870 }
+  ];
+
+  // Remove duplicates & Sort by Kills
+  const uniqueMap = new Map();
+  entries.forEach(e => uniqueMap.set(e.name.toLowerCase(), e));
+  const sorted = Array.from(uniqueMap.values()).sort((a,b) => b.kills - a.kills);
+
+  sorted.forEach((e, idx) => {
+    const tr = document.createElement('tr');
+    const vTag = isVerified(e.name) ? `<span class="verified-badge">✔</span>` : '';
+    tr.innerHTML = `
+      <td>#${idx + 1}</td>
+      <td><strong>${e.name}</strong>${vTag}</td>
+      <td style="color:#00ffcc;">${e.kills}</td>
+      <td style="color:#ffcc00;">${e.credits}</td>
+      <td style="color:#ff4444;">${e.dmg}</td>
+    `;
+    lbBody.appendChild(tr);
+  });
 }
 
 function refreshAdminUI() {
@@ -260,6 +348,7 @@ window.addEventListener('keydown', e => {
   keys[e.key] = true;
   if ((e.key === '~' || e.key === '`') && player && hasAdmin(player.name)) toggleAdminConsole();
   if (e.key.toLowerCase() === 'r' && player) player.reload();
+  if (e.key.toLowerCase() === 'g' && player) player.throwBomb();
 });
 window.addEventListener('keyup', e => {
   keys[e.key.toLowerCase()] = false;
@@ -270,115 +359,223 @@ window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.cli
 window.addEventListener('mousedown', e => { mouse.down = true; mouse.x = e.clientX; mouse.y = e.clientY; });
 window.addEventListener('mouseup', () => mouse.down = false);
 
-// --- JOYSTICK 1: MOVEMENT ---
+// --- JOYSTICK CONTROLS ---
 const moveContainer = document.getElementById('moveContainer');
 const moveStick = document.getElementById('moveStick');
 let moveActive = false;
 
-moveContainer.addEventListener('touchstart', handleMoveStart, { passive: false });
-moveContainer.addEventListener('touchmove', handleMoveMove, { passive: false });
-moveContainer.addEventListener('touchend', handleMoveEnd, { passive: false });
+moveContainer.addEventListener('touchstart', e => { e.preventDefault(); moveActive = true; handleMove(e); }, { passive: false });
+moveContainer.addEventListener('touchmove', handleMove, { passive: false });
+moveContainer.addEventListener('touchend', e => {
+  moveActive = false;
+  moveStick.style.transform = `translate(0px, 0px)`;
+  keys['ArrowLeft'] = false; keys['ArrowRight'] = false; keys['ArrowUp'] = false;
+}, { passive: false });
 
-function handleMoveStart(e) { e.preventDefault(); moveActive = true; handleMoveMove(e); }
-function handleMoveMove(e) {
+function handleMove(e) {
   if (!moveActive) return;
   e.preventDefault();
   const rect = moveContainer.getBoundingClientRect();
   const touch = e.touches[0];
   let deltaX = touch.clientX - (rect.left + rect.width / 2);
   let deltaY = touch.clientY - (rect.top + rect.height / 2);
-  const distance = Math.hypot(deltaX, deltaY);
-  const maxRadius = 32;
+  const dist = Math.hypot(deltaX, deltaY);
+  const maxR = 32;
 
-  if (distance > maxRadius) {
-    deltaX = (deltaX / distance) * maxRadius;
-    deltaY = (deltaY / distance) * maxRadius;
-  }
+  if (dist > maxR) { deltaX = (deltaX / dist) * maxR; deltaY = (deltaY / dist) * maxR; }
   moveStick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
   keys['ArrowLeft'] = deltaX < -10;
   keys['ArrowRight'] = deltaX > 10;
   keys['ArrowUp'] = deltaY < -15;
 }
-function handleMoveEnd(e) {
-  moveActive = false;
-  moveStick.style.transform = `translate(0px, 0px)`;
-  keys['ArrowLeft'] = false; keys['ArrowRight'] = false; keys['ArrowUp'] = false;
-}
 
-// --- JOYSTICK 2: COMBINED AIM & SHOOT JOY-CON ---
 const aimShootContainer = document.getElementById('aimShootContainer');
 const aimShootStick = document.getElementById('aimShootStick');
 let aimShootActive = false;
 
-aimShootContainer.addEventListener('touchstart', handleAimShootStart, { passive: false });
-aimShootContainer.addEventListener('touchmove', handleAimShootMove, { passive: false });
-aimShootContainer.addEventListener('touchend', handleAimShootEnd, { passive: false });
+aimShootContainer.addEventListener('touchstart', e => { e.preventDefault(); aimShootActive = true; mouse.down = true; handleAim(e); }, { passive: false });
+aimShootContainer.addEventListener('touchmove', handleAim, { passive: false });
+aimShootContainer.addEventListener('touchend', e => { aimShootActive = false; mouse.down = false; aimShootStick.style.transform = `translate(0px, 0px)`; }, { passive: false });
 
-function handleAimShootStart(e) {
-  e.preventDefault();
-  aimShootActive = true;
-  mouse.down = true;
-  handleAimShootMove(e);
-}
-
-function handleAimShootMove(e) {
+function handleAim(e) {
   if (!aimShootActive) return;
   e.preventDefault();
   const rect = aimShootContainer.getBoundingClientRect();
   const touch = e.touches[0];
   let deltaX = touch.clientX - (rect.left + rect.width / 2);
   let deltaY = touch.clientY - (rect.top + rect.height / 2);
-  const distance = Math.hypot(deltaX, deltaY);
-  const maxRadius = 32;
+  const dist = Math.hypot(deltaX, deltaY);
+  const maxR = 32;
 
-  if (distance > maxRadius) {
-    deltaX = (deltaX / distance) * maxRadius;
-    deltaY = (deltaY / distance) * maxRadius;
-  }
+  if (dist > maxR) { deltaX = (deltaX / dist) * maxR; deltaY = (deltaY / dist) * maxR; }
   aimShootStick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-  
-  if (distance > 3) {
-    touchAimAngle = Math.atan2(deltaY, deltaX);
-  }
+  if (dist > 3) touchAimAngle = Math.atan2(deltaY, deltaX);
   mouse.down = true;
 }
 
-function handleAimShootEnd(e) {
-  aimShootActive = false;
-  mouse.down = false;
-  aimShootStick.style.transform = `translate(0px, 0px)`;
-}
-
-// Canvas Direct-Touch Support
-canvas.addEventListener('touchstart', (e) => {
-  if (e.touches.length > 0) {
-    mouse.x = e.touches[0].clientX;
-    mouse.y = e.touches[0].clientY;
-    touchAimAngle = null;
-    mouse.down = true;
-  }
-});
-canvas.addEventListener('touchmove', (e) => {
-  if (e.touches.length > 0) {
-    mouse.x = e.touches[0].clientX;
-    mouse.y = e.touches[0].clientY;
-    touchAimAngle = null;
-  }
-});
+// Direct Touch Aiming
+canvas.addEventListener('touchstart', e => { if (e.touches.length > 0) { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; touchAimAngle = null; mouse.down = true; } });
+canvas.addEventListener('touchmove', e => { if (e.touches.length > 0) { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; touchAimAngle = null; } });
 canvas.addEventListener('touchend', () => mouse.down = false);
 
 // --- WEAPONS DATABASE ---
 const WEAPONS = {
-  pistol: { name: 'Pistol', tier: 'Basic Tier', damage: 1, rate: 280, ammo: 15, maxAmmo: 15, speed: 20, cost: 0, ownerOnly: false, multishot: 1 },
-  assault: { name: 'Assault Rifle', tier: 'Tier 1 - Fast Fire', damage: 1, rate: 110, ammo: 30, maxAmmo: 30, speed: 22, cost: 200, ownerOnly: false, multishot: 1 },
-  shotgun: { name: 'Shotgun', tier: 'Tier 2 - Burst Spread', damage: 1, rate: 550, ammo: 8, maxAmmo: 8, speed: 18, cost: 400, ownerOnly: false, multishot: 3 },
-  sniper: { name: 'Sniper Rifle', tier: 'Tier 3 - High Speed', damage: 3, rate: 700, ammo: 6, maxAmmo: 6, speed: 40, cost: 700, ownerOnly: false, multishot: 1 },
-  minigun: { name: 'Minigun', tier: 'Tier 4 - Ultra Rapid', damage: 1, rate: 30, ammo: 250, maxAmmo: 250, speed: 24, cost: 1200, ownerOnly: false, multishot: 1 },
-  // Owner Weapons (Reserved strictly for piggy and sphinx)
-  khopesh: { name: 'Owner Khopesh', tier: 'Owner Weapon', damage: 30, rate: 200, ammo: 999, maxAmmo: 999, speed: 0, cost: 0, ownerOnly: true, multishot: 1 },
-  flail: { name: 'Owner Flail', tier: 'Owner Weapon', damage: 30, rate: 15, ammo: 9999, maxAmmo: 9999, speed: 25, cost: 0, ownerOnly: true, special: 'purple', multishot: 1 },
-  crook: { name: 'Owner Crook', tier: 'Owner Weapon', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal', multishot: 1 }
+  pistol: { name: 'Pistol', tier: 'Basic Tier', damage: 1, rate: 280, ammo: 15, maxAmmo: 15, speed: 20, cost: 0, gravity: 0, ownerOnly: false, multishot: 1, shape: 'pistol' },
+  assault: { name: 'Assault Rifle', tier: 'Tier 1 - Fast Fire', damage: 1, rate: 110, ammo: 30, maxAmmo: 30, speed: 22, cost: 200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'rifle' },
+  shotgun: { name: 'Shotgun', tier: 'Tier 2 - Burst Spread', damage: 1, rate: 550, ammo: 8, maxAmmo: 8, speed: 18, cost: 400, gravity: 0, ownerOnly: false, multishot: 3, shape: 'shotgun' },
+  sniper: { name: 'Sniper Rifle', tier: 'Tier 3 - High Speed', damage: 3, rate: 700, ammo: 6, maxAmmo: 6, speed: 42, cost: 700, gravity: 0, ownerOnly: false, multishot: 1, shape: 'sniper' },
+  minigun: { name: 'Minigun', tier: 'Tier 4 - Ultra Rapid', damage: 1, rate: 30, ammo: 250, maxAmmo: 250, speed: 24, cost: 1200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'minigun' },
+  rocket: { name: 'Rocket Launcher', tier: 'Tier 5 - Explosive Arc', damage: 15, rate: 1200, ammo: 4, maxAmmo: 4, speed: 16, cost: 1800, gravity: 0.1, ownerOnly: false, multishot: 1, shape: 'rocket', isExplosive: true },
+  
+  // Master Weapons (piggy & sphinx exclusive)
+  khopesh: { name: 'Khopesh Blade', tier: 'Master Weapon', damage: 50, rate: 200, ammo: 999, maxAmmo: 999, speed: 0, cost: 0, ownerOnly: true, multishot: 1, shape: 'khopesh' },
+  flail: { name: 'Energy Flail', tier: 'Master Weapon', damage: 50, rate: 15, ammo: 9999, maxAmmo: 9999, speed: 25, cost: 0, ownerOnly: true, special: 'purple', multishot: 1, shape: 'flail' },
+  crook: { name: 'Healer Crook', tier: 'Master Weapon', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal', multishot: 1, shape: 'crook' }
 };
+
+// --- BEANS (HEALTH DROPS) SYSTEM ---
+let beans = [];
+class Bean {
+  constructor(x, y, type = 'red') {
+    this.x = x;
+    this.y = y;
+    this.type = type; // 'red' (+10), 'green' (+20), 'gold' (+35)
+    this.radius = 8;
+    this.vy = 0;
+    
+    if (type === 'red') { this.heal = 10; this.color = '#ff3366'; }
+    if (type === 'green') { this.heal = 20; this.color = '#00ff66'; }
+    if (type === 'gold') { this.heal = 35; this.color = '#ffcc00'; }
+  }
+
+  update() {
+    const floorY = canvas.height - 100;
+    if (this.y + this.radius < floorY) {
+      this.vy += 0.3;
+      this.y += this.vy;
+    } else {
+      this.y = floorY - this.radius;
+      this.vy = 0;
+    }
+
+    // Collision check with players
+    [player, opponent].filter(Boolean).forEach(p => {
+      if (Math.hypot(p.x - this.x, p.y - this.y) < 22) {
+        p.health = Math.min(p.maxHealth, p.health + this.heal);
+        this.dead = true;
+      }
+    });
+  }
+
+  draw() {
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y, this.radius + 3, this.radius, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+
+function spawnRandomBean(xOverride, yOverride) {
+  const x = xOverride || (50 + Math.random() * (canvas.width - 100));
+  const y = yOverride || 50;
+  const rand = Math.random();
+  let type = 'red';
+  if (rand > 0.6) type = 'green';
+  if (rand > 0.9) type = 'gold';
+
+  beans.push(new Bean(x, y, type));
+}
+
+setInterval(() => {
+  if (Math.random() < 0.6) spawnRandomBean();
+}, 8000);
+
+// --- BOMBS & EXPLOSIVES SYSTEM ---
+let bombs = [];
+let explosions = [];
+
+class Bomb {
+  constructor(x, y, vx, vy, owner) {
+    this.x = x; this.y = y;
+    this.vx = vx; this.vy = vy;
+    this.owner = owner;
+    this.radius = 7;
+    this.dead = false;
+  }
+
+  update() {
+    this.vy += 0.45; // Real gravitational acceleration
+    this.x += this.vx;
+    this.y += this.vy;
+
+    const floorY = canvas.height - 100;
+    if (this.y >= floorY || this.x < 0 || this.x > canvas.width) {
+      this.explode();
+    }
+
+    // Check hit direct player
+    [player, opponent].filter(Boolean).forEach(p => {
+      if (p !== this.owner && Math.hypot(p.x - this.x, p.y - this.y) < 20) {
+        this.explode();
+      }
+    });
+  }
+
+  explode() {
+    if (this.dead) return;
+    this.dead = true;
+    explosions.push(new Explosion(this.x, this.y, 60, 25, this.owner));
+  }
+
+  draw() {
+    ctx.fillStyle = '#ff2200';
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillRect(this.x - 2, this.y - 12, 4, 5);
+  }
+}
+
+class Explosion {
+  constructor(x, y, maxRadius, damage, owner) {
+    this.x = x; this.y = y;
+    this.maxRadius = maxRadius;
+    this.radius = 5;
+    this.damage = damage;
+    this.owner = owner;
+    this.dead = false;
+
+    // Apply Splash AoE Damage instantly
+    [player, opponent].filter(Boolean).forEach(p => {
+      const dist = Math.hypot(p.x - this.x, p.y - this.y);
+      if (dist < this.maxRadius) {
+        const falloff = 1 - (dist / this.maxRadius);
+        const dealt = Math.ceil(this.damage * falloff);
+        p.takeDamage(dealt);
+        if (this.owner === player && p !== player) {
+          totalDamageDealt += dealt;
+          saveProgress();
+        }
+      }
+    });
+  }
+
+  update() {
+    this.radius += 4;
+    if (this.radius >= this.maxRadius) this.dead = true;
+  }
+
+  draw() {
+    ctx.fillStyle = `rgba(255, 102, 0, ${1 - this.radius / this.maxRadius})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
 
 // --- RAGDOLL CHARACTER CLASS ---
 class Character {
@@ -387,8 +584,8 @@ class Character {
     this.y = y;
     this.vx = 0;
     this.vy = 0;
-    this.health = 30;
-    this.maxHealth = 30;
+    this.health = 50;
+    this.maxHealth = 50;
     this.isBot = isBot;
     this.name = name;
     
@@ -399,7 +596,7 @@ class Character {
     this.reloading = false;
     this.limbAngle = 0;
     
-    // Admin toggles & Modifiers
+    // Admin & Modifiers
     this.godMode = false;
     this.infiniteDamage = false;
     this.flyMode = false;
@@ -412,6 +609,7 @@ class Character {
 
     this.adminTimer = 0;
     this.matchKills = 0;
+    this.emergencyBeanDropped = false;
   }
 
   update() {
@@ -422,6 +620,13 @@ class Character {
       this.y += this.vy;
       this.checkCollisions();
       return;
+    }
+
+    // Emergency Bean Drop when health is critical (< 15 HP)
+    if (this.health < 15 && !this.emergencyBeanDropped) {
+      this.emergencyBeanDropped = true;
+      spawnRandomBean(this.x - 20, this.y - 100);
+      spawnRandomBean(this.x + 20, this.y - 100);
     }
 
     if (!this.isBot) {
@@ -504,7 +709,7 @@ class Character {
     }
 
     const angle = this.getAimAngle();
-    const dmg = this.infiniteDamage ? 30 : this.weaponData.damage;
+    const dmg = this.infiniteDamage ? 50 : this.weaponData.damage;
     const isPurple = this.weaponData.special === 'purple';
 
     const count = this.weaponData.multishot || 1;
@@ -514,9 +719,16 @@ class Character {
         this.x, this.y - (10 * this.scaleMult), 
         Math.cos(angle + spread) * this.weaponData.speed, 
         Math.sin(angle + spread) * this.weaponData.speed, 
-        dmg, this, isPurple
+        dmg, this, isPurple, this.weaponData.gravity || 0, this.weaponData.isExplosive || false
       ));
     }
+  }
+
+  throwBomb() {
+    if (this.frozen) return;
+    const angle = this.getAimAngle();
+    const speed = 14;
+    bombs.push(new Bomb(this.x, this.y - 10, Math.cos(angle) * speed, Math.sin(angle) * speed, this));
   }
 
   reload() {
@@ -627,6 +839,13 @@ class Character {
       }
       updateScoreboard();
 
+      // Check Sudden Death Activation (4 vs 4)
+      if (player.matchKills === 4 && opponent && opponent.matchKills === 4 && !isSuddenDeath) {
+        triggerSuddenDeath();
+        resetMatchPositions();
+        return;
+      }
+
       if (player.matchKills >= 5) {
         showVictoryModal("VICTORY!", "You reached 5 kills first!");
       } else if (opponent && opponent.matchKills >= 5) {
@@ -668,49 +887,60 @@ class Character {
       ctx.stroke();
     }
 
-    // 1. Head
+    // Body Setup
     ctx.fillStyle = this.frozen ? '#80e5ff' : '#ffe0bd';
     ctx.beginPath();
     ctx.arc(0, -30, 8, 0, Math.PI * 2);
     ctx.fill();
 
-    // 2. Torso
     ctx.beginPath();
-    ctx.moveTo(0, -22);
-    ctx.lineTo(0, 0);
+    ctx.moveTo(0, -22); ctx.lineTo(0, 0); ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(Math.sin(this.limbAngle) * 12, 18);
+    ctx.moveTo(0, 0); ctx.lineTo(-Math.sin(this.limbAngle) * 12, 18);
     ctx.stroke();
 
-    // 3. Legs
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(Math.sin(this.limbAngle) * 12, 18);
-    ctx.moveTo(0, 0);
-    ctx.lineTo(-Math.sin(this.limbAngle) * 12, 18);
-    ctx.stroke();
-
-    // 4. Arms & Weapon
+    // Stylized Weapon Render in Hand
     ctx.save();
     ctx.translate(0, -15);
     ctx.rotate(aimAngle);
     
-    ctx.fillStyle = this.weaponData.ownerOnly ? '#9900ff' : '#666';
-    ctx.fillRect(5, -3, 18, 6);
+    // Non-Realistic Visual Hand Weapon Models
+    const wShape = this.weaponData.shape || 'pistol';
+    ctx.fillStyle = this.weaponData.ownerOnly ? '#a800ff' : '#00ffcc';
+    
+    if (wShape === 'pistol') {
+      ctx.fillRect(4, -3, 14, 5);
+      ctx.fillRect(2, -1, 4, 8);
+    } else if (wShape === 'rifle') {
+      ctx.fillRect(2, -4, 26, 6);
+      ctx.fillRect(8, 2, 4, 8);
+    } else if (wShape === 'minigun') {
+      ctx.fillRect(0, -6, 28, 12);
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillRect(28, -5, 6, 10);
+    } else if (wShape === 'rocket') {
+      ctx.fillStyle = '#ff3300';
+      ctx.fillRect(-2, -8, 32, 14);
+      ctx.fillStyle = '#ffcc00';
+      ctx.beginPath(); ctx.arc(32, -1, 7, 0, Math.PI*2); ctx.fill();
+    } else {
+      ctx.fillRect(4, -4, 22, 7);
+    }
 
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(12, 0);
-    ctx.stroke();
+    ctx.restore();
     ctx.restore();
 
-    ctx.restore();
-
-    // Username & Overhead Health Bar
+    // Username & Verified Badge Overhead
     ctx.fillStyle = '#fff';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${this.name} ${this.godMode ? '🛡️' : ''}${this.frozen ? '❄️' : ''}${this.shieldActive ? '🌐' : ''}`, this.x, this.y - (56 * this.scaleMult));
+    
+    const vMark = isVerified(this.name) ? " ✔" : "";
+    ctx.fillText(`${this.name}${vMark} ${this.godMode ? '🛡️' : ''}${this.frozen ? '❄️' : ''}`, this.x, this.y - (56 * this.scaleMult));
 
-    const barWidth = 40;
+    const barWidth = 44;
     const hpRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(this.x - barWidth/2, this.y - (48 * this.scaleMult), barWidth, 6);
@@ -723,16 +953,19 @@ class Character {
 
 // --- PROJECTILE CLASS ---
 class Projectile {
-  constructor(x, y, vx, vy, damage, owner, isPurple = false) {
+  constructor(x, y, vx, vy, damage, owner, isPurple = false, gravity = 0, isExplosive = false) {
     this.x = x; this.y = y;
     this.vx = vx; this.vy = vy;
     this.damage = damage;
     this.owner = owner;
     this.isPurple = isPurple;
-    this.radius = isPurple ? 10 : 4;
+    this.gravity = gravity;
+    this.isExplosive = isExplosive;
+    this.radius = isPurple ? 10 : (isExplosive ? 7 : 4);
   }
 
   update() {
+    this.vy += this.gravity; // Realistic Ballistics Gravitational Effect
     this.x += this.vx;
     this.y += this.vy;
 
@@ -744,19 +977,28 @@ class Projectile {
           this.vy = -this.vy * 1.2;
           this.owner = target;
         } else {
-          target.takeDamage(this.damage);
+          if (this.isExplosive) {
+            explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
+          } else {
+            target.takeDamage(this.damage);
+            if (this.owner === player) {
+              totalDamageDealt += this.damage;
+              saveProgress();
+            }
+          }
           this.dead = true;
         }
       }
     });
 
     if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height - 100) {
+      if (this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
       this.dead = true;
     }
   }
 
   draw() {
-    ctx.fillStyle = this.isPurple ? '#a800ff' : '#ffcc00';
+    ctx.fillStyle = this.isPurple ? '#a800ff' : (this.isExplosive ? '#ff3300' : '#ffcc00');
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
@@ -770,8 +1012,8 @@ const maps = {
   islands: { bg: '#0a1d24', floor: '#1b3b48' }
 };
 
-// --- GAME INITIALIZATION & MULTIPLAYER ---
-let player = new Character(150, canvas.height - 124, false, "Player");
+// --- GAME CONTROLLERS ---
+let player = new Character(150, canvas.height - 124, false, "piggy");
 let opponent = null;
 let projectiles = [];
 
@@ -783,34 +1025,45 @@ function selectMode(mode) {
   document.getElementById('aiDiffBox').style.display = mode === 'ai' ? 'flex' : 'none';
 }
 
-function changeDifficulty(val) {
-  aiDifficulty = val;
+function changeDifficulty(val) { aiDifficulty = val; }
+
+function triggerSuddenDeath() {
+  isSuddenDeath = true;
+  document.getElementById('suddenDeathBanner').style.display = 'block';
+  player.maxHealth = 50; player.health = 50;
+  if (opponent) { opponent.maxHealth = 50; opponent.health = 50; }
 }
 
 function resetMatchPositions() {
   projectiles = [];
+  bombs = [];
+  explosions = [];
+  beans = [];
   
-  player.health = player.maxHealth;
+  const baseHp = isSuddenDeath ? 50 : 50;
+  player.maxHealth = baseHp;
+  player.health = baseHp;
   player.x = 150;
   player.y = canvas.height - 124;
-  player.vx = 0;
-  player.vy = 0;
+  player.vx = 0; player.vy = 0;
   player.weaponData.ammo = player.weaponData.maxAmmo;
   player.reloading = false;
   player.frozen = false;
+  player.emergencyBeanDropped = false;
 
   if (opponent) {
-    opponent.health = opponent.maxHealth;
+    opponent.maxHealth = baseHp;
+    opponent.health = baseHp;
     opponent.x = canvas.width - 150;
     opponent.y = canvas.height - 124;
-    opponent.vx = 0;
-    opponent.vy = 0;
+    opponent.vx = 0; opponent.vy = 0;
     opponent.weaponData.ammo = opponent.weaponData.maxAmmo;
     opponent.reloading = false;
     opponent.frozen = false;
+    opponent.emergencyBeanDropped = false;
 
     if (opponent.isBot) {
-      const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper'];
+      const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper', 'rocket'];
       const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
       opponent.equippedWeapon = randomWep;
       opponent.weaponData = { ...WEAPONS[randomWep] };
@@ -826,6 +1079,8 @@ function showVictoryModal(title, text) {
 }
 
 function restartMatch() {
+  isSuddenDeath = false;
+  document.getElementById('suddenDeathBanner').style.display = 'none';
   player.matchKills = 0;
   if (opponent) opponent.matchKills = 0;
   document.getElementById('victoryModal').style.display = 'none';
@@ -839,9 +1094,9 @@ function confirmLogin() {
 
   player.name = playerName;
   
-  // Grant persistent admin access automatically to piggy and sphinx
   if (isOwnerUser(playerName)) {
     adminUsers.add(playerName.toLowerCase());
+    verifiedUsers.add(playerName.toLowerCase());
   }
 
   document.getElementById('playerNameVal').innerText = playerName;
@@ -860,6 +1115,12 @@ function confirmLogin() {
   updateScoreboard();
 }
 
+function toggleLobbyModal(show) {
+  document.getElementById('usernameModal').style.display = show ? 'flex' : 'none';
+  if (show) updateLeaderboardUI();
+}
+
+// --- WEBRTC MULTIPLAYER ---
 function initMultiplayer(targetUsername) {
   const myPeerId = `rr-user-${playerName.toLowerCase().replace(/\s+/g, '')}`;
   peer = new Peer(myPeerId);
@@ -875,6 +1136,9 @@ function initMultiplayer(targetUsername) {
   });
 
   peer.on('error', err => {
+    if (err.type === 'unavailable-id') {
+      alert("Username is already online in another session! Unique names required.");
+    }
     respawnOpponent();
   });
 
@@ -901,17 +1165,21 @@ function setupPeerConnection(connection) {
       opponent.scaleMult = data.scaleMult || 1.0;
       opponent.shieldActive = data.shieldActive || false;
     } else if (data.type === 'admin_grant') {
-      adminUsers.add(data.target.toLowerCase());
-      refreshAdminUI();
-      if (data.target.toLowerCase() === player.name.toLowerCase()) alert("Admin permissions granted by host!");
+      if (hasAdmin(playerName) || isOwnerUser(data.sender)) {
+        adminUsers.add(data.target.toLowerCase());
+        refreshAdminUI();
+        if (data.target.toLowerCase() === player.name.toLowerCase()) alert("Admin permissions granted by sphinx!");
+      }
     } else if (data.type === 'admin_revoke') {
       if (!isOwnerUser(data.target)) {
         adminUsers.delete(data.target.toLowerCase());
         refreshAdminUI();
         if (data.target.toLowerCase() === player.name.toLowerCase()) alert("Admin permissions revoked!");
       }
+    } else if (data.type === 'verify_user') {
+      verifiedUsers.add(data.target.toLowerCase());
     } else if (data.type === 'admin_cmd') {
-      // Immunity Guard: Block administrative attacks against piggy and sphinx
+      // MASTER IMMUNITY GUARD
       if (isOwnerUser(player.name)) return;
 
       if (data.target.toLowerCase() === player.name.toLowerCase() || !data.target) {
@@ -961,7 +1229,7 @@ function toggleMovementMode() {
 
 function respawnOpponent() {
   if (isMultiplayer) return;
-  const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper'];
+  const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper', 'rocket'];
   const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
 
   opponent = new Character(canvas.width - 150, canvas.height - 124, true, "Opponent AI");
@@ -988,7 +1256,7 @@ function initShop() {
     card.className = 'shop-card';
     card.innerHTML = `
       <div>
-        <h4>${w.name} ${w.ownerOnly ? '(OWNER)' : ''}</h4>
+        <h4>${w.name} ${w.ownerOnly ? '(MASTER)' : ''}</h4>
         <div class="tier-tag">${w.tier}</div>
         <p style="font-size: 11px;">Ammo: ${w.maxAmmo} | Speed: ${w.speed}</p>
         <p style="margin-top:4px; font-weight:bold; color: #00ffcc;">Cost: ${w.cost} Credits</p>
@@ -1004,7 +1272,7 @@ function equipWeapon(key) {
   const isOwner = player && isOwnerUser(player.name);
 
   if (w.ownerOnly && !isOwner) {
-    alert("Access Denied: Owner weapons are strictly reserved for piggy and sphinx.");
+    alert("Access Denied: Master weapons are strictly reserved for piggy and sphinx.");
     return;
   }
 
@@ -1017,7 +1285,7 @@ function equipWeapon(key) {
   }
 }
 
-// --- ADMIN COMMAND SYSTEM ---
+// --- ADMIN COMMAND CONSOLE ENGINE ---
 function toggleAdminConsole() {
   if (!player || !hasAdmin(player.name)) return;
   const consoleEl = document.getElementById('adminConsole');
@@ -1025,7 +1293,7 @@ function toggleAdminConsole() {
   if (consoleEl.style.display === 'flex') document.getElementById('adminInput').focus();
 }
 
-document.getElementById('adminInput').addEventListener('keydown', (e) => {
+document.getElementById('adminInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     const rawInput = e.target.value;
     e.target.value = '';
@@ -1046,7 +1314,7 @@ function processCommand(cmd) {
 
   function extractTargetUser() {
     let t = '';
-    if (action === 'grant' || action === 'revoke') {
+    if (action === 'grant' || action === 'revoke' || action === 'verify' || action === 'unverify') {
       t = parts[1] || '';
       if (t.toLowerCase() === 'admin' && parts[2]) t = parts[2];
     } else if (action === 'give' && parts[1] && parts[1].toLowerCase() === 'admin') {
@@ -1058,7 +1326,7 @@ function processCommand(cmd) {
     return t;
   }
 
-  // Immunity Guard: Prevent granted admins from targeting piggy or sphinx
+  // Master Protection Guard: Prevents commands against piggy and sphinx
   function isGuardedOwner(target) {
     if (target && isOwnerUser(target) && !isOwnerUser(player.name)) {
       alert("PROTECTION ACTIVE: Admin commands cannot be used against piggy or sphinx.");
@@ -1067,7 +1335,7 @@ function processCommand(cmd) {
     return false;
   }
 
-  // 1. STOP ALL ADMIN COMMAND
+  // 1. STOP ALL ADMIN
   if (cleanCmd === 'stop all admin' || cleanCmd === 'stopalladmin' || cleanCmd === 'stop admin') {
     player.godMode = false;
     player.flyMode = false;
@@ -1081,7 +1349,7 @@ function processCommand(cmd) {
     return;
   }
 
-  // 2. ALL ADMIN COMMAND
+  // 2. ALL ADMIN
   if (cleanCmd === 'all admin' || cleanCmd === 'alladmin' || (action === 'all' && parts[1] && parts[1].toLowerCase() === 'admin')) {
     player.godMode = true;
     player.flyMode = true;
@@ -1105,7 +1373,7 @@ function processCommand(cmd) {
     return;
   }
 
-  // 3. GRANT ADMIN COMMAND
+  // 3. GRANT ADMIN (Supported by sphinx or admins)
   if (action === 'grant' || action === 'giveadmin' || (action === 'give' && parts[1] && parts[1].toLowerCase() === 'admin')) {
     let target = extractTargetUser();
     if (!target && opponent) target = opponent.name;
@@ -1116,17 +1384,17 @@ function processCommand(cmd) {
         adminUsers.add(opponent.name.toLowerCase());
       }
       if (conn && conn.open) {
-        conn.send({ type: 'admin_grant', target: target });
+        conn.send({ type: 'admin_grant', target: target, sender: player.name });
       }
       refreshAdminUI();
       alert(`Granted admin privileges to "${target}"!`);
     } else {
-      alert("Usage: grant <username> admin");
+      alert("Usage: grant <username>");
     }
     return;
   }
 
-  // 4. REVOKE ADMIN COMMAND
+  // 4. REVOKE ADMIN
   if (action === 'revoke' || action === 'removeadmin') {
     let target = extractTargetUser();
     if (!target && opponent) target = opponent.name;
@@ -1147,6 +1415,27 @@ function processCommand(cmd) {
       alert(`Revoked admin privileges from "${target}"!`);
     } else {
       alert("Usage: revoke <username>");
+    }
+    return;
+  }
+
+  // 5. VERIFY PLAYER COMMAND
+  if (action === 'verify' || action === 'verified') {
+    let target = extractTargetUser();
+    if (!target && opponent) target = opponent.name;
+    if (target) {
+      verifiedUsers.add(target.toLowerCase());
+      if (conn && conn.open) conn.send({ type: 'verify_user', target: target });
+      alert(`User "${target}" is now VERIFIED ✔!`);
+    }
+    return;
+  }
+
+  if (action === 'unverify') {
+    let target = extractTargetUser();
+    if (target && !isOwnerUser(target)) {
+      verifiedUsers.delete(target.toLowerCase());
+      alert(`Unverified "${target}".`);
     }
     return;
   }
@@ -1230,7 +1519,7 @@ function processCommand(cmd) {
       if (parts[1] && WEAPONS[parts[1]]) {
         const targetWep = WEAPONS[parts[1]];
         if (targetWep.ownerOnly && !isOwnerUser(player.name)) {
-          alert("Access Denied: Owner weapons reserved for piggy and sphinx.");
+          alert("Access Denied: Master weapons reserved for piggy and sphinx.");
           return;
         }
         player.equippedWeapon = parts[1];
@@ -1276,13 +1565,10 @@ function updateScoreboard() {
 
 function toggleMenu(show) {
   document.getElementById('menuModal').style.display = show ? 'flex' : 'none';
+  if (show) initShop();
 }
 
-function startOrResumeGame() {
-  toggleMenu(false);
-}
-
-// --- MAIN GAME LOOP ---
+// --- MAIN ENGINE LOOP ---
 function loop() {
   const theme = maps[currentMap];
   ctx.fillStyle = theme.bg;
@@ -1294,6 +1580,27 @@ function loop() {
 
   ctx.fillStyle = 'rgba(255,255,255,0.1)';
   ctx.fillRect(0, floorY, canvas.width, 4);
+
+  // Update & Render Health Beans
+  beans.forEach((b, idx) => {
+    b.update();
+    b.draw();
+    if (b.dead) beans.splice(idx, 1);
+  });
+
+  // Update & Render Bombs
+  bombs.forEach((b, idx) => {
+    b.update();
+    b.draw();
+    if (b.dead) bombs.splice(idx, 1);
+  });
+
+  // Update & Render Explosions
+  explosions.forEach((ex, idx) => {
+    ex.update();
+    ex.draw();
+    if (ex.dead) explosions.splice(idx, 1);
+  });
 
   player.update();
   player.draw();
@@ -1309,7 +1616,7 @@ function loop() {
     if (p.dead) projectiles.splice(idx, 1);
   });
 
-  // Render Nuke Flash Effect
+  // Nuke Screen Flash Render
   if (screenFlashTimer > 0) {
     ctx.fillStyle = `rgba(255, 255, 255, ${screenFlashTimer / 15})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1319,16 +1626,18 @@ function loop() {
   broadcastState();
 
   // Update HUD
-  document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, Math.ceil(player.health))} / 30`;
+  document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, Math.ceil(player.health))} / ${player.maxHealth}`;
   document.getElementById('creditsVal').innerText = credits;
   document.getElementById('weaponVal').innerText = player.weaponData.name;
+  document.getElementById('ammoVal').innerText = player.reloading ? "RELOADING..." : `${player.weaponData.ammo} / ${player.weaponData.maxAmmo}`;
 
   requestAnimationFrame(loop);
 }
 
-// Load Persistent Save Data & Start Engine
+// Initialize Save Data & Start Engine
 loadSavedProgress();
 respawnOpponent();
+initShop();
 loop();
 </script>
 </body>
