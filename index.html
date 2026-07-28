@@ -59,10 +59,10 @@
 
     /* Modal / Overlay UI */
     .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.88); display: flex; justify-content: center; align-items: center; z-index: 200; }
-    .modal-content { background: #1c1d24; border: 2px solid #333; width: 800px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 25px; overflow-y: auto; color: #fff; }
+    .modal-content { background: #1c1d24; border: 2px solid #333; width: 850px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 25px; overflow-y: auto; color: #fff; }
     h2 { margin-bottom: 15px; color: #00ffcc; border-bottom: 2px solid #333; padding-bottom: 8px; }
     
-    .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 15px; margin-top: 15px; }
+    .shop-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px; }
     .shop-card { background: #252733; padding: 15px; border-radius: 8px; border: 1px solid #3d4052; text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
     .shop-card h4 { color: #ffcc00; margin-bottom: 5px; }
     .shop-card .tier-tag { font-size: 11px; color: #00ffcc; text-transform: uppercase; margin-bottom: 8px; }
@@ -200,14 +200,15 @@
   <!-- Weapon Shop Modal -->
   <div id="menuModal" class="modal" style="display:none;">
     <div class="modal-content">
-      <h2>Weapon Loadout & Shop</h2>
-      <p>Select or purchase weapons using your earned credits!</p>
+      <h2>Weapon Loadout & Map Selection</h2>
+      <p>Select or purchase weapons and choose multi-platform battle arenas!</p>
       
       <div style="margin: 15px 0;">
-        <h3>Select Arena Style</h3>
-        <button class="btn btn-secondary" onclick="setMap('cyber')">Cyber Arena</button>
-        <button class="btn btn-secondary" onclick="setMap('lava')">Lava Arena</button>
-        <button class="btn btn-secondary" onclick="setMap('islands')">Floating Isles</button>
+        <h3>Select Arena Layout</h3>
+        <button class="btn btn-secondary" onclick="setMap('cyber')">Cyber City (Platforms)</button>
+        <button class="btn btn-secondary" onclick="setMap('lava')">Lava Volcano (Platforms)</button>
+        <button class="btn btn-secondary" onclick="setMap('islands')">Floating Sky Isles</button>
+        <button class="btn btn-secondary" onclick="setMap('warehouse')">Industrial Warehouse</button>
       </div>
 
       <h3>Weapon Arsenal</h3>
@@ -312,7 +313,6 @@ function updateLeaderboardUI() {
     { name: "ShadowRival", kills: 29, credits: 850, dmg: 870 }
   ];
 
-  // Remove duplicates & Sort by Kills
   const uniqueMap = new Map();
   entries.forEach(e => uniqueMap.set(e.name.toLowerCase(), e));
   const sorted = Array.from(uniqueMap.values()).sort((a,b) => b.kills - a.kills);
@@ -423,8 +423,12 @@ const WEAPONS = {
   pistol: { name: 'Pistol', tier: 'Basic Tier', damage: 1, rate: 280, ammo: 15, maxAmmo: 15, speed: 20, cost: 0, gravity: 0, ownerOnly: false, multishot: 1, shape: 'pistol' },
   assault: { name: 'Assault Rifle', tier: 'Tier 1 - Fast Fire', damage: 1, rate: 110, ammo: 30, maxAmmo: 30, speed: 22, cost: 200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'rifle' },
   shotgun: { name: 'Shotgun', tier: 'Tier 2 - Burst Spread', damage: 1, rate: 550, ammo: 8, maxAmmo: 8, speed: 18, cost: 400, gravity: 0, ownerOnly: false, multishot: 3, shape: 'shotgun' },
+  db_shotgun: { name: 'Double Barrel', tier: 'Tier 2 - Heavy Burst', damage: 2, rate: 450, ammo: 4, maxAmmo: 4, speed: 20, cost: 550, gravity: 0, ownerOnly: false, multishot: 5, shape: 'db_shotgun' },
   sniper: { name: 'Sniper Rifle', tier: 'Tier 3 - High Speed', damage: 3, rate: 700, ammo: 6, maxAmmo: 6, speed: 42, cost: 700, gravity: 0, ownerOnly: false, multishot: 1, shape: 'sniper' },
+  crossbow: { name: 'Heavy Crossbow', tier: 'Tier 3 - Silent Bolt', damage: 4, rate: 600, ammo: 8, maxAmmo: 8, speed: 28, cost: 850, gravity: 0.05, ownerOnly: false, multishot: 1, shape: 'crossbow' },
   minigun: { name: 'Minigun', tier: 'Tier 4 - Ultra Rapid', damage: 1, rate: 30, ammo: 250, maxAmmo: 250, speed: 24, cost: 1200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'minigun' },
+  plasma: { name: 'Plasma Cannon', tier: 'Tier 4 - Sci-Fi Energy', damage: 6, rate: 300, ammo: 12, maxAmmo: 12, speed: 30, cost: 1450, gravity: 0, ownerOnly: false, multishot: 1, shape: 'plasma', special: 'purple' },
+  grenade_l: { name: 'Grenade Launcher', tier: 'Tier 5 - AoE Shells', damage: 12, rate: 900, ammo: 6, maxAmmo: 6, speed: 15, cost: 1600, gravity: 0.25, ownerOnly: false, multishot: 1, shape: 'grenade_l', isExplosive: true },
   rocket: { name: 'Rocket Launcher', tier: 'Tier 5 - Explosive Arc', damage: 15, rate: 1200, ammo: 4, maxAmmo: 4, speed: 16, cost: 1800, gravity: 0.1, ownerOnly: false, multishot: 1, shape: 'rocket', isExplosive: true },
   
   // Master Weapons (piggy & sphinx exclusive)
@@ -433,13 +437,65 @@ const WEAPONS = {
   crook: { name: 'Healer Crook', tier: 'Master Weapon', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal', multishot: 1, shape: 'crook' }
 };
 
+// --- MAP LAYOUTS (WITH PLATFORMS) ---
+const maps = {
+  cyber: { 
+    bg: '#12121c', floor: '#2a2d42',
+    platforms: [
+      { x: 180, y: 0.70, w: 220, h: 14 },
+      { x: 0.50, y: 0.50, w: 260, h: 14, isCenter: true },
+      { x: 0.82, y: 0.70, w: 220, h: 14, isRelRight: true }
+    ]
+  },
+  lava: { 
+    bg: '#240a0a', floor: '#4a1515',
+    platforms: [
+      { x: 150, y: 0.65, w: 180, h: 14 },
+      { x: 0.35, y: 0.45, w: 200, h: 14 },
+      { x: 0.65, y: 0.45, w: 200, h: 14 },
+      { x: 0.85, y: 0.65, w: 180, h: 14, isRelRight: true }
+    ]
+  },
+  islands: { 
+    bg: '#0a1d24', floor: '#1b3b48',
+    platforms: [
+      { x: 200, y: 0.60, w: 240, h: 16 },
+      { x: 0.50, y: 0.40, w: 280, h: 16, isCenter: true },
+      { x: 0.80, y: 0.60, w: 240, h: 16, isRelRight: true }
+    ]
+  },
+  warehouse: {
+    bg: '#18191f', floor: '#333642',
+    platforms: [
+      { x: 120, y: 0.72, w: 280, h: 14 },
+      { x: 0.50, y: 0.52, w: 320, h: 14, isCenter: true },
+      { x: 0.88, y: 0.72, w: 280, h: 14, isRelRight: true }
+    ]
+  }
+};
+
+function getCalculatedPlatforms() {
+  const current = maps[currentMap] || maps.cyber;
+  const floorY = canvas.height - 100;
+  
+  return current.platforms.map(p => {
+    let px = p.x;
+    if (p.isCenter) px = (canvas.width / 2) - (p.w / 2);
+    else if (p.isRelRight) px = canvas.width - p.x;
+    else if (p.x < 1) px = canvas.width * p.x;
+
+    let py = p.y < 1 ? canvas.height * p.y : p.y;
+    return { x: px, y: py, w: p.w, h: p.h };
+  });
+}
+
 // --- BEANS (HEALTH DROPS) SYSTEM ---
 let beans = [];
 class Bean {
   constructor(x, y, type = 'red') {
     this.x = x;
     this.y = y;
-    this.type = type; // 'red' (+10), 'green' (+20), 'gold' (+35)
+    this.type = type;
     this.radius = 8;
     this.vy = 0;
     
@@ -450,15 +506,24 @@ class Bean {
 
   update() {
     const floorY = canvas.height - 100;
-    if (this.y + this.radius < floorY) {
+    const platforms = getCalculatedPlatforms();
+    let targetY = floorY;
+
+    // Platform landing check
+    platforms.forEach(p => {
+      if (this.x >= p.x && this.x <= p.x + p.w && this.y <= p.y + 10) {
+        if (p.y < targetY) targetY = p.y;
+      }
+    });
+
+    if (this.y + this.radius < targetY) {
       this.vy += 0.3;
       this.y += this.vy;
     } else {
-      this.y = floorY - this.radius;
+      this.y = targetY - this.radius;
       this.vy = 0;
     }
 
-    // Collision check with players
     [player, opponent].filter(Boolean).forEach(p => {
       if (Math.hypot(p.x - this.x, p.y - this.y) < 22) {
         p.health = Math.min(p.maxHealth, p.health + this.heal);
@@ -507,16 +572,24 @@ class Bomb {
   }
 
   update() {
-    this.vy += 0.45; // Real gravitational acceleration
+    this.vy += 0.45;
     this.x += this.vx;
     this.y += this.vy;
 
     const floorY = canvas.height - 100;
+    const platforms = getCalculatedPlatforms();
+
+    // Check platform impact
+    platforms.forEach(p => {
+      if (this.x >= p.x && this.x <= p.x + p.w && Math.abs(this.y - p.y) < 12) {
+        this.explode();
+      }
+    });
+
     if (this.y >= floorY || this.x < 0 || this.x > canvas.width) {
       this.explode();
     }
 
-    // Check hit direct player
     [player, opponent].filter(Boolean).forEach(p => {
       if (p !== this.owner && Math.hypot(p.x - this.x, p.y - this.y) < 20) {
         this.explode();
@@ -549,7 +622,6 @@ class Explosion {
     this.owner = owner;
     this.dead = false;
 
-    // Apply Splash AoE Damage instantly
     [player, opponent].filter(Boolean).forEach(p => {
       const dist = Math.hypot(p.x - this.x, p.y - this.y);
       if (dist < this.maxRadius) {
@@ -622,7 +694,6 @@ class Character {
       return;
     }
 
-    // Emergency Bean Drop when health is critical (< 15 HP)
     if (this.health < 15 && !this.emergencyBeanDropped) {
       this.emergencyBeanDropped = true;
       spawnRandomBean(this.x - 20, this.y - 100);
@@ -813,8 +884,21 @@ class Character {
   checkCollisions() {
     this.grounded = false;
     const floorY = canvas.height - 100;
+    const platforms = getCalculatedPlatforms();
 
-    if (this.y + (24 * this.scaleMult) >= floorY) {
+    // Check elevated platform landings
+    platforms.forEach(p => {
+      if (this.x >= p.x - 10 && this.x <= p.x + p.w + 10) {
+        if (this.vy >= 0 && this.y + (24 * this.scaleMult) >= p.y && this.y + (24 * this.scaleMult) <= p.y + 12) {
+          this.y = p.y - (24 * this.scaleMult);
+          this.vy = 0;
+          this.grounded = true;
+        }
+      }
+    });
+
+    // Floor Collision
+    if (!this.grounded && this.y + (24 * this.scaleMult) >= floorY) {
       this.y = floorY - (24 * this.scaleMult);
       this.vy = 0;
       this.grounded = true;
@@ -839,7 +923,6 @@ class Character {
       }
       updateScoreboard();
 
-      // Check Sudden Death Activation (4 vs 4)
       if (player.matchKills === 4 && opponent && opponent.matchKills === 4 && !isSuddenDeath) {
         triggerSuddenDeath();
         resetMatchPositions();
@@ -901,38 +984,62 @@ class Character {
     ctx.moveTo(0, 0); ctx.lineTo(-Math.sin(this.limbAngle) * 12, 18);
     ctx.stroke();
 
-    // Stylized Weapon Render in Hand
+    // EXPLICIT FIXED IN-HAND WEAPON RENDERING ENGINE
     ctx.save();
     ctx.translate(0, -15);
     ctx.rotate(aimAngle);
     
-    // Non-Realistic Visual Hand Weapon Models
     const wShape = this.weaponData.shape || 'pistol';
-    ctx.fillStyle = this.weaponData.ownerOnly ? '#a800ff' : '#00ffcc';
-    
+    ctx.fillStyle = this.weaponData.ownerOnly ? '#a800ff' : '#222';
+    ctx.strokeStyle = '#00ffcc';
+    ctx.lineWidth = 1.5;
+
     if (wShape === 'pistol') {
-      ctx.fillRect(4, -3, 14, 5);
-      ctx.fillRect(2, -1, 4, 8);
+      ctx.fillRect(2, -3, 14, 6);
+      ctx.fillRect(0, -1, 4, 9);
+      ctx.strokeRect(2, -3, 14, 6);
     } else if (wShape === 'rifle') {
-      ctx.fillRect(2, -4, 26, 6);
-      ctx.fillRect(8, 2, 4, 8);
+      ctx.fillRect(-2, -4, 28, 7);
+      ctx.fillRect(6, 3, 5, 8);
+      ctx.fillStyle = '#555'; ctx.fillRect(-6, -2, 6, 4); // Stock
+      ctx.strokeRect(-2, -4, 28, 7);
+    } else if (wShape === 'shotgun') {
+      ctx.fillRect(-4, -4, 26, 6);
+      ctx.fillStyle = '#8B4513'; ctx.fillRect(-8, -2, 6, 5); // Wooden Stock
+      ctx.strokeRect(-4, -4, 26, 6);
+    } else if (wShape === 'db_shotgun') {
+      ctx.fillRect(-2, -5, 24, 9);
+      ctx.fillStyle = '#8B4513'; ctx.fillRect(-8, -3, 8, 7);
+      ctx.strokeRect(-2, -5, 24, 9);
+    } else if (wShape === 'sniper') {
+      ctx.fillRect(-6, -3, 34, 5);
+      ctx.fillStyle = '#00ffcc'; ctx.fillRect(8, -7, 10, 4); // Scope
+      ctx.strokeRect(-6, -3, 34, 5);
+    } else if (wShape === 'crossbow') {
+      ctx.fillRect(-2, -3, 24, 5);
+      ctx.beginPath(); ctx.moveTo(18, -12); ctx.lineTo(18, 12); ctx.stroke(); // Bow limbs
     } else if (wShape === 'minigun') {
-      ctx.fillRect(0, -6, 28, 12);
-      ctx.fillStyle = '#ffcc00';
-      ctx.fillRect(28, -5, 6, 10);
+      ctx.fillStyle = '#333'; ctx.fillRect(-4, -7, 30, 13);
+      ctx.fillStyle = '#ffcc00'; ctx.fillRect(26, -6, 6, 11); // Multi-Barrel Tip
+      ctx.strokeRect(-4, -7, 30, 13);
+    } else if (wShape === 'plasma') {
+      ctx.fillStyle = '#6600cc'; ctx.fillRect(-2, -6, 26, 11);
+      ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(24, -1, 5, 0, Math.PI*2); ctx.fill(); // Plasma orb tip
+    } else if (wShape === 'grenade_l') {
+      ctx.fillRect(-2, -5, 24, 9);
+      ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(8, 0, 7, 0, Math.PI*2); ctx.fill(); // Drum Magazine
     } else if (wShape === 'rocket') {
-      ctx.fillStyle = '#ff3300';
-      ctx.fillRect(-2, -8, 32, 14);
-      ctx.fillStyle = '#ffcc00';
-      ctx.beginPath(); ctx.arc(32, -1, 7, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#334433'; ctx.fillRect(-8, -8, 36, 14); // Launcher Tube
+      ctx.fillStyle = '#ff3300'; ctx.beginPath(); ctx.moveTo(28, -8); ctx.lineTo(38, -1); ctx.lineTo(28, 6); ctx.fill(); // Rocket Warhead Tip
+      ctx.strokeRect(-8, -8, 36, 14);
     } else {
-      ctx.fillRect(4, -4, 22, 7);
+      ctx.fillRect(2, -4, 20, 7);
     }
 
     ctx.restore();
     ctx.restore();
 
-    // Username & Verified Badge Overhead
+    // Username & Overhead Health
     ctx.fillStyle = '#fff';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
@@ -965,9 +1072,20 @@ class Projectile {
   }
 
   update() {
-    this.vy += this.gravity; // Realistic Ballistics Gravitational Effect
+    this.vy += this.gravity;
     this.x += this.vx;
     this.y += this.vy;
+
+    const floorY = canvas.height - 100;
+    const platforms = getCalculatedPlatforms();
+
+    // Platform Projectile Detonation
+    platforms.forEach(p => {
+      if (this.x >= p.x && this.x <= p.x + p.w && Math.abs(this.y - p.y) < 8) {
+        if (this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
+        this.dead = true;
+      }
+    });
 
     const targets = [player, opponent].filter(Boolean);
     targets.forEach(target => {
@@ -991,7 +1109,7 @@ class Projectile {
       }
     });
 
-    if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height - 100) {
+    if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > floorY) {
       if (this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
       this.dead = true;
     }
@@ -1004,13 +1122,6 @@ class Projectile {
     ctx.fill();
   }
 }
-
-// --- MAP THEMES ---
-const maps = {
-  cyber: { bg: '#12121c', floor: '#2a2d42' },
-  lava: { bg: '#240a0a', floor: '#4a1515' },
-  islands: { bg: '#0a1d24', floor: '#1b3b48' }
-};
 
 // --- GAME CONTROLLERS ---
 let player = new Character(150, canvas.height - 124, false, "piggy");
@@ -1063,7 +1174,7 @@ function resetMatchPositions() {
     opponent.emergencyBeanDropped = false;
 
     if (opponent.isBot) {
-      const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper', 'rocket'];
+      const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper', 'rocket', 'plasma', 'grenade_l'];
       const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
       opponent.equippedWeapon = randomWep;
       opponent.weaponData = { ...WEAPONS[randomWep] };
@@ -1179,7 +1290,6 @@ function setupPeerConnection(connection) {
     } else if (data.type === 'verify_user') {
       verifiedUsers.add(data.target.toLowerCase());
     } else if (data.type === 'admin_cmd') {
-      // MASTER IMMUNITY GUARD
       if (isOwnerUser(player.name)) return;
 
       if (data.target.toLowerCase() === player.name.toLowerCase() || !data.target) {
@@ -1229,7 +1339,7 @@ function toggleMovementMode() {
 
 function respawnOpponent() {
   if (isMultiplayer) return;
-  const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper', 'rocket'];
+  const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper', 'rocket', 'plasma', 'grenade_l'];
   const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
 
   opponent = new Character(canvas.width - 150, canvas.height - 124, true, "Opponent AI");
@@ -1326,7 +1436,6 @@ function processCommand(cmd) {
     return t;
   }
 
-  // Master Protection Guard: Prevents commands against piggy and sphinx
   function isGuardedOwner(target) {
     if (target && isOwnerUser(target) && !isOwnerUser(player.name)) {
       alert("PROTECTION ACTIVE: Admin commands cannot be used against piggy or sphinx.");
@@ -1373,7 +1482,7 @@ function processCommand(cmd) {
     return;
   }
 
-  // 3. GRANT ADMIN (Supported by sphinx or admins)
+  // 3. GRANT ADMIN
   if (action === 'grant' || action === 'giveadmin' || (action === 'give' && parts[1] && parts[1].toLowerCase() === 'admin')) {
     let target = extractTargetUser();
     if (!target && opponent) target = opponent.name;
@@ -1419,7 +1528,7 @@ function processCommand(cmd) {
     return;
   }
 
-  // 5. VERIFY PLAYER COMMAND
+  // 5. VERIFY PLAYER
   if (action === 'verify' || action === 'verified') {
     let target = extractTargetUser();
     if (!target && opponent) target = opponent.name;
@@ -1570,7 +1679,7 @@ function toggleMenu(show) {
 
 // --- MAIN ENGINE LOOP ---
 function loop() {
-  const theme = maps[currentMap];
+  const theme = maps[currentMap] || maps.cyber;
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1581,21 +1690,30 @@ function loop() {
   ctx.fillStyle = 'rgba(255,255,255,0.1)';
   ctx.fillRect(0, floorY, canvas.width, 4);
 
-  // Update & Render Health Beans
+  // Render Map Platforms
+  const platforms = getCalculatedPlatforms();
+  platforms.forEach(p => {
+    ctx.fillStyle = theme.floor;
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.fillStyle = '#00ffcc';
+    ctx.fillRect(p.x, p.y, p.w, 3);
+  });
+
+  // Render Health Beans
   beans.forEach((b, idx) => {
     b.update();
     b.draw();
     if (b.dead) beans.splice(idx, 1);
   });
 
-  // Update & Render Bombs
+  // Render Bombs
   bombs.forEach((b, idx) => {
     b.update();
     b.draw();
     if (b.dead) bombs.splice(idx, 1);
   });
 
-  // Update & Render Explosions
+  // Render Explosions
   explosions.forEach((ex, idx) => {
     ex.update();
     ex.draw();
