@@ -58,15 +58,10 @@
     .modal-content { background: #181a24; border: 2px solid #333748; width: 880px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 25px; overflow-y: auto; color: #fff; }
     h2 { margin-bottom: 12px; color: #00ffcc; border-bottom: 2px solid #2a2e40; padding-bottom: 8px; }
     
-    .grid-3col { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-top: 15px; }
+    .grid-3col { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px; }
     .shop-card { background: #222534; padding: 15px; border-radius: 8px; border: 1px solid #3a3f56; text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
     .shop-card h4 { color: #ffcc00; margin-bottom: 5px; }
-    .shop-card .tier-tag { font-size: 11px; color: #00ffcc; text-transform: uppercase; margin-bottom: 8px; }
-
-    /* Leaderboard Tables */
-    .lb-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-    .lb-table th, .lb-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #2d3244; }
-    .lb-table th { color: #00ffcc; text-transform: uppercase; font-size: 10px; }
+    .shop-card .cost-tag { font-size: 12px; color: #00ffcc; font-weight: bold; margin: 4px 0 8px 0; }
 
     /* Mode Selection Grid */
     .mode-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 15px 0; }
@@ -77,6 +72,9 @@
 
     #controlsHint { position: absolute; bottom: 15px; left: 15px; font-size: 11px; color: #888; pointer-events: none; }
     .verified-badge { color: #00ffcc; font-weight: bold; margin-left: 3px; text-shadow: 0 0 6px rgba(0,255,204,0.8); }
+    .lb-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    .lb-table th, .lb-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #2d3244; }
+    .lb-table th { color: #00ffcc; text-transform: uppercase; font-size: 10px; }
   </style>
 </head>
 <body>
@@ -84,7 +82,6 @@
 <div id="gameContainer">
   <canvas id="gameCanvas"></canvas>
 
-  <!-- Sudden Death Alert -->
   <div id="suddenDeathBanner">⚡ SUDDEN DEATH (50 HP) ⚡</div>
 
   <!-- HUD -->
@@ -122,7 +119,7 @@
     [WASD/Arrows] Move/Jump | [Mouse/Right Joy-Con] Aim & Fire | [R] Reload | [G] Throw Bomb | [~] Admin Console
   </div>
 
-  <!-- On-Screen Dual Joy-Cons -->
+  <!-- Dual Joy-Cons -->
   <div id="touchOverlay">
     <div id="moveContainer" class="joy-container">
       <span class="joy-label">Move</span>
@@ -134,7 +131,6 @@
     </div>
   </div>
 
-  <!-- On-Screen Action Buttons -->
   <div id="touchActions">
     <button class="btn btn-secondary" onclick="if(player) player.reload();">RELOAD [R]</button>
     <button class="btn btn-danger" onclick="if(player) player.throwBomb();">BOMB [G]</button>
@@ -145,7 +141,7 @@
     <input type="text" id="adminInput" placeholder="Commands: grant <user>, revoke <user>, verify <user>, unverify <user>, ALL ADMIN, stop all admin, freeze <user>, nuke, god, fly, invis, aimbot, heal, shield, speed <mult>, size <mult>, give <weapon>, credits <amt>, kill <user>, kick <user>">
   </div>
 
-  <!-- Game Win/Loss Modal -->
+  <!-- Win/Loss Modal -->
   <div id="victoryModal" class="modal" style="display:none;">
     <div class="modal-content" style="width: 400px; text-align: center;">
       <h2 id="victoryTitle" style="color: #00ffcc;">VICTORY!</h2>
@@ -206,7 +202,7 @@
   <div id="shopModal" class="modal" style="display:none;">
     <div class="modal-content">
       <h2>Weapon Shop & Finish Skins</h2>
-      <p>Equip weapons or customize their visual skin finishes!</p>
+      <p>Equip weapons or customize their visual finish skins!</p>
       
       <div style="margin: 15px 0;">
         <h3>Select Weapon Finish Skin</h3>
@@ -215,6 +211,9 @@
         <button class="btn btn-secondary" onclick="setWeaponSkin('gold')">Pure Gold</button>
         <button class="btn btn-secondary" onclick="setWeaponSkin('galaxy')">Galaxy Purple</button>
         <button class="btn btn-secondary" onclick="setWeaponSkin('lava')">Magma Red</button>
+        <button class="btn btn-secondary" onclick="setWeaponSkin('frost')">Diamond Frost</button>
+        <button class="btn btn-secondary" onclick="setWeaponSkin('void')">Void Darkness</button>
+        <button class="btn btn-secondary" onclick="setWeaponSkin('acid')">Toxic Acid</button>
       </div>
 
       <h3>Weapon Arsenal</h3>
@@ -230,20 +229,9 @@
   <div id="outfitModal" class="modal" style="display:none;">
     <div class="modal-content">
       <h2>Character Outfits Wardrobe</h2>
-      <p>Choose an outfit for your character to wear in-game!</p>
+      <p>Purchase or equip distinct outfits for your ragdoll fighter using earned credits!</p>
 
-      <div class="grid-3col">
-        <div class="shop-card">
-          <h4>Default Outfit</h4>
-          <p style="font-size: 11px; color: #aaa; margin: 8px 0;">Standard smooth combat suit style.</p>
-          <button class="btn" onclick="setOutfit('default')">Equip Default</button>
-        </div>
-        <div class="shop-card">
-          <h4>🐔 Chicken Outfit</h4>
-          <p style="font-size: 11px; color: #ffcc00; margin: 8px 0;">Complete chicken suit with yellow beak & head comb!</p>
-          <button class="btn" onclick="setOutfit('chicken')">Equip Chicken</button>
-        </div>
-      </div>
+      <div class="grid-3col" id="outfitWardrobeGrid"></div>
 
       <div style="margin-top: 25px;">
         <button class="btn" onclick="toggleOutfitModal(false)">Close Wardrobe</button>
@@ -275,8 +263,9 @@ let aiDifficulty = 'medium';
 let isSuddenDeath = false;
 
 // Customization Systems
-let equippedSkin = 'default'; // 'default', 'neon', 'gold', 'galaxy', 'lava'
-let equippedOutfit = 'default'; // 'default', 'chicken'
+let equippedSkin = 'default';
+let equippedOutfit = 'default';
+let ownedOutfits = new Set(['default']);
 
 // Match State
 let selectedMode = '1v1';
@@ -300,6 +289,19 @@ function hasAdmin(user) { if (!user) return false; return adminUsers.has(user.to
 function isOwnerUser(user) { if (!user) return false; return OWNER_USERNAMES.has(user.toLowerCase()); }
 function isVerified(user) { if (!user) return false; return verifiedUsers.has(user.toLowerCase()); }
 
+// --- OUTFITS PRICING & DATABASE ---
+const OUTFITS_CATALOG = {
+  default: { id: 'default', name: '👤 Default Fighter', cost: 0, desc: 'Standard smooth combat suit style.', lockedToSphinx: false },
+  ninja: { id: 'ninja', name: '🥷 Ninja Suit', cost: 350, desc: 'Stealth assassin suit with red head wrap.', lockedToSphinx: false },
+  cowboy: { id: 'cowboy', name: '🤠 Cowboy', cost: 500, desc: 'Classic Stetson hat and leather vest accent.', lockedToSphinx: false },
+  cyber_knight: { id: 'cyber_knight', name: '🛡️ Cyber Knight', cost: 800, desc: 'Heavy cybernetic glowing armor plating.', lockedToSphinx: false },
+  king: { id: 'king', name: '👑 Royal King', cost: 1200, desc: 'Golden crown with royal purple cape accents.', lockedToSphinx: false },
+  skeleton: { id: 'skeleton', name: '💀 Skeleton Lord', cost: 1600, desc: 'Bone-white skull mask with obsidian suit.', lockedToSphinx: false },
+  astronaut: { id: 'astronaut', name: '🚀 Astronaut', cost: 2200, desc: 'White space suit with gold reflective visor.', lockedToSphinx: false },
+  alien: { id: 'alien', name: '👽 Alien Invader', cost: 3000, desc: 'Neon green alien skin with black oversized eyes.', lockedToSphinx: false },
+  chicken: { id: 'chicken', name: '🐔 Chicken Outfit (SPHINX ONLY)', cost: 5000, desc: 'Strictly reserved for sphinx! Feather suit & beak.', lockedToSphinx: true }
+};
+
 // --- PERSISTENCE & LEADERBOARDS ---
 function loadSavedProgress() {
   const savedName = localStorage.getItem('rr_username');
@@ -307,13 +309,26 @@ function loadSavedProgress() {
   const savedKills = localStorage.getItem('rr_kills');
   const savedDmg = localStorage.getItem('rr_dmg');
   const savedOutfit = localStorage.getItem('rr_outfit');
+  const savedOwnedOutfits = localStorage.getItem('rr_owned_outfits');
   const savedSkin = localStorage.getItem('rr_skin');
 
   if (savedName) { playerName = savedName; document.getElementById('usernameInput').value = savedName; }
   if (savedCredits !== null) credits = parseInt(savedCredits, 10);
   if (savedKills !== null) playerKills = parseInt(savedKills, 10);
   if (savedDmg !== null) totalDamageDealt = parseInt(savedDmg, 10);
-  if (savedOutfit) equippedOutfit = savedOutfit;
+
+  if (savedOwnedOutfits) {
+    try {
+      const arr = JSON.parse(savedOwnedOutfits);
+      arr.forEach(o => ownedOutfits.add(o));
+    } catch(e) {}
+  }
+  ownedOutfits.add('default');
+
+  if (savedOutfit) {
+    if (savedOutfit === 'chicken' && playerName.toLowerCase() !== 'sphinx') equippedOutfit = 'default';
+    else equippedOutfit = savedOutfit;
+  }
   if (savedSkin) equippedSkin = savedSkin;
 
   updateLeaderboardUI();
@@ -325,6 +340,7 @@ function saveProgress() {
   localStorage.setItem('rr_kills', playerKills);
   localStorage.setItem('rr_dmg', totalDamageDealt);
   localStorage.setItem('rr_outfit', equippedOutfit);
+  localStorage.setItem('rr_owned_outfits', JSON.stringify(Array.from(ownedOutfits)));
   localStorage.setItem('rr_skin', equippedSkin);
   updateLeaderboardUI();
 }
@@ -435,13 +451,16 @@ canvas.addEventListener('touchend', () => mouse.down = false);
 // --- WEAPONS DATABASE ---
 const WEAPONS = {
   pistol: { name: 'Pistol', tier: 'Basic Tier', damage: 1, rate: 280, ammo: 15, maxAmmo: 15, speed: 20, cost: 0, gravity: 0, ownerOnly: false, multishot: 1, shape: 'pistol' },
+  smg: { name: 'Tactical SMG', tier: 'Tier 1 - Rapid Burst', damage: 1, rate: 75, ammo: 35, maxAmmo: 35, speed: 23, cost: 250, gravity: 0, ownerOnly: false, multishot: 1, shape: 'smg' },
   assault: { name: 'Assault Rifle', tier: 'Tier 1 - Fast Fire', damage: 1, rate: 110, ammo: 30, maxAmmo: 30, speed: 22, cost: 200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'rifle' },
   shotgun: { name: 'Shotgun', tier: 'Tier 2 - Burst Spread', damage: 1, rate: 550, ammo: 8, maxAmmo: 8, speed: 18, cost: 400, gravity: 0, ownerOnly: false, multishot: 3, shape: 'shotgun' },
   db_shotgun: { name: 'Double Barrel', tier: 'Tier 2 - Heavy Burst', damage: 2, rate: 450, ammo: 4, maxAmmo: 4, speed: 20, cost: 550, gravity: 0, ownerOnly: false, multishot: 5, shape: 'db_shotgun' },
   sniper: { name: 'Sniper Rifle', tier: 'Tier 3 - High Speed', damage: 3, rate: 700, ammo: 6, maxAmmo: 6, speed: 42, cost: 700, gravity: 0, ownerOnly: false, multishot: 1, shape: 'sniper' },
+  laser: { name: 'Laser Beam Rifle', tier: 'Tier 3 - Beam Velocity', damage: 5, rate: 400, ammo: 10, maxAmmo: 10, speed: 50, cost: 950, gravity: 0, ownerOnly: false, multishot: 1, shape: 'laser', special: 'cyan' },
   crossbow: { name: 'Heavy Crossbow', tier: 'Tier 3 - Silent Bolt', damage: 4, rate: 600, ammo: 8, maxAmmo: 8, speed: 28, cost: 850, gravity: 0.05, ownerOnly: false, multishot: 1, shape: 'crossbow' },
   minigun: { name: 'Minigun', tier: 'Tier 4 - Ultra Rapid', damage: 1, rate: 30, ammo: 250, maxAmmo: 250, speed: 24, cost: 1200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'minigun' },
   plasma: { name: 'Plasma Cannon', tier: 'Tier 4 - Sci-Fi Energy', damage: 6, rate: 300, ammo: 12, maxAmmo: 12, speed: 30, cost: 1450, gravity: 0, ownerOnly: false, multishot: 1, shape: 'plasma', special: 'purple' },
+  flame_m: { name: 'Flame Mortar', tier: 'Tier 5 - Fire Artillery', damage: 14, rate: 1000, ammo: 5, maxAmmo: 5, speed: 17, cost: 1700, gravity: 0.2, ownerOnly: false, multishot: 1, shape: 'flame_m', isExplosive: true },
   grenade_l: { name: 'Grenade Launcher', tier: 'Tier 5 - AoE Shells', damage: 12, rate: 900, ammo: 6, maxAmmo: 6, speed: 15, cost: 1600, gravity: 0.25, ownerOnly: false, multishot: 1, shape: 'grenade_l', isExplosive: true },
   rocket: { name: 'Rocket Launcher', tier: 'Tier 5 - Explosive Arc', damage: 15, rate: 1200, ammo: 4, maxAmmo: 4, speed: 16, cost: 1800, gravity: 0.1, ownerOnly: false, multishot: 1, shape: 'rocket', isExplosive: true },
   
@@ -471,7 +490,7 @@ function getCalculatedPlatforms() {
   });
 }
 
-// --- HEALTH BEANS & EXPLOSIVES ---
+// --- BEANS & EXPLOSIVES ---
 let beans = [];
 class Bean {
   constructor(x, y, type = 'red') {
@@ -582,7 +601,7 @@ class Explosion {
   }
 }
 
-// --- RAGDOLL CHARACTER & OUTFIT ENGINE ---
+// --- RAGDOLL CHARACTER ENGINE & EXPANDED OUTFITS ---
 class Character {
   constructor(x, y, isBot = false, name = "Player", team = 'A') {
     this.x = x; this.y = y; this.vx = 0; this.vy = 0;
@@ -787,23 +806,53 @@ class Character {
       ctx.beginPath(); ctx.arc(0, -15, 35, 0, Math.PI * 2); ctx.stroke();
     }
 
-    // Outfit Check: Chicken Outfit or Default
-    const isChicken = (this === player && equippedOutfit === 'chicken') || (this.isBot && Math.random() < 0.15);
+    // STRICT SPHINX-ONLY CHICKEN LOCK EVALUATION
+    const isSphinx = this.name.toLowerCase() === 'sphinx';
+    const activeOutfit = (this === player) ? equippedOutfit : 'default';
+    const isChicken = (activeOutfit === 'chicken' && isSphinx) || (this.isBot && isSphinx);
 
-    // Head
-    ctx.fillStyle = isChicken ? '#ffffff' : (this.frozen ? '#80e5ff' : '#ffe0bd');
+    // Head Base Render
+    let headColor = '#ffe0bd';
+    if (isChicken) headColor = '#ffffff';
+    else if (activeOutfit === 'skeleton') headColor = '#e6e6e6';
+    else if (activeOutfit === 'alien') headColor = '#00ff66';
+    else if (this.frozen) headColor = '#80e5ff';
+
+    ctx.fillStyle = headColor;
     ctx.beginPath(); ctx.arc(0, -30, 8, 0, Math.PI * 2); ctx.fill();
 
-    // Chicken Suit Features (Beak & Red Comb)
+    // CUSTOM OUTFIT VISUAL RENDERING ENGINE
     if (isChicken) {
-      // Red Comb on Top
       ctx.fillStyle = '#ff0033';
       ctx.beginPath(); ctx.arc(0, -40, 4, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(3, -38, 3, 0, Math.PI * 2); ctx.fill();
-
-      // Yellow Beak
       ctx.fillStyle = '#ffaa00';
       ctx.beginPath(); ctx.moveTo(6, -30); ctx.lineTo(13, -28); ctx.lineTo(6, -26); ctx.fill();
+    } else if (activeOutfit === 'ninja') {
+      ctx.fillStyle = '#222'; ctx.fillRect(-8, -35, 16, 6);
+      ctx.fillStyle = '#ff0000'; ctx.fillRect(-8, -32, 16, 2);
+    } else if (activeOutfit === 'cyber_knight') {
+      ctx.fillStyle = '#00ffff'; ctx.fillRect(-6, -32, 12, 3);
+    } else if (activeOutfit === 'king') {
+      ctx.fillStyle = '#ffd700'; ctx.beginPath();
+      ctx.moveTo(-7, -36); ctx.lineTo(-7, -42); ctx.lineTo(-3, -38);
+      ctx.lineTo(0, -44); ctx.lineTo(3, -38); ctx.lineTo(7, -42);
+      ctx.lineTo(7, -36); ctx.fill();
+    } else if (activeOutfit === 'skeleton') {
+      ctx.fillStyle = '#111';
+      ctx.beginPath(); ctx.arc(-3, -31, 2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(3, -31, 2, 0, Math.PI*2); ctx.fill();
+    } else if (activeOutfit === 'astronaut') {
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, -30, 11, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(2, -30, 6, 0, Math.PI*2); ctx.fill();
+    } else if (activeOutfit === 'alien') {
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.ellipse(-3, -31, 3, 5, 0.2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(3, -31, 3, 5, -0.2, 0, Math.PI*2); ctx.fill();
+    } else if (activeOutfit === 'cowboy') {
+      ctx.fillStyle = '#8B4513'; ctx.fillRect(-12, -37, 24, 3);
+      ctx.fillRect(-6, -43, 12, 7);
     }
 
     // Torso
@@ -815,28 +864,36 @@ class Character {
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.sin(this.limbAngle) * 12, 18);
     ctx.moveTo(0, 0); ctx.lineTo(-Math.sin(this.limbAngle) * 12, 18); ctx.stroke();
 
-    // VISUAL WEAPON & SKIN ENGINE RENDERING
+    // VISUAL WEAPON & EXPANDED FINISH SKINS ENGINE
     ctx.save();
     ctx.translate(0, -15);
     ctx.rotate(aimAngle);
     
     const wShape = this.weaponData.shape || 'pistol';
     
-    // Skin Accent Colors
     let skinColor = '#222';
     if (equippedSkin === 'neon') skinColor = '#00ffff';
     if (equippedSkin === 'gold') skinColor = '#ffd700';
-    if (equippedSkin === 'galaxy') skinColor = '#ff00ff';
+    if (equippedSkin === 'galaxy') skinColor = '#a800ff';
     if (equippedSkin === 'lava') skinColor = '#ff3300';
+    if (equippedSkin === 'frost') skinColor = '#80e5ff';
+    if (equippedSkin === 'void') skinColor = '#050508';
+    if (equippedSkin === 'acid') skinColor = '#33ff00';
 
     ctx.fillStyle = this.weaponData.ownerOnly ? '#a800ff' : skinColor;
     ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 1.5;
 
     if (wShape === 'pistol') {
       ctx.fillRect(2, -3, 14, 6); ctx.fillRect(0, -1, 4, 9); ctx.strokeRect(2, -3, 14, 6);
+    } else if (wShape === 'smg') {
+      ctx.fillRect(-2, -4, 20, 6); ctx.fillRect(4, 2, 4, 7); ctx.strokeRect(-2, -4, 20, 6);
     } else if (wShape === 'rifle') {
       ctx.fillRect(-2, -4, 28, 7); ctx.fillRect(6, 3, 5, 8);
       ctx.fillStyle = '#555'; ctx.fillRect(-6, -2, 6, 4); ctx.strokeRect(-2, -4, 28, 7);
+    } else if (wShape === 'laser') {
+      ctx.fillStyle = '#00ffff'; ctx.fillRect(-4, -4, 30, 6); ctx.strokeRect(-4, -4, 30, 6);
+    } else if (wShape === 'flame_m') {
+      ctx.fillStyle = '#ff4400'; ctx.fillRect(-6, -6, 28, 11); ctx.strokeRect(-6, -6, 28, 11);
     } else if (wShape === 'rocket') {
       ctx.fillStyle = '#334433'; ctx.fillRect(-8, -8, 36, 14);
       ctx.fillStyle = '#ff3300'; ctx.beginPath(); ctx.moveTo(28, -8); ctx.lineTo(38, -1); ctx.lineTo(28, 6); ctx.fill();
@@ -930,11 +987,74 @@ function setSelectMode(mode) {
 }
 
 function setWeaponSkin(skin) {
-  equippedSkin = skin; saveProgress(); alert(`Equipped ${skin.toUpperCase()} weapon skin!`);
+  equippedSkin = skin; saveProgress(); alert(`Equipped ${skin.toUpperCase()} finish skin!`);
 }
 
-function setOutfit(outfit) {
-  equippedOutfit = outfit; saveProgress(); alert(`Equipped ${outfit.toUpperCase()} outfit!`);
+function initOutfitWardrobe() {
+  const grid = document.getElementById('outfitWardrobeGrid');
+  grid.innerHTML = '';
+
+  Object.keys(OUTFITS_CATALOG).forEach(key => {
+    const item = OUTFITS_CATALOG[key];
+    const isOwned = ownedOutfits.has(key);
+    const isEquipped = (equippedOutfit === key);
+    const isSphinx = playerName.toLowerCase() === 'sphinx';
+
+    const card = document.createElement('div');
+    card.className = 'shop-card';
+    if (item.lockedToSphinx) card.style.border = '2px solid #ffcc00';
+
+    let btnText = "Buy & Equip";
+    let btnStyle = "";
+
+    if (isEquipped) {
+      btnText = "Equipped ✔";
+      btnStyle = "background: #00ffcc; color: #000;";
+    } else if (isOwned) {
+      btnText = "Equip";
+    } else if (item.lockedToSphinx) {
+      btnText = "Equip Chicken 🔒";
+      btnStyle = "background: #ffcc00; color: #000;";
+    }
+
+    card.innerHTML = `
+      <div>
+        <h4>${item.name}</h4>
+        <div class="cost-tag">${item.cost === 0 ? "FREE" : item.cost + " Credits"}</div>
+        <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;">${item.desc}</p>
+      </div>
+      <button class="btn" style="${btnStyle}" onclick="handleOutfitClick('${key}')">${btnText}</button>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function handleOutfitClick(outfitId) {
+  const item = OUTFITS_CATALOG[outfitId];
+  if (!item) return;
+
+  if (item.lockedToSphinx && playerName.toLowerCase() !== 'sphinx') {
+    alert("Access Denied: The Chicken Outfit is strictly reserved for sphinx!");
+    return;
+  }
+
+  if (ownedOutfits.has(outfitId) || item.cost === 0 || (item.lockedToSphinx && playerName.toLowerCase() === 'sphinx')) {
+    equippedOutfit = outfitId;
+    saveProgress();
+    initOutfitWardrobe();
+    alert(`Equipped ${item.name}!`);
+  } else {
+    if (credits >= item.cost) {
+      credits -= item.cost;
+      ownedOutfits.add(outfitId);
+      equippedOutfit = outfitId;
+      saveProgress();
+      initOutfitWardrobe();
+      alert(`Purchased & Equipped ${item.name}!`);
+    } else {
+      alert(`Not enough credits! Required: ${item.cost} Credits (You have: ${credits}).`);
+    }
+  }
 }
 
 function triggerSuddenDeath() {
@@ -948,6 +1068,11 @@ function confirmMatchStart() {
   if (pInput.length > 0) playerName = pInput;
 
   player.name = playerName;
+
+  if (equippedOutfit === 'chicken' && playerName.toLowerCase() !== 'sphinx') {
+    equippedOutfit = 'default';
+  }
+
   if (isOwnerUser(playerName)) {
     adminUsers.add(playerName.toLowerCase());
     verifiedUsers.add(playerName.toLowerCase());
@@ -968,7 +1093,7 @@ function startMatch(mode) {
   document.getElementById('suddenDeathBanner').style.display = 'none';
 
   allEntities = [player];
-  const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper', 'rocket', 'plasma'];
+  const weaponKeys = ['pistol', 'smg', 'assault', 'shotgun', 'sniper', 'laser', 'rocket', 'plasma'];
 
   function createBot(name, x, team) {
     const b = new Character(x, canvas.height - 124, true, name, team);
@@ -1035,7 +1160,7 @@ function showVictoryModal(title, text) {
 
 function toggleHubModal(show) { document.getElementById('hubModal').style.display = show ? 'flex' : 'none'; }
 function toggleShopModal(show) { document.getElementById('shopModal').style.display = show ? 'flex' : 'none'; if(show) initShop(); }
-function toggleOutfitModal(show) { document.getElementById('outfitModal').style.display = show ? 'flex' : 'none'; }
+function toggleOutfitModal(show) { document.getElementById('outfitModal').style.display = show ? 'flex' : 'none'; if(show) initOutfitWardrobe(); }
 
 // --- WEAPON SHOP SYSTEM ---
 function initShop() {
@@ -1132,7 +1257,7 @@ function updateScoreboard() {
 
 function setMap(mapKey) { currentMap = mapKey; alert(`Map set to ${mapKey.toUpperCase()} 3D!`); }
 
-// --- MAIN ENGINE LOOP WITH 3D PLATFORM EXTRUSION ---
+// --- MAIN ENGINE LOOP ---
 function loop() {
   const theme = maps[currentMap] || maps.cyber;
   ctx.fillStyle = theme.bg;
@@ -1140,7 +1265,6 @@ function loop() {
 
   const floorY = canvas.height - 100;
 
-  // Render Extruded 3D Floor
   ctx.fillStyle = theme.side;
   ctx.fillRect(0, floorY, canvas.width, 100);
   ctx.fillStyle = theme.floor;
@@ -1148,22 +1272,12 @@ function loop() {
   ctx.fillStyle = theme.top;
   ctx.fillRect(0, floorY, canvas.width, 3);
 
-  // Render 3D Block Extruded Platforms
   const platforms = getCalculatedPlatforms();
   platforms.forEach(p => {
-    // 3D Front Extruded Face
-    ctx.fillStyle = theme.side;
-    ctx.fillRect(p.x, p.y + p.h, p.w, 18);
+    ctx.fillStyle = theme.side; ctx.fillRect(p.x, p.y + p.h, p.w, 18);
+    ctx.fillStyle = theme.floor; ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.fillStyle = theme.top; ctx.fillRect(p.x, p.y, p.w, 4);
 
-    // 3D Platform Body
-    ctx.fillStyle = theme.floor;
-    ctx.fillRect(p.x, p.y, p.w, p.h);
-
-    // 3D Highlighted Edge
-    ctx.fillStyle = theme.top;
-    ctx.fillRect(p.x, p.y, p.w, 4);
-
-    // Perspective Side Depth
     ctx.fillStyle = theme.side;
     ctx.beginPath();
     ctx.moveTo(p.x + p.w, p.y);
@@ -1173,7 +1287,6 @@ function loop() {
     ctx.fill();
   });
 
-  // Render Game Entities
   beans.forEach((b, idx) => { b.update(); b.draw(); if (b.dead) beans.splice(idx, 1); });
   bombs.forEach((b, idx) => { b.update(); b.draw(); if (b.dead) bombs.splice(idx, 1); });
   explosions.forEach((ex, idx) => { ex.update(); ex.draw(); if (ex.dead) explosions.splice(idx, 1); });
@@ -1187,7 +1300,6 @@ function loop() {
     screenFlashTimer--;
   }
 
-  // Update HUD
   document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, Math.ceil(player.health))} / ${player.maxHealth}`;
   document.getElementById('creditsVal').innerText = credits;
   document.getElementById('weaponVal').innerText = player.weaponData.name;
@@ -1196,7 +1308,6 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// Load Saves & Run Engine
 loadSavedProgress();
 initShop();
 loop();
