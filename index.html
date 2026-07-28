@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NOVA WARS - 1v1 Arena Shooter</title>
+  <title>NOVA WARS - Physical Lobby & Arena Shooter</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -25,6 +25,9 @@
     /* Sudden Death Banner */
     #suddenDeathBanner { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 900; color: #ff0055; text-shadow: 0 0 12px #ff0055, 0 0 24px #ff0000; letter-spacing: 3px; display: none; z-index: 80; animation: pulse 0.8s infinite alternate; }
     @keyframes pulse { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.1); } }
+
+    /* Lobby Zone HUD Banner */
+    #lobbyStatusBanner { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-size: 18px; font-weight: bold; color: #00ffcc; text-shadow: 0 0 10px rgba(0,255,204,0.6); pointer-events: none; z-index: 70; background: rgba(0,0,0,0.6); padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(0,255,204,0.3); }
 
     /* Difficulty Select Styling */
     .hud-select { background: #111; color: #ffcc00; border: 1px solid #555; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 13px; outline: none; cursor: pointer; }
@@ -75,9 +78,6 @@
     /* Lobby Login Box */
     #loginBox { display: flex; flex-direction: column; gap: 12px; width: 420px; text-align: center; }
     .input-field { padding: 12px; font-size: 14px; border-radius: 6px; border: 1px solid #555; background: #111; color: #fff; text-align: center; outline: none; }
-    .mode-tab-group { display: flex; gap: 10px; margin-bottom: 5px; }
-    .mode-tab { flex: 1; padding: 10px; background: #222; border: 1px solid #444; color: #aaa; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
-    .mode-tab.active { background: #00ffcc; color: #000; border-color: #00ffcc; }
 
     #controlsHint { position: absolute; bottom: 15px; left: 15px; font-size: 11px; color: #888; pointer-events: none; }
     .verified-badge { color: #00ffcc; font-weight: bold; margin-left: 3px; text-shadow: 0 0 6px rgba(0,255,204,0.8); }
@@ -90,6 +90,9 @@
 
   <!-- Sudden Death Alert -->
   <div id="suddenDeathBanner">⚡ SUDDEN DEATH (50 HP) ⚡</div>
+
+  <!-- Physical Lobby Status Banner -->
+  <div id="lobbyStatusBanner">🏙️ LOBBY ZONE — Walk onto a Pad to Queue!</div>
 
   <!-- HUD -->
   <div id="statsHud" class="hud-panel">
@@ -111,15 +114,15 @@
 
   <div id="quickControls">
     <button class="btn" onclick="toggleMenu(true)">Weapon Shop</button>
-    <button class="btn btn-secondary" onclick="toggleLobbyModal(true)">Lobby & Leaderboards</button>
-    <button class="btn btn-secondary" id="moveToggleBtn" onclick="toggleMovementMode()">Movement: Manual</button>
+    <button class="btn btn-secondary" onclick="toggleLobbyModal(true)">Leaderboards</button>
+    <button class="btn btn-secondary" id="returnLobbyBtn" style="display:none;" onclick="returnToLobby()">Return to Lobby</button>
     <button class="btn btn-secondary" id="adminBtn" style="display:none;" onclick="toggleAdminConsole()">Admin Console [~]</button>
   </div>
 
   <!-- Scoreboard -->
-  <div id="scoreHud" class="hud-panel">
-    <h3>First to 5 Kills Wins</h3>
-    <div id="scoreVal"><span id="sbPlayerLabel" style="color:#00ffcc;">You: 0</span> | <span id="sbEnemyLabel" style="color:#ff4444;">Enemy: 0</span></div>
+  <div id="scoreHud" class="hud-panel" style="display:none;">
+    <h3 id="modeTitleText">Mode: 1v1 Arena</h3>
+    <div id="scoreVal"><span id="sbPlayerLabel" style="color:#00ffcc;">Team A: 0</span> | <span id="sbEnemyLabel" style="color:#ff4444;">Team B: 0</span></div>
   </div>
 
   <div id="controlsHint">
@@ -153,29 +156,20 @@
   <div id="victoryModal" class="modal" style="display:none;">
     <div id="loginBox" class="modal-content">
       <h2 id="victoryTitle" style="color: #00ffcc;">VICTORY!</h2>
-      <p id="victoryText">You reached 5 kills first!</p>
-      <button class="btn" onclick="restartMatch()">Play Again</button>
+      <p id="victoryText">Your squad reached 5 kills first!</p>
+      <button class="btn" onclick="returnToLobby()">Return to Lobby</button>
     </div>
   </div>
 
-  <!-- Main Lobby & Leaderboards Modal -->
+  <!-- Main Login & Leaderboards Modal -->
   <div id="usernameModal" class="modal">
     <div id="loginBox" class="modal-content">
-      <h2>NOVA WARS LOBBY</h2>
-      <p style="font-size: 11px; color: #aaa;">Enter your unique username and choose game mode.</p>
+      <h2>NOVA WARS - Lobby Spawn</h2>
+      <p style="font-size: 11px; color: #aaa;">Enter your username to step into the walkaround physical lobby.</p>
       
       <input type="text" id="usernameInput" class="input-field" maxlength="16" placeholder="Enter Username..." value="piggy">
 
-      <div class="mode-tab-group">
-        <button id="tabAi" class="mode-tab active" onclick="selectMode('ai')">VS Bot AI</button>
-        <button id="tabOnline" class="mode-tab" onclick="selectMode('online')">VS Online Player</button>
-      </div>
-
-      <div id="onlineSearchBox" style="display:none; flex-direction:column; gap:8px;">
-        <input type="text" id="targetPlayerInput" class="input-field" placeholder="Search Target Username to Duel">
-      </div>
-
-      <button class="btn" onclick="confirmLogin()">Enter Arena</button>
+      <button class="btn" onclick="confirmLogin()">Spawn in Lobby</button>
 
       <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
 
@@ -201,7 +195,7 @@
   <div id="menuModal" class="modal" style="display:none;">
     <div class="modal-content">
       <h2>Weapon Loadout & Map Selection</h2>
-      <p>Select or purchase weapons and choose multi-platform battle arenas!</p>
+      <p>Select or purchase weapons and choose battle arena layouts!</p>
       
       <div style="margin: 15px 0;">
         <h3>Select Arena Layout</h3>
@@ -215,7 +209,7 @@
       <div class="shop-grid" id="weaponShop"></div>
 
       <div style="margin-top: 25px; display: flex; gap: 10px;">
-        <button class="btn" onclick="toggleMenu(false)">Resume Battle</button>
+        <button class="btn" onclick="toggleMenu(false)">Close Menu</button>
       </div>
     </div>
   </div>
@@ -235,7 +229,6 @@ resize();
 
 // Global Game Variables
 let playerName = "piggy";
-let selectedGameMode = 'ai';
 let credits = 0;
 let playerKills = 0;
 let totalDamageDealt = 0;
@@ -243,6 +236,13 @@ let currentMap = 'cyber';
 let autoMoveDisabled = false;
 let aiDifficulty = 'medium';
 let isSuddenDeath = false;
+
+// Game State Management
+let inLobby = true; // Physical Walkaround Lobby Mode
+let activeGameMode = '1v1'; // '1v1', '2v1', '2v2', '3v3', 'ffa'
+let lobbyQueueTimer = null;
+let queueCountdown = 0;
+let queuedPad = null;
 
 // Touch Aim Joystick Override
 let touchAimAngle = null;
@@ -426,7 +426,7 @@ const WEAPONS = {
   db_shotgun: { name: 'Double Barrel', tier: 'Tier 2 - Heavy Burst', damage: 2, rate: 450, ammo: 4, maxAmmo: 4, speed: 20, cost: 550, gravity: 0, ownerOnly: false, multishot: 5, shape: 'db_shotgun' },
   sniper: { name: 'Sniper Rifle', tier: 'Tier 3 - High Speed', damage: 3, rate: 700, ammo: 6, maxAmmo: 6, speed: 42, cost: 700, gravity: 0, ownerOnly: false, multishot: 1, shape: 'sniper' },
   crossbow: { name: 'Heavy Crossbow', tier: 'Tier 3 - Silent Bolt', damage: 4, rate: 600, ammo: 8, maxAmmo: 8, speed: 28, cost: 850, gravity: 0.05, ownerOnly: false, multishot: 1, shape: 'crossbow' },
-  minigun: { name: 'Minigun', tier: 'Tier 4 - Ultra Rapid', damage: 1, rate: 30, ammo: 250, maxAmmo: 250, speed: 24, cost: 1200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'minigun' },
+  minigun: { name: 'Minigun', tier: 'Tier 4 - Ultra Rapid', damage: 1, rate: 30, ammo: 250, maxAmmo: 250, speed: 24, cost: 1200, ownerOnly: false, multishot: 1, shape: 'minigun' },
   plasma: { name: 'Plasma Cannon', tier: 'Tier 4 - Sci-Fi Energy', damage: 6, rate: 300, ammo: 12, maxAmmo: 12, speed: 30, cost: 1450, gravity: 0, ownerOnly: false, multishot: 1, shape: 'plasma', special: 'purple' },
   grenade_l: { name: 'Grenade Launcher', tier: 'Tier 5 - AoE Shells', damage: 12, rate: 900, ammo: 6, maxAmmo: 6, speed: 15, cost: 1600, gravity: 0.25, ownerOnly: false, multishot: 1, shape: 'grenade_l', isExplosive: true },
   rocket: { name: 'Rocket Launcher', tier: 'Tier 5 - Explosive Arc', damage: 15, rate: 1200, ammo: 4, maxAmmo: 4, speed: 16, cost: 1800, gravity: 0.1, ownerOnly: false, multishot: 1, shape: 'rocket', isExplosive: true },
@@ -435,6 +435,20 @@ const WEAPONS = {
   khopesh: { name: 'Khopesh Blade', tier: 'Master Weapon', damage: 50, rate: 200, ammo: 999, maxAmmo: 999, speed: 0, cost: 0, ownerOnly: true, multishot: 1, shape: 'khopesh' },
   flail: { name: 'Energy Flail', tier: 'Master Weapon', damage: 50, rate: 15, ammo: 9999, maxAmmo: 9999, speed: 25, cost: 0, ownerOnly: true, special: 'purple', multishot: 1, shape: 'flail' },
   crook: { name: 'Healer Crook', tier: 'Master Weapon', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal', multishot: 1, shape: 'crook' }
+};
+
+// --- PHYSICAL LOBBY ZONE DEFINITION ---
+const LOBBY_ZONE = {
+  bg: '#10121b',
+  floor: '#1e2230',
+  pads: [
+    { id: '1v1', name: '1 vs 1 Duel', color: '#00ffcc', x: 0.18, w: 120, mode: '1v1' },
+    { id: '2v1', name: '2 vs 1 Duel', color: '#ffcc00', x: 0.33, w: 120, mode: '2v1' },
+    { id: '2v2', name: '2 vs 2 Teams', color: '#00aaff', x: 0.48, w: 120, mode: '2v2' },
+    { id: '3v3', name: '3 vs 3 Squads', color: '#aa00ff', x: 0.63, w: 120, mode: '3v3' },
+    { id: 'ffa', name: 'Free-For-All', color: '#ff3300', x: 0.78, w: 120, mode: 'ffa' },
+    { id: 'shop', name: 'Weapon Shop 🛍️', color: '#ff00aa', x: 0.90, w: 100, isShop: true }
+  ]
 };
 
 // --- MAP LAYOUTS (WITH PLATFORMS) ---
@@ -475,8 +489,8 @@ const maps = {
 };
 
 function getCalculatedPlatforms() {
+  if (inLobby) return [];
   const current = maps[currentMap] || maps.cyber;
-  const floorY = canvas.height - 100;
   
   return current.platforms.map(p => {
     let px = p.x;
@@ -493,11 +507,8 @@ function getCalculatedPlatforms() {
 let beans = [];
 class Bean {
   constructor(x, y, type = 'red') {
-    this.x = x;
-    this.y = y;
-    this.type = type;
-    this.radius = 8;
-    this.vy = 0;
+    this.x = x; this.y = y;
+    this.type = type; this.radius = 8; this.vy = 0;
     
     if (type === 'red') { this.heal = 10; this.color = '#ff3366'; }
     if (type === 'green') { this.heal = 20; this.color = '#00ff66'; }
@@ -505,11 +516,11 @@ class Bean {
   }
 
   update() {
+    if (inLobby) return;
     const floorY = canvas.height - 100;
     const platforms = getCalculatedPlatforms();
     let targetY = floorY;
 
-    // Platform landing check
     platforms.forEach(p => {
       if (this.x >= p.x && this.x <= p.x + p.w && this.y <= p.y + 10) {
         if (p.y < targetY) targetY = p.y;
@@ -524,7 +535,7 @@ class Bean {
       this.vy = 0;
     }
 
-    [player, opponent].filter(Boolean).forEach(p => {
+    allEntities.filter(Boolean).forEach(p => {
       if (Math.hypot(p.x - this.x, p.y - this.y) < 22) {
         p.health = Math.min(p.maxHealth, p.health + this.heal);
         this.dead = true;
@@ -544,6 +555,7 @@ class Bean {
 }
 
 function spawnRandomBean(xOverride, yOverride) {
+  if (inLobby) return;
   const x = xOverride || (50 + Math.random() * (canvas.width - 100));
   const y = yOverride || 50;
   const rand = Math.random();
@@ -555,7 +567,7 @@ function spawnRandomBean(xOverride, yOverride) {
 }
 
 setInterval(() => {
-  if (Math.random() < 0.6) spawnRandomBean();
+  if (!inLobby && Math.random() < 0.6) spawnRandomBean();
 }, 8000);
 
 // --- BOMBS & EXPLOSIVES SYSTEM ---
@@ -572,6 +584,7 @@ class Bomb {
   }
 
   update() {
+    if (inLobby) return;
     this.vy += 0.45;
     this.x += this.vx;
     this.y += this.vy;
@@ -579,7 +592,6 @@ class Bomb {
     const floorY = canvas.height - 100;
     const platforms = getCalculatedPlatforms();
 
-    // Check platform impact
     platforms.forEach(p => {
       if (this.x >= p.x && this.x <= p.x + p.w && Math.abs(this.y - p.y) < 12) {
         this.explode();
@@ -590,8 +602,8 @@ class Bomb {
       this.explode();
     }
 
-    [player, opponent].filter(Boolean).forEach(p => {
-      if (p !== this.owner && Math.hypot(p.x - this.x, p.y - this.y) < 20) {
+    allEntities.filter(Boolean).forEach(p => {
+      if (p !== this.owner && p.team !== this.owner.team && Math.hypot(p.x - this.x, p.y - this.y) < 20) {
         this.explode();
       }
     });
@@ -600,16 +612,13 @@ class Bomb {
   explode() {
     if (this.dead) return;
     this.dead = true;
-    explosions.push(new Explosion(this.x, this.y, 60, 25, this.owner));
+    explosions.push(new Explosion(this.x, this.y, 65, 25, this.owner));
   }
 
   draw() {
     ctx.fillStyle = '#ff2200';
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ffcc00';
-    ctx.fillRect(this.x - 2, this.y - 12, 4, 5);
+    ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffcc00'; ctx.fillRect(this.x - 2, this.y - 12, 4, 5);
   }
 }
 
@@ -622,18 +631,20 @@ class Explosion {
     this.owner = owner;
     this.dead = false;
 
-    [player, opponent].filter(Boolean).forEach(p => {
-      const dist = Math.hypot(p.x - this.x, p.y - this.y);
-      if (dist < this.maxRadius) {
-        const falloff = 1 - (dist / this.maxRadius);
-        const dealt = Math.ceil(this.damage * falloff);
-        p.takeDamage(dealt);
-        if (this.owner === player && p !== player) {
-          totalDamageDealt += dealt;
-          saveProgress();
+    if (!inLobby) {
+      allEntities.filter(Boolean).forEach(p => {
+        const dist = Math.hypot(p.x - this.x, p.y - this.y);
+        if (dist < this.maxRadius) {
+          const falloff = 1 - (dist / this.maxRadius);
+          const dealt = Math.ceil(this.damage * falloff);
+          p.takeDamage(dealt);
+          if (this.owner === player && p !== player) {
+            totalDamageDealt += dealt;
+            saveProgress();
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   update() {
@@ -643,15 +654,13 @@ class Explosion {
 
   draw() {
     ctx.fillStyle = `rgba(255, 102, 0, ${1 - this.radius / this.maxRadius})`;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
   }
 }
 
 // --- RAGDOLL CHARACTER CLASS ---
 class Character {
-  constructor(x, y, isBot = false, name = "Player") {
+  constructor(x, y, isBot = false, name = "Player", team = 'A') {
     this.x = x;
     this.y = y;
     this.vx = 0;
@@ -660,15 +669,16 @@ class Character {
     this.maxHealth = 50;
     this.isBot = isBot;
     this.name = name;
+    this.team = team; // 'A', 'B', or unique for FFA
     
-    this.color = isBot ? '#ff4444' : '#00ffcc';
+    this.color = team === 'A' ? '#00ffcc' : (team === 'B' ? '#ff4444' : '#ffcc00');
     this.equippedWeapon = 'pistol';
     this.weaponData = { ...WEAPONS.pistol };
     this.lastShot = 0;
     this.reloading = false;
     this.limbAngle = 0;
     
-    // Admin & Modifiers
+    // Modifiers
     this.godMode = false;
     this.infiniteDamage = false;
     this.flyMode = false;
@@ -694,7 +704,7 @@ class Character {
       return;
     }
 
-    if (this.health < 15 && !this.emergencyBeanDropped) {
+    if (!inLobby && this.health < 15 && !this.emergencyBeanDropped) {
       this.emergencyBeanDropped = true;
       spawnRandomBean(this.x - 20, this.y - 100);
       spawnRandomBean(this.x + 20, this.y - 100);
@@ -728,7 +738,7 @@ class Character {
         this.vy += 0.5;
       }
     } else {
-      this.aiBehavior();
+      if (!inLobby) this.aiBehavior();
     }
 
     this.x += this.vx;
@@ -737,27 +747,71 @@ class Character {
 
     this.limbAngle = Math.sin(Date.now() * 0.01) * (Math.abs(this.vx) > 0.5 ? 0.6 : 0.1);
 
-    if (!this.isBot && mouse.down && Date.now() - this.lastShot > this.weaponData.rate) {
+    if (!inLobby && !this.isBot && mouse.down && Date.now() - this.lastShot > this.weaponData.rate) {
       this.shoot();
+    }
+
+    // Physical Lobby Pad Collision Detection
+    if (inLobby && this === player) {
+      this.checkLobbyPads();
+    }
+  }
+
+  checkLobbyPads() {
+    const floorY = canvas.height - 100;
+    let standingOnPad = null;
+
+    LOBBY_ZONE.pads.forEach(pad => {
+      const padX = canvas.width * pad.x;
+      if (this.x >= padX - (pad.w/2) && this.x <= padX + (pad.w/2) && Math.abs(this.y - (floorY - 24)) < 20) {
+        standingOnPad = pad;
+      }
+    });
+
+    if (standingOnPad) {
+      if (standingOnPad.isShop) {
+        toggleMenu(true);
+        return;
+      }
+
+      if (queuedPad !== standingOnPad) {
+        queuedPad = standingOnPad;
+        queueCountdown = 3;
+        document.getElementById('lobbyStatusBanner').innerText = `⏳ QUEUED FOR ${standingOnPad.name}! Teleporting in ${queueCountdown}...`;
+        
+        clearInterval(lobbyQueueTimer);
+        lobbyQueueTimer = setInterval(() => {
+          queueCountdown--;
+          if (queueCountdown > 0) {
+            document.getElementById('lobbyStatusBanner').innerText = `⏳ QUEUED FOR ${standingOnPad.name}! Teleporting in ${queueCountdown}...`;
+          } else {
+            clearInterval(lobbyQueueTimer);
+            startMatchFromLobby(standingOnPad.mode);
+          }
+        }, 1000);
+      }
+    } else {
+      if (queuedPad) {
+        queuedPad = null;
+        clearInterval(lobbyQueueTimer);
+        document.getElementById('lobbyStatusBanner').innerText = "🏙️ LOBBY ZONE — Walk onto a Pad to Queue!";
+      }
     }
   }
 
   getAimAngle() {
     if (this.isBot) {
-      if (aiDifficulty === 'admin' && this.aimbot && player && !player.invisible) {
-        return Math.atan2(player.y - this.y, player.x - this.x);
-      }
-      if (player && !player.invisible) {
-        let errorSpread = 0;
-        if (aiDifficulty === 'easy') errorSpread = (Math.random() - 0.5) * 0.8;
-        if (aiDifficulty === 'medium') errorSpread = (Math.random() - 0.5) * 0.3;
-        return Math.atan2(player.y - this.y, player.x - this.x) + errorSpread;
+      const enemyTarget = allEntities.find(e => e && e !== this && e.team !== this.team && !e.invisible);
+      if (enemyTarget) {
+        let errorSpread = (Math.random() - 0.5) * 0.3;
+        return Math.atan2(enemyTarget.y - this.y, enemyTarget.x - this.x) + errorSpread;
       }
       return Math.random() * Math.PI * 2;
     }
 
-    if (this.aimbot && opponent) {
-      return Math.atan2(opponent.y - this.y, opponent.x - this.x);
+    const enemyTarget = allEntities.find(e => e && e !== this && e.team !== this.team);
+    if (this.aimbot && enemyTarget) {
+      return Math.atan2(enemyTarget.y - this.y, enemyTarget.x - this.x);
     }
     if (touchAimAngle !== null) {
       return touchAimAngle;
@@ -766,7 +820,7 @@ class Character {
   }
 
   shoot() {
-    if (this.reloading || this.frozen) return;
+    if (inLobby || this.reloading || this.frozen) return;
     if (this.weaponData.ammo <= 0) {
       this.reload();
       return;
@@ -796,7 +850,7 @@ class Character {
   }
 
   throwBomb() {
-    if (this.frozen) return;
+    if (inLobby || this.frozen) return;
     const angle = this.getAimAngle();
     const speed = 14;
     bombs.push(new Bomb(this.x, this.y - 10, Math.cos(angle) * speed, Math.sin(angle) * speed, this));
@@ -811,72 +865,25 @@ class Character {
   }
 
   aiBehavior() {
-    if (!player) return;
+    const enemyTarget = allEntities.find(e => e && e !== this && e.team !== this.team && !e.invisible);
+    if (!enemyTarget) return;
 
-    if (aiDifficulty === 'admin') {
-      if (Date.now() - this.adminTimer > 4000) {
-        this.adminTimer = Date.now();
-        const adminCmds = ['god', 'invis', 'aimbot', 'give_minigun', 'give_sniper', 'inf_dmg', 'shield'];
-        const chosen = adminCmds[Math.floor(Math.random() * adminCmds.length)];
-        
-        if (chosen === 'god') {
-          this.godMode = true;
-          setTimeout(() => this.godMode = false, 3000);
-        } else if (chosen === 'invis') {
-          this.invisible = true;
-          setTimeout(() => this.invisible = false, 2500);
-        } else if (chosen === 'aimbot') {
-          this.aimbot = true;
-        } else if (chosen === 'inf_dmg') {
-          this.infiniteDamage = true;
-          setTimeout(() => this.infiniteDamage = false, 2000);
-        } else if (chosen === 'shield') {
-          this.shieldActive = true;
-          setTimeout(() => this.shieldActive = false, 4000);
-        } else if (chosen === 'give_minigun') {
-          this.equippedWeapon = 'minigun';
-          this.weaponData = { ...WEAPONS.minigun };
-        } else if (chosen === 'give_sniper') {
-          this.equippedWeapon = 'sniper';
-          this.weaponData = { ...WEAPONS.sniper };
-        }
-      }
-    }
+    const distToTarget = enemyTarget.x - this.x;
+    const absDist = Math.abs(distToTarget);
 
-    if (player.invisible) {
-      this.vx = Math.sin(Date.now() * 0.002) * 2;
-      this.vy += 0.5;
-      if (Date.now() - this.lastShot > (this.weaponData.rate * 2)) {
-        const randomAngle = Math.random() * Math.PI * 2;
-        projectiles.push(new Projectile(this.x, this.y - 10, Math.cos(randomAngle) * 15, Math.sin(randomAngle) * 15, 1, this, false));
-        this.lastShot = Date.now();
-      }
-      return;
-    }
-
-    const distToPlayer = player.x - this.x;
-    const absDist = Math.abs(distToPlayer);
-
-    let speedMult = 2.0;
-    let jumpProb = 0.01;
-    let fireDelayMult = 1.8;
-
-    if (aiDifficulty === 'easy') { speedMult = 1.2; jumpProb = 0.005; fireDelayMult = 2.5; }
-    if (aiDifficulty === 'medium') { speedMult = 2.8; jumpProb = 0.02; fireDelayMult = 1.3; }
-    if (aiDifficulty === 'hard' || aiDifficulty === 'admin') { speedMult = 4.2; jumpProb = 0.04; fireDelayMult = 0.8; }
-
-    if (absDist > 380) this.vx = distToPlayer > 0 ? speedMult : -speedMult;
-    else if (absDist < 200) this.vx = distToPlayer > 0 ? -speedMult : speedMult;
+    let speedMult = 2.8;
+    if (absDist > 300) this.vx = distToTarget > 0 ? speedMult : -speedMult;
+    else if (absDist < 180) this.vx = distToTarget > 0 ? -speedMult : speedMult;
     else this.vx = Math.sin(Date.now() * 0.005) * speedMult;
 
     this.vy += 0.5;
 
-    if (this.grounded && Math.random() < jumpProb) {
+    if (this.grounded && Math.random() < 0.02) {
       this.vy = -12;
       this.grounded = false;
     }
 
-    if (Date.now() - this.lastShot > (this.weaponData.rate * fireDelayMult)) {
+    if (Date.now() - this.lastShot > (this.weaponData.rate * 1.4)) {
       this.shoot();
     }
   }
@@ -886,7 +893,6 @@ class Character {
     const floorY = canvas.height - 100;
     const platforms = getCalculatedPlatforms();
 
-    // Check elevated platform landings
     platforms.forEach(p => {
       if (this.x >= p.x - 10 && this.x <= p.x + p.w + 10) {
         if (this.vy >= 0 && this.y + (24 * this.scaleMult) >= p.y && this.y + (24 * this.scaleMult) <= p.y + 12) {
@@ -897,7 +903,6 @@ class Character {
       }
     });
 
-    // Floor Collision
     if (!this.grounded && this.y + (24 * this.scaleMult) >= floorY) {
       this.y = floorY - (24 * this.scaleMult);
       this.vy = 0;
@@ -909,30 +914,32 @@ class Character {
   }
 
   takeDamage(amount) {
-    if (this.godMode || this.invisible) return;
+    if (inLobby || this.godMode || this.invisible) return;
     this.health -= amount;
 
     if (this.health <= 0) {
-      if (this === opponent) {
+      if (this.team === 'A' && this !== player) teamAScore++;
+      if (this.team !== 'A') {
         player.matchKills++;
         playerKills++;
         credits += 50;
+        teamAScore++;
         saveProgress();
       } else {
-        if (opponent) opponent.matchKills++;
+        teamBScore++;
       }
       updateScoreboard();
 
-      if (player.matchKills === 4 && opponent && opponent.matchKills === 4 && !isSuddenDeath) {
+      if (teamAScore === 4 && teamBScore === 4 && !isSuddenDeath) {
         triggerSuddenDeath();
         resetMatchPositions();
         return;
       }
 
-      if (player.matchKills >= 5) {
-        showVictoryModal("VICTORY!", "You reached 5 kills first!");
-      } else if (opponent && opponent.matchKills >= 5) {
-        showVictoryModal("DEFEAT!", `${opponent.name} reached 5 kills first.`);
+      if (teamAScore >= 5) {
+        showVictoryModal("VICTORY!", "Your team reached 5 kills first!");
+      } else if (teamBScore >= 5) {
+        showVictoryModal("DEFEAT!", "Enemy squad reached 5 kills first.");
       } else {
         resetMatchPositions();
       }
@@ -957,89 +964,50 @@ class Character {
 
     if (this.godMode) {
       ctx.fillStyle = 'rgba(255, 204, 0, 0.3)';
-      ctx.beginPath();
-      ctx.arc(0, -15, 30, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(0, -15, 30, 0, Math.PI * 2); ctx.fill();
     }
 
     if (this.shieldActive) {
-      ctx.strokeStyle = '#00aaff';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(0, -15, 35, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.strokeStyle = '#00aaff'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, -15, 35, 0, Math.PI * 2); ctx.stroke();
     }
 
-    // Body Setup
     ctx.fillStyle = this.frozen ? '#80e5ff' : '#ffe0bd';
-    ctx.beginPath();
-    ctx.arc(0, -30, 8, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -30, 8, 0, Math.PI * 2); ctx.fill();
 
-    ctx.beginPath();
-    ctx.moveTo(0, -22); ctx.lineTo(0, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(0, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.sin(this.limbAngle) * 12, 18);
+    ctx.moveTo(0, 0); ctx.lineTo(-Math.sin(this.limbAngle) * 12, 18); ctx.stroke();
 
-    ctx.beginPath();
-    ctx.moveTo(0, 0); ctx.lineTo(Math.sin(this.limbAngle) * 12, 18);
-    ctx.moveTo(0, 0); ctx.lineTo(-Math.sin(this.limbAngle) * 12, 18);
-    ctx.stroke();
+    // Visual Weapon Render
+    if (!inLobby) {
+      ctx.save();
+      ctx.translate(0, -15);
+      ctx.rotate(aimAngle);
+      
+      const wShape = this.weaponData.shape || 'pistol';
+      ctx.fillStyle = this.weaponData.ownerOnly ? '#a800ff' : '#222';
+      ctx.strokeStyle = '#00ffcc';
+      ctx.lineWidth = 1.5;
 
-    // EXPLICIT FIXED IN-HAND WEAPON RENDERING ENGINE
-    ctx.save();
-    ctx.translate(0, -15);
-    ctx.rotate(aimAngle);
-    
-    const wShape = this.weaponData.shape || 'pistol';
-    ctx.fillStyle = this.weaponData.ownerOnly ? '#a800ff' : '#222';
-    ctx.strokeStyle = '#00ffcc';
-    ctx.lineWidth = 1.5;
-
-    if (wShape === 'pistol') {
-      ctx.fillRect(2, -3, 14, 6);
-      ctx.fillRect(0, -1, 4, 9);
-      ctx.strokeRect(2, -3, 14, 6);
-    } else if (wShape === 'rifle') {
-      ctx.fillRect(-2, -4, 28, 7);
-      ctx.fillRect(6, 3, 5, 8);
-      ctx.fillStyle = '#555'; ctx.fillRect(-6, -2, 6, 4); // Stock
-      ctx.strokeRect(-2, -4, 28, 7);
-    } else if (wShape === 'shotgun') {
-      ctx.fillRect(-4, -4, 26, 6);
-      ctx.fillStyle = '#8B4513'; ctx.fillRect(-8, -2, 6, 5); // Wooden Stock
-      ctx.strokeRect(-4, -4, 26, 6);
-    } else if (wShape === 'db_shotgun') {
-      ctx.fillRect(-2, -5, 24, 9);
-      ctx.fillStyle = '#8B4513'; ctx.fillRect(-8, -3, 8, 7);
-      ctx.strokeRect(-2, -5, 24, 9);
-    } else if (wShape === 'sniper') {
-      ctx.fillRect(-6, -3, 34, 5);
-      ctx.fillStyle = '#00ffcc'; ctx.fillRect(8, -7, 10, 4); // Scope
-      ctx.strokeRect(-6, -3, 34, 5);
-    } else if (wShape === 'crossbow') {
-      ctx.fillRect(-2, -3, 24, 5);
-      ctx.beginPath(); ctx.moveTo(18, -12); ctx.lineTo(18, 12); ctx.stroke(); // Bow limbs
-    } else if (wShape === 'minigun') {
-      ctx.fillStyle = '#333'; ctx.fillRect(-4, -7, 30, 13);
-      ctx.fillStyle = '#ffcc00'; ctx.fillRect(26, -6, 6, 11); // Multi-Barrel Tip
-      ctx.strokeRect(-4, -7, 30, 13);
-    } else if (wShape === 'plasma') {
-      ctx.fillStyle = '#6600cc'; ctx.fillRect(-2, -6, 26, 11);
-      ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(24, -1, 5, 0, Math.PI*2); ctx.fill(); // Plasma orb tip
-    } else if (wShape === 'grenade_l') {
-      ctx.fillRect(-2, -5, 24, 9);
-      ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(8, 0, 7, 0, Math.PI*2); ctx.fill(); // Drum Magazine
-    } else if (wShape === 'rocket') {
-      ctx.fillStyle = '#334433'; ctx.fillRect(-8, -8, 36, 14); // Launcher Tube
-      ctx.fillStyle = '#ff3300'; ctx.beginPath(); ctx.moveTo(28, -8); ctx.lineTo(38, -1); ctx.lineTo(28, 6); ctx.fill(); // Rocket Warhead Tip
-      ctx.strokeRect(-8, -8, 36, 14);
-    } else {
-      ctx.fillRect(2, -4, 20, 7);
+      if (wShape === 'pistol') {
+        ctx.fillRect(2, -3, 14, 6); ctx.fillRect(0, -1, 4, 9); ctx.strokeRect(2, -3, 14, 6);
+      } else if (wShape === 'rifle') {
+        ctx.fillRect(-2, -4, 28, 7); ctx.fillRect(6, 3, 5, 8);
+        ctx.fillStyle = '#555'; ctx.fillRect(-6, -2, 6, 4); ctx.strokeRect(-2, -4, 28, 7);
+      } else if (wShape === 'rocket') {
+        ctx.fillStyle = '#334433'; ctx.fillRect(-8, -8, 36, 14);
+        ctx.fillStyle = '#ff3300'; ctx.beginPath(); ctx.moveTo(28, -8); ctx.lineTo(38, -1); ctx.lineTo(28, 6); ctx.fill();
+        ctx.strokeRect(-8, -8, 36, 14);
+      } else {
+        ctx.fillRect(2, -4, 20, 7);
+      }
+      ctx.restore();
     }
 
     ctx.restore();
-    ctx.restore();
 
-    // Username & Overhead Health
+    // Overhead Tag & Health
     ctx.fillStyle = '#fff';
     ctx.font = '11px sans-serif';
     ctx.textAlign = 'center';
@@ -1047,12 +1015,14 @@ class Character {
     const vMark = isVerified(this.name) ? " ✔" : "";
     ctx.fillText(`${this.name}${vMark} ${this.godMode ? '🛡️' : ''}${this.frozen ? '❄️' : ''}`, this.x, this.y - (56 * this.scaleMult));
 
-    const barWidth = 44;
-    const hpRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(this.x - barWidth/2, this.y - (48 * this.scaleMult), barWidth, 6);
-    ctx.fillStyle = this.isBot ? '#ff4444' : '#00ffcc';
-    ctx.fillRect(this.x - barWidth/2, this.y - (48 * this.scaleMult), barWidth * (this.health === Infinity ? 1 : hpRatio), 6);
+    if (!inLobby) {
+      const barWidth = 44;
+      const hpRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(this.x - barWidth/2, this.y - (48 * this.scaleMult), barWidth, 6);
+      ctx.fillStyle = this.team === 'A' ? '#00ffcc' : '#ff4444';
+      ctx.fillRect(this.x - barWidth/2, this.y - (48 * this.scaleMult), barWidth * (this.health === Infinity ? 1 : hpRatio), 6);
+    }
 
     ctx.globalAlpha = 1.0;
   }
@@ -1072,6 +1042,7 @@ class Projectile {
   }
 
   update() {
+    if (inLobby) return;
     this.vy += this.gravity;
     this.x += this.vx;
     this.y += this.vy;
@@ -1079,7 +1050,6 @@ class Projectile {
     const floorY = canvas.height - 100;
     const platforms = getCalculatedPlatforms();
 
-    // Platform Projectile Detonation
     platforms.forEach(p => {
       if (this.x >= p.x && this.x <= p.x + p.w && Math.abs(this.y - p.y) < 8) {
         if (this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
@@ -1087,9 +1057,8 @@ class Projectile {
       }
     });
 
-    const targets = [player, opponent].filter(Boolean);
-    targets.forEach(target => {
-      if (target !== this.owner && Math.hypot(target.x - this.x, target.y - this.y) < (18 * target.scaleMult) + this.radius) {
+    allEntities.filter(Boolean).forEach(target => {
+      if (target !== this.owner && target.team !== this.owner.team && Math.hypot(target.x - this.x, target.y - this.y) < (18 * target.scaleMult) + this.radius) {
         if (target.shieldActive) {
           this.vx = -this.vx * 1.2;
           this.vy = -this.vy * 1.2;
@@ -1117,69 +1086,109 @@ class Projectile {
 
   draw() {
     ctx.fillStyle = this.isPurple ? '#a800ff' : (this.isExplosive ? '#ff3300' : '#ffcc00');
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
   }
 }
 
-// --- GAME CONTROLLERS ---
-let player = new Character(150, canvas.height - 124, false, "piggy");
-let opponent = null;
+// --- GLOBAL GAME ENTITIES & MATCH CONTROLLER ---
+let player = new Character(150, canvas.height - 124, false, "piggy", 'A');
+let allEntities = [player];
+let teamAScore = 0;
+let teamBScore = 0;
 let projectiles = [];
-
-function selectMode(mode) {
-  selectedGameMode = mode;
-  document.getElementById('tabAi').className = `mode-tab ${mode === 'ai' ? 'active' : ''}`;
-  document.getElementById('tabOnline').className = `mode-tab ${mode === 'online' ? 'active' : ''}`;
-  document.getElementById('onlineSearchBox').style.display = mode === 'online' ? 'flex' : 'none';
-  document.getElementById('aiDiffBox').style.display = mode === 'ai' ? 'flex' : 'none';
-}
 
 function changeDifficulty(val) { aiDifficulty = val; }
 
 function triggerSuddenDeath() {
   isSuddenDeath = true;
   document.getElementById('suddenDeathBanner').style.display = 'block';
-  player.maxHealth = 50; player.health = 50;
-  if (opponent) { opponent.maxHealth = 50; opponent.health = 50; }
+  allEntities.forEach(e => { if (e) { e.maxHealth = 50; e.health = 50; } });
+}
+
+function startMatchFromLobby(mode) {
+  inLobby = false;
+  activeGameMode = mode;
+  isSuddenDeath = false;
+  teamAScore = 0;
+  teamBScore = 0;
+
+  document.getElementById('lobbyStatusBanner').style.display = 'none';
+  document.getElementById('scoreHud').style.display = 'block';
+  document.getElementById('returnLobbyBtn').style.display = 'inline-block';
+  document.getElementById('suddenDeathBanner').style.display = 'none';
+
+  // Setup Players/Bots for requested Mode (1v1, 2v1, 2v2, 3v3, FFA)
+  allEntities = [player];
+  const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper', 'rocket', 'plasma'];
+
+  function createBot(name, x, team) {
+    const b = new Character(x, canvas.height - 124, true, name, team);
+    const rWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
+    b.equippedWeapon = rWep;
+    b.weaponData = { ...WEAPONS[rWep] };
+    return b;
+  }
+
+  if (mode === '1v1') {
+    allEntities.push(createBot("Opponent AI", canvas.width - 150, 'B'));
+  } else if (mode === '2v1') {
+    allEntities.push(createBot("Ally AI", 220, 'A'));
+    allEntities.push(createBot("Boss AI", canvas.width - 150, 'B'));
+  } else if (mode === '2v2') {
+    allEntities.push(createBot("Teammate", 220, 'A'));
+    allEntities.push(createBot("Enemy 1", canvas.width - 150, 'B'));
+    allEntities.push(createBot("Enemy 2", canvas.width - 250, 'B'));
+  } else if (mode === '3v3') {
+    allEntities.push(createBot("Ally 1", 200, 'A'));
+    allEntities.push(createBot("Ally 2", 280, 'A'));
+    allEntities.push(createBot("Enemy 1", canvas.width - 150, 'B'));
+    allEntities.push(createBot("Enemy 2", canvas.width - 230, 'B'));
+    allEntities.push(createBot("Enemy 3", canvas.width - 310, 'B'));
+  } else if (mode === 'ffa') {
+    player.team = 'P1';
+    allEntities.push(createBot("Rival 1", canvas.width * 0.35, 'B1'));
+    allEntities.push(createBot("Rival 2", canvas.width * 0.65, 'B2'));
+    allEntities.push(createBot("Rival 3", canvas.width - 150, 'B3'));
+  }
+
+  document.getElementById('modeTitleText').innerText = `Mode: ${mode.toUpperCase()} Arena`;
+  resetMatchPositions();
+  updateScoreboard();
+}
+
+function returnToLobby() {
+  inLobby = true;
+  document.getElementById('lobbyStatusBanner').style.display = 'block';
+  document.getElementById('scoreHud').style.display = 'none';
+  document.getElementById('returnLobbyBtn').style.display = 'none';
+  document.getElementById('victoryModal').style.display = 'none';
+  document.getElementById('suddenDeathBanner').style.display = 'none';
+
+  player.x = canvas.width * 0.10;
+  player.y = canvas.height - 124;
+  player.vx = 0; player.vy = 0;
+  player.team = 'A';
+  allEntities = [player];
+  projectiles = []; bombs = []; explosions = []; beans = [];
 }
 
 function resetMatchPositions() {
-  projectiles = [];
-  bombs = [];
-  explosions = [];
-  beans = [];
+  projectiles = []; bombs = []; explosions = []; beans = [];
   
-  const baseHp = isSuddenDeath ? 50 : 50;
-  player.maxHealth = baseHp;
-  player.health = baseHp;
-  player.x = 150;
-  player.y = canvas.height - 124;
-  player.vx = 0; player.vy = 0;
-  player.weaponData.ammo = player.weaponData.maxAmmo;
-  player.reloading = false;
-  player.frozen = false;
-  player.emergencyBeanDropped = false;
+  allEntities.forEach((ent, idx) => {
+    if (!ent) return;
+    ent.maxHealth = 50; ent.health = 50;
+    ent.vx = 0; ent.vy = 0;
+    ent.weaponData.ammo = ent.weaponData.maxAmmo;
+    ent.reloading = false; ent.frozen = false; ent.emergencyBeanDropped = false;
 
-  if (opponent) {
-    opponent.maxHealth = baseHp;
-    opponent.health = baseHp;
-    opponent.x = canvas.width - 150;
-    opponent.y = canvas.height - 124;
-    opponent.vx = 0; opponent.vy = 0;
-    opponent.weaponData.ammo = opponent.weaponData.maxAmmo;
-    opponent.reloading = false;
-    opponent.frozen = false;
-    opponent.emergencyBeanDropped = false;
-
-    if (opponent.isBot) {
-      const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper', 'rocket', 'plasma', 'grenade_l'];
-      const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
-      opponent.equippedWeapon = randomWep;
-      opponent.weaponData = { ...WEAPONS[randomWep] };
+    if (ent.team === 'A' || ent.team === 'P1') {
+      ent.x = 120 + (idx * 70);
+    } else {
+      ent.x = canvas.width - 120 - (idx * 70);
     }
-  }
+    ent.y = canvas.height - 124;
+  });
 }
 
 function showVictoryModal(title, text) {
@@ -1187,16 +1196,6 @@ function showVictoryModal(title, text) {
   document.getElementById('victoryTitle').style.color = title === "VICTORY!" ? "#00ffcc" : "#ff4444";
   document.getElementById('victoryText').innerText = text;
   document.getElementById('victoryModal').style.display = 'flex';
-}
-
-function restartMatch() {
-  isSuddenDeath = false;
-  document.getElementById('suddenDeathBanner').style.display = 'none';
-  player.matchKills = 0;
-  if (opponent) opponent.matchKills = 0;
-  document.getElementById('victoryModal').style.display = 'none';
-  resetMatchPositions();
-  updateScoreboard();
 }
 
 function confirmLogin() {
@@ -1215,141 +1214,12 @@ function confirmLogin() {
   document.getElementById('usernameModal').style.display = 'none';
 
   refreshAdminUI();
-
-  if (selectedGameMode === 'online') {
-    const targetPeerUser = document.getElementById('targetPlayerInput').value.trim();
-    initMultiplayer(targetPeerUser);
-  } else {
-    isMultiplayer = false;
-    respawnOpponent();
-  }
-  updateScoreboard();
+  returnToLobby();
 }
 
 function toggleLobbyModal(show) {
   document.getElementById('usernameModal').style.display = show ? 'flex' : 'none';
   if (show) updateLeaderboardUI();
-}
-
-// --- WEBRTC MULTIPLAYER ---
-function initMultiplayer(targetUsername) {
-  const myPeerId = `rr-user-${playerName.toLowerCase().replace(/\s+/g, '')}`;
-  peer = new Peer(myPeerId);
-
-  peer.on('open', id => {
-    if (targetUsername && targetUsername.length > 0) {
-      const targetId = `rr-user-${targetUsername.toLowerCase().replace(/\s+/g, '')}`;
-      conn = peer.connect(targetId);
-      setupPeerConnection(conn);
-    } else {
-      respawnOpponent();
-    }
-  });
-
-  peer.on('error', err => {
-    if (err.type === 'unavailable-id') {
-      alert("Username is already online in another session! Unique names required.");
-    }
-    respawnOpponent();
-  });
-
-  peer.on('connection', connection => {
-    conn = connection;
-    setupPeerConnection(conn);
-  });
-}
-
-function setupPeerConnection(connection) {
-  isMultiplayer = true;
-  opponent = new Character(canvas.width - 150, canvas.height - 124, false, "Opponent");
-
-  connection.on('data', data => {
-    if (data.type === 'state' && opponent) {
-      opponent.x = data.x;
-      opponent.y = data.y;
-      opponent.vx = data.vx;
-      opponent.vy = data.vy;
-      opponent.name = data.name;
-      opponent.health = data.health;
-      opponent.invisible = data.invisible;
-      opponent.frozen = data.frozen;
-      opponent.scaleMult = data.scaleMult || 1.0;
-      opponent.shieldActive = data.shieldActive || false;
-    } else if (data.type === 'admin_grant') {
-      if (hasAdmin(playerName) || isOwnerUser(data.sender)) {
-        adminUsers.add(data.target.toLowerCase());
-        refreshAdminUI();
-        if (data.target.toLowerCase() === player.name.toLowerCase()) alert("Admin permissions granted by sphinx!");
-      }
-    } else if (data.type === 'admin_revoke') {
-      if (!isOwnerUser(data.target)) {
-        adminUsers.delete(data.target.toLowerCase());
-        refreshAdminUI();
-        if (data.target.toLowerCase() === player.name.toLowerCase()) alert("Admin permissions revoked!");
-      }
-    } else if (data.type === 'verify_user') {
-      verifiedUsers.add(data.target.toLowerCase());
-    } else if (data.type === 'admin_cmd') {
-      if (isOwnerUser(player.name)) return;
-
-      if (data.target.toLowerCase() === player.name.toLowerCase() || !data.target) {
-        if (data.cmd === 'kill') player.takeDamage(999);
-        if (data.cmd === 'freeze') {
-          player.frozen = true;
-          setTimeout(() => player.frozen = false, 5000);
-        }
-        if (data.cmd === 'kick') {
-          alert("You have been kicked by an admin.");
-          window.location.reload();
-        }
-        if (data.cmd === 'size') {
-          player.scaleMult = data.val || 1.0;
-        }
-      }
-      if (data.cmd === 'nuke') {
-        screenFlashTimer = 15;
-        player.takeDamage(999);
-      }
-    }
-  });
-}
-
-function broadcastState() {
-  if (conn && conn.open && player) {
-    conn.send({
-      type: 'state',
-      x: player.x,
-      y: player.y,
-      vx: player.vx,
-      vy: player.vy,
-      name: player.name,
-      health: player.health,
-      invisible: player.invisible,
-      frozen: player.frozen,
-      scaleMult: player.scaleMult,
-      shieldActive: player.shieldActive
-    });
-  }
-}
-
-function toggleMovementMode() {
-  autoMoveDisabled = !autoMoveDisabled;
-  document.getElementById('moveToggleBtn').innerText = autoMoveDisabled ? "Movement: Static" : "Movement: Manual";
-}
-
-function respawnOpponent() {
-  if (isMultiplayer) return;
-  const weaponKeys = ['pistol', 'assault', 'shotgun', 'sniper', 'rocket', 'plasma', 'grenade_l'];
-  const randomWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
-
-  opponent = new Character(canvas.width - 150, canvas.height - 124, true, "Opponent AI");
-  opponent.equippedWeapon = randomWep;
-  opponent.weaponData = { ...WEAPONS[randomWep] };
-}
-
-function setMap(mapKey) {
-  currentMap = mapKey;
-  toggleMenu(false);
 }
 
 // --- WEAPON SHOP SYSTEM ---
@@ -1422,20 +1292,6 @@ function processCommand(cmd) {
   const parts = cmd.trim().split(/\s+/);
   const action = parts[0] ? parts[0].toLowerCase() : '';
 
-  function extractTargetUser() {
-    let t = '';
-    if (action === 'grant' || action === 'revoke' || action === 'verify' || action === 'unverify') {
-      t = parts[1] || '';
-      if (t.toLowerCase() === 'admin' && parts[2]) t = parts[2];
-    } else if (action === 'give' && parts[1] && parts[1].toLowerCase() === 'admin') {
-      t = parts[2] || '';
-    } else if (action === 'giveadmin' || action === 'removeadmin') {
-      t = parts[1] || '';
-    }
-    if (t.toLowerCase() === 'admin') t = '';
-    return t;
-  }
-
   function isGuardedOwner(target) {
     if (target && isOwnerUser(target) && !isOwnerUser(player.name)) {
       alert("PROTECTION ACTIVE: Admin commands cannot be used against piggy or sphinx.");
@@ -1444,108 +1300,25 @@ function processCommand(cmd) {
     return false;
   }
 
-  // 1. STOP ALL ADMIN
-  if (cleanCmd === 'stop all admin' || cleanCmd === 'stopalladmin' || cleanCmd === 'stop admin') {
-    player.godMode = false;
-    player.flyMode = false;
-    player.invisible = false;
-    player.aimbot = false;
-    player.shieldActive = false;
-    player.speedMult = 1.0;
-    player.scaleMult = 1.0;
-    player.frozen = false;
+  if (cleanCmd === 'stop all admin' || cleanCmd === 'stopalladmin') {
+    player.godMode = false; player.flyMode = false; player.invisible = false;
+    player.aimbot = false; player.shieldActive = false; player.speedMult = 1.0;
+    player.scaleMult = 1.0; player.frozen = false;
     alert("STOPPED ALL ACTIVE ADMIN COMMANDS!");
     return;
   }
 
-  // 2. ALL ADMIN
-  if (cleanCmd === 'all admin' || cleanCmd === 'alladmin' || (action === 'all' && parts[1] && parts[1].toLowerCase() === 'admin')) {
-    player.godMode = true;
-    player.flyMode = true;
-    player.invisible = true;
-    player.aimbot = true;
-    player.shieldActive = true;
-    player.health = player.maxHealth;
-    player.speedMult = 2.5;
-    player.scaleMult = 1.5;
-    credits += 10000;
-    saveProgress();
+  if (cleanCmd === 'all admin' || cleanCmd === 'alladmin') {
+    player.godMode = true; player.flyMode = true; player.invisible = true;
+    player.aimbot = true; player.shieldActive = true; player.health = player.maxHealth;
+    player.speedMult = 2.5; player.scaleMult = 1.5; credits += 10000; saveProgress();
     
     if (isOwnerUser(player.name)) {
-      player.equippedWeapon = 'flail';
-      player.weaponData = { ...WEAPONS.flail };
+      player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail };
     } else {
-      player.equippedWeapon = 'minigun';
-      player.weaponData = { ...WEAPONS.minigun };
+      player.equippedWeapon = 'minigun'; player.weaponData = { ...WEAPONS.minigun };
     }
-    alert("ACTIVATED ALL ADMIN PERKS! (Grant/Revoke Excluded)");
-    return;
-  }
-
-  // 3. GRANT ADMIN
-  if (action === 'grant' || action === 'giveadmin' || (action === 'give' && parts[1] && parts[1].toLowerCase() === 'admin')) {
-    let target = extractTargetUser();
-    if (!target && opponent) target = opponent.name;
-
-    if (target) {
-      adminUsers.add(target.toLowerCase());
-      if (opponent && opponent.name.toLowerCase() === target.toLowerCase()) {
-        adminUsers.add(opponent.name.toLowerCase());
-      }
-      if (conn && conn.open) {
-        conn.send({ type: 'admin_grant', target: target, sender: player.name });
-      }
-      refreshAdminUI();
-      alert(`Granted admin privileges to "${target}"!`);
-    } else {
-      alert("Usage: grant <username>");
-    }
-    return;
-  }
-
-  // 4. REVOKE ADMIN
-  if (action === 'revoke' || action === 'removeadmin') {
-    let target = extractTargetUser();
-    if (!target && opponent) target = opponent.name;
-
-    if (target) {
-      if (isOwnerUser(target)) {
-        alert("Cannot revoke owner admin status from piggy or sphinx!");
-        return;
-      }
-      adminUsers.delete(target.toLowerCase());
-      if (opponent && opponent.name.toLowerCase() === target.toLowerCase()) {
-        adminUsers.delete(opponent.name.toLowerCase());
-      }
-      if (conn && conn.open) {
-        conn.send({ type: 'admin_revoke', target: target });
-      }
-      refreshAdminUI();
-      alert(`Revoked admin privileges from "${target}"!`);
-    } else {
-      alert("Usage: revoke <username>");
-    }
-    return;
-  }
-
-  // 5. VERIFY PLAYER
-  if (action === 'verify' || action === 'verified') {
-    let target = extractTargetUser();
-    if (!target && opponent) target = opponent.name;
-    if (target) {
-      verifiedUsers.add(target.toLowerCase());
-      if (conn && conn.open) conn.send({ type: 'verify_user', target: target });
-      alert(`User "${target}" is now VERIFIED ✔!`);
-    }
-    return;
-  }
-
-  if (action === 'unverify') {
-    let target = extractTargetUser();
-    if (target && !isOwnerUser(target)) {
-      verifiedUsers.delete(target.toLowerCase());
-      alert(`Unverified "${target}".`);
-    }
+    alert("ACTIVATED ALL ADMIN PERKS!");
     return;
   }
 
@@ -1553,122 +1326,21 @@ function processCommand(cmd) {
   if (isGuardedOwner(targetUser)) return;
 
   switch(action) {
-    case 'god':
-    case 'invincible':
-      player.godMode = !player.godMode;
-      alert(`Godmode: ${player.godMode}`);
-      break;
-    case 'fly':
-      player.flyMode = !player.flyMode;
-      alert(`Flymode: ${player.flyMode}`);
-      break;
-    case 'invis':
-    case 'invisible':
-      player.invisible = !player.invisible;
-      alert(`Invisibility: ${player.invisible}`);
-      break;
-    case 'aimbot':
-      player.aimbot = !player.aimbot;
-      alert(`Aimbot: ${player.aimbot}`);
-      break;
-    case 'heal':
-      player.health = player.maxHealth;
-      alert("Healed to full health!");
-      break;
-    case 'shield':
-      player.shieldActive = !player.shieldActive;
-      alert(`Shield: ${player.shieldActive}`);
-      break;
-    case 'speed':
-      player.speedMult = parseFloat(parts[1]) || 2.0;
-      alert(`Speed Multiplier: ${player.speedMult}x`);
-      break;
-    case 'size':
-    case 'scale':
-      const newScale = parseFloat(parts[1]) || 1.5;
-      if (targetUser && opponent && opponent.name.toLowerCase() === targetUser.toLowerCase()) {
-        opponent.scaleMult = newScale;
-      } else if (targetUser && conn && conn.open) {
-        conn.send({ type: 'admin_cmd', cmd: 'size', target: targetUser, val: newScale });
-      } else {
-        player.scaleMult = newScale;
-      }
-      alert(`Scale updated!`);
-      break;
-    case 'freeze':
-      if (opponent) {
-        opponent.frozen = true;
-        setTimeout(() => { if (opponent) opponent.frozen = false; }, 5000);
-      }
-      if (conn && conn.open) {
-        conn.send({ type: 'admin_cmd', cmd: 'freeze', target: targetUser || (opponent ? opponent.name : '') });
-      }
-      alert(`Freezing opponent for 5 seconds!`);
-      break;
-    case 'nuke':
-      screenFlashTimer = 15;
-      if (opponent) opponent.takeDamage(999);
-      if (conn && conn.open) {
-        conn.send({ type: 'admin_cmd', cmd: 'nuke' });
-      }
-      alert("NUKE LAUNCHED!");
-      break;
-    case 'reset':
-      player.godMode = false;
-      player.flyMode = false;
-      player.invisible = false;
-      player.aimbot = false;
-      player.shieldActive = false;
-      player.speedMult = 1.0;
-      player.scaleMult = 1.0;
-      player.frozen = false;
-      alert("All admin modifiers reset!");
-      break;
-    case 'give':
-      if (parts[1] && WEAPONS[parts[1]]) {
-        const targetWep = WEAPONS[parts[1]];
-        if (targetWep.ownerOnly && !isOwnerUser(player.name)) {
-          alert("Access Denied: Master weapons reserved for piggy and sphinx.");
-          return;
-        }
-        player.equippedWeapon = parts[1];
-        player.weaponData = { ...targetWep };
-        alert(`Gave ${parts[1]}`);
-      }
-      break;
-    case 'credits':
-      credits += parseInt(parts[1] || 1000);
-      saveProgress();
-      break;
-    case 'kill':
-      if (targetUser && opponent && opponent.name.toLowerCase() === targetUser.toLowerCase()) {
-        opponent.takeDamage(999);
-      } else if (conn && conn.open) {
-        conn.send({ type: 'admin_cmd', cmd: 'kill', target: targetUser });
-      } else if (!targetUser && opponent) {
-        opponent.takeDamage(999);
-      }
-      break;
-    case 'kick':
-      if (targetUser && opponent && opponent.name.toLowerCase() === targetUser.toLowerCase()) {
-        opponent = null;
-        if (conn) conn.close();
-        alert(`Kicked "${targetUser}"`);
-      } else if (conn && conn.open) {
-        conn.send({ type: 'admin_cmd', cmd: 'kick', target: targetUser });
-        alert(`Sent kick command to "${targetUser}"`);
-      }
-      break;
+    case 'god': player.godMode = !player.godMode; alert(`Godmode: ${player.godMode}`); break;
+    case 'fly': player.flyMode = !player.flyMode; alert(`Flymode: ${player.flyMode}`); break;
+    case 'invis': player.invisible = !player.invisible; alert(`Invisibility: ${player.invisible}`); break;
+    case 'aimbot': player.aimbot = !player.aimbot; alert(`Aimbot: ${player.aimbot}`); break;
+    case 'heal': player.health = player.maxHealth; alert("Healed!"); break;
+    case 'shield': player.shieldActive = !player.shieldActive; alert(`Shield: ${player.shieldActive}`); break;
+    case 'speed': player.speedMult = parseFloat(parts[1]) || 2.0; alert(`Speed: ${player.speedMult}x`); break;
+    case 'credits': credits += parseInt(parts[1] || 1000); saveProgress(); break;
   }
 }
 
 // --- SCOREBOARD ---
 function updateScoreboard() {
-  const enemyLabel = (opponent && opponent.name) ? opponent.name : "Opponent";
-  const pScore = player ? player.matchKills : 0;
-  const eScore = opponent ? opponent.matchKills : 0;
   document.getElementById('scoreVal').innerHTML = `
-    <span style="color:#00ffcc;">${playerName}: ${pScore} / 5</span> | <span style="color:#ff4444;">${enemyLabel}: ${eScore} / 5</span>
+    <span style="color:#00ffcc;">Team A: ${teamAScore} / 5</span> | <span style="color:#ff4444;">Team B: ${teamBScore} / 5</span>
   `;
 }
 
@@ -1679,71 +1351,68 @@ function toggleMenu(show) {
 
 // --- MAIN ENGINE LOOP ---
 function loop() {
-  const theme = maps[currentMap] || maps.cyber;
-  ctx.fillStyle = theme.bg;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   const floorY = canvas.height - 100;
-  ctx.fillStyle = theme.floor;
-  ctx.fillRect(0, floorY, canvas.width, 100);
 
-  ctx.fillStyle = 'rgba(255,255,255,0.1)';
-  ctx.fillRect(0, floorY, canvas.width, 4);
+  if (inLobby) {
+    // Render Walkaround Lobby Environment
+    ctx.fillStyle = LOBBY_ZONE.bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Render Map Platforms
-  const platforms = getCalculatedPlatforms();
-  platforms.forEach(p => {
+    ctx.fillStyle = LOBBY_ZONE.floor;
+    ctx.fillRect(0, floorY, canvas.width, 100);
+
+    // Render Physical Match Pads & Portals on Lobby Floor
+    LOBBY_ZONE.pads.forEach(pad => {
+      const padX = (canvas.width * pad.x) - (pad.w / 2);
+      ctx.fillStyle = pad.color;
+      ctx.fillRect(padX, floorY - 6, pad.w, 8);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(padX, floorY - 60, pad.w, 54);
+
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(pad.name, padX + (pad.w / 2), floorY - 25);
+    });
+
+  } else {
+    // Render Active Combat Map
+    const theme = maps[currentMap] || maps.cyber;
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     ctx.fillStyle = theme.floor;
-    ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.fillStyle = '#00ffcc';
-    ctx.fillRect(p.x, p.y, p.w, 3);
-  });
+    ctx.fillRect(0, floorY, canvas.width, 100);
 
-  // Render Health Beans
-  beans.forEach((b, idx) => {
-    b.update();
-    b.draw();
-    if (b.dead) beans.splice(idx, 1);
-  });
-
-  // Render Bombs
-  bombs.forEach((b, idx) => {
-    b.update();
-    b.draw();
-    if (b.dead) bombs.splice(idx, 1);
-  });
-
-  // Render Explosions
-  explosions.forEach((ex, idx) => {
-    ex.update();
-    ex.draw();
-    if (ex.dead) explosions.splice(idx, 1);
-  });
-
-  player.update();
-  player.draw();
-
-  if (opponent) {
-    opponent.update();
-    opponent.draw();
+    // Render Platforms
+    const platforms = getCalculatedPlatforms();
+    platforms.forEach(p => {
+      ctx.fillStyle = theme.floor;
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = '#00ffcc';
+      ctx.fillRect(p.x, p.y, p.w, 3);
+    });
   }
 
-  projectiles.forEach((p, idx) => {
-    p.update();
-    p.draw();
-    if (p.dead) projectiles.splice(idx, 1);
+  // Update & Render Game Entities
+  beans.forEach((b, idx) => { b.update(); b.draw(); if (b.dead) beans.splice(idx, 1); });
+  bombs.forEach((b, idx) => { b.update(); b.draw(); if (b.dead) bombs.splice(idx, 1); });
+  explosions.forEach((ex, idx) => { ex.update(); ex.draw(); if (ex.dead) explosions.splice(idx, 1); });
+
+  allEntities.forEach(ent => {
+    if (ent) { ent.update(); ent.draw(); }
   });
 
-  // Nuke Screen Flash Render
+  projectiles.forEach((p, idx) => { p.update(); p.draw(); if (p.dead) projectiles.splice(idx, 1); });
+
   if (screenFlashTimer > 0) {
     ctx.fillStyle = `rgba(255, 255, 255, ${screenFlashTimer / 15})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     screenFlashTimer--;
   }
 
-  broadcastState();
-
-  // Update HUD
+  // Update HUD Reads
   document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, Math.ceil(player.health))} / ${player.maxHealth}`;
   document.getElementById('creditsVal').innerText = credits;
   document.getElementById('weaponVal').innerText = player.weaponData.name;
@@ -1752,9 +1421,8 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// Initialize Save Data & Start Engine
+// Load Saves & Run Engine
 loadSavedProgress();
-respawnOpponent();
 initShop();
 loop();
 </script>
