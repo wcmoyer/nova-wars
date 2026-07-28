@@ -22,9 +22,9 @@
     #scoreHud h3 { font-size: 11px; color: #ffcc00; text-transform: uppercase; margin-bottom: 2px; }
     #scoreVal { font-size: 16px; font-weight: bold; color: #fff; }
 
-    /* Gift Pop-up Banner */
-    #giftPopupBanner { position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%); font-size: 22px; font-weight: 800; color: #ffcc00; background: rgba(15, 15, 25, 0.9); border: 2px solid #ffcc00; padding: 14px 28px; border-radius: 12px; text-shadow: 0 0 10px rgba(255, 204, 0, 0.8); box-shadow: 0 0 20px rgba(255, 204, 0, 0.4); display: none; z-index: 150; pointer-events: none; animation: popIn 0.3s ease-out; }
-    @keyframes popIn { from { transform: translate(-50%, -60%) scale(0.8); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+    /* Notification Banner */
+    #giftPopupBanner { position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; font-weight: 800; color: #ffcc00; background: rgba(15, 15, 25, 0.92); border: 2px solid #ffcc00; padding: 14px 28px; border-radius: 12px; text-shadow: 0 0 10px rgba(255, 204, 0, 0.8); box-shadow: 0 0 24px rgba(255, 204, 0, 0.4); display: none; z-index: 150; pointer-events: none; text-align: center; animation: popIn 0.3s ease-out; }
+    @keyframes popIn { from { transform: translate(-50%, -65%) scale(0.8); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
 
     /* Sudden Death Banner */
     #suddenDeathBanner { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 900; color: #ff0055; text-shadow: 0 0 12px #ff0055, 0 0 24px #ff0000; letter-spacing: 3px; display: none; z-index: 80; animation: pulse 0.8s infinite alternate; }
@@ -87,7 +87,7 @@
   <canvas id="gameCanvas"></canvas>
 
   <div id="suddenDeathBanner">⚡ SUDDEN DEATH (50 HP) ⚡</div>
-  <div id="giftPopupBanner">🎁 You were gifted 1000 credits by sphinx!</div>
+  <div id="giftPopupBanner">🎁 Notification Message</div>
 
   <!-- HUD -->
   <div id="statsHud" class="hud-panel">
@@ -143,7 +143,7 @@
 
   <!-- Admin Input Console -->
   <div id="adminConsole">
-    <input type="text" id="adminInput" placeholder="Commands: grant <user>, revoke <user>, verify <user>, unverify <user>, ALL ADMIN, stop all admin, freeze <user>, nuke, god, fly, invis, aimbot, heal, shield, speed <mult>, size <mult>, give <weapon>, credits <amt> [user], kill <user>, kick <user>">
+    <input type="text" id="adminInput" placeholder="Commands: grant <user>, revoke <user>, verify <user>, unverify <user>, wallbang, ALL ADMIN, stop all admin, freeze <user>, nuke, god, fly, invis, aimbot, heal, shield, speed <mult>, size <mult>, give <weapon>, credits <amt> [user], kill <user>, kick <user>">
   </div>
 
   <!-- Win/Loss Modal -->
@@ -279,7 +279,7 @@ let isMatchActive = false;
 // Touch Aim Override
 let touchAimAngle = null;
 let screenFlashTimer = 0;
-let giftPopupTimer = null;
+let bannerTimer = null;
 
 // WebRTC State
 let peer = null;
@@ -387,15 +387,17 @@ function refreshAdminUI() {
   if (!isAdmin) document.getElementById('adminConsole').style.display = 'none';
 }
 
-function showGiftPopup(amount, sender) {
+function showNotificationBanner(msg, isWarning = false) {
   const popup = document.getElementById('giftPopupBanner');
-  popup.innerText = `🎁 You were gifted ${amount} credits by ${sender}!`;
+  popup.innerText = msg;
+  popup.style.borderColor = isWarning ? '#ff4444' : '#ffcc00';
+  popup.style.color = isWarning ? '#ff4444' : '#ffcc00';
   popup.style.display = 'block';
 
-  if (giftPopupTimer) clearTimeout(giftPopupTimer);
-  giftPopupTimer = setTimeout(() => {
+  if (bannerTimer) clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => {
     popup.style.display = 'none';
-  }, 4000);
+  }, 4500);
 }
 
 // Input Controls
@@ -633,7 +635,8 @@ class Character {
     
     this.godMode = false; this.infiniteDamage = false; this.flyMode = false;
     this.invisible = false; this.aimbot = false; this.frozen = false;
-    this.shieldActive = false; this.speedMult = 1.0; this.scaleMult = 1.0;
+    this.shieldActive = false; this.wallbang = false; // SHOOT THROUGH WALLS PERK
+    this.speedMult = 1.0; this.scaleMult = 1.0;
     this.matchKills = 0; this.emergencyBeanDropped = false;
   }
 
@@ -926,7 +929,8 @@ class Character {
     ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
     const vMark = isVerified(this.name) ? " ✔" : "";
     const chickTag = isChicken ? " 🐔" : "";
-    ctx.fillText(`${this.name}${vMark}${chickTag} ${this.godMode ? '🛡️' : ''}${this.frozen ? '❄️' : ''}`, this.x, this.y - (56 * this.scaleMult));
+    const wbTag = this.wallbang ? " 🎯" : "";
+    ctx.fillText(`${this.name}${vMark}${chickTag}${wbTag} ${this.godMode ? '🛡️' : ''}${this.frozen ? '❄️' : ''}`, this.x, this.y - (56 * this.scaleMult));
 
     const barWidth = 44;
     const hpRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
@@ -939,7 +943,7 @@ class Character {
   }
 }
 
-// --- PROJECTILE CLASS ---
+// --- PROJECTILE CLASS & WALLBANG PENETRATION ---
 class Projectile {
   constructor(x, y, vx, vy, damage, owner, isPurple = false, gravity = 0, isExplosive = false) {
     this.x = x; this.y = y; this.vx = vx; this.vy = vy;
@@ -951,14 +955,17 @@ class Projectile {
   update() {
     this.vy += this.gravity; this.x += this.vx; this.y += this.vy;
     const floorY = canvas.height - 100;
-    const platforms = getCalculatedPlatforms();
 
-    platforms.forEach(p => {
-      if (this.x >= p.x && this.x <= p.x + p.w && Math.abs(this.y - p.y) < 8) {
-        if (this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
-        this.dead = true;
-      }
-    });
+    // Platform Collision (Skipped if Wallbang / Pierce is active)
+    if (!this.owner || !this.owner.wallbang) {
+      const platforms = getCalculatedPlatforms();
+      platforms.forEach(p => {
+        if (this.x >= p.x && this.x <= p.x + p.w && Math.abs(this.y - p.y) < 8) {
+          if (this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
+          this.dead = true;
+        }
+      });
+    }
 
     allEntities.filter(Boolean).forEach(target => {
       if (target !== this.owner && target.team !== this.owner.team && Math.hypot(target.x - this.x, target.y - this.y) < (18 * target.scaleMult) + this.radius) {
@@ -983,7 +990,7 @@ class Projectile {
   }
 
   draw() {
-    ctx.fillStyle = this.isPurple ? '#a800ff' : (this.isExplosive ? '#ff3300' : '#ffcc00');
+    ctx.fillStyle = this.owner && this.owner.wallbang ? '#00ffff' : (this.isPurple ? '#a800ff' : (this.isExplosive ? '#ff3300' : '#ffcc00'));
     ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
   }
 }
@@ -1239,43 +1246,88 @@ function processCommand(cmd) {
   const parts = cmd.trim().split(/\s+/);
   const action = parts[0] ? parts[0].toLowerCase() : '';
 
+  function extractTargetUser() {
+    let t = parts[1] || '';
+    if (t.toLowerCase() === 'admin' && parts[2]) t = parts[2];
+    return t;
+  }
+
+  function isGuardedOwner(target) {
+    if (target && isOwnerUser(target) && !isOwnerUser(player.name)) {
+      alert("PROTECTION ACTIVE: Admin commands cannot be used against piggy or sphinx.");
+      return true;
+    }
+    return false;
+  }
+
   if (cleanCmd === 'stop all admin' || cleanCmd === 'stopalladmin') {
     player.godMode = false; player.flyMode = false; player.invisible = false;
-    player.aimbot = false; player.shieldActive = false; player.speedMult = 1.0;
-    player.scaleMult = 1.0; player.frozen = false;
+    player.aimbot = false; player.shieldActive = false; player.wallbang = false;
+    player.speedMult = 1.0; player.scaleMult = 1.0; player.frozen = false;
     alert("STOPPED ALL ACTIVE ADMIN COMMANDS!"); return;
   }
 
   if (cleanCmd === 'all admin' || cleanCmd === 'alladmin') {
     player.godMode = true; player.flyMode = true; player.invisible = true;
-    player.aimbot = true; player.shieldActive = true; player.health = player.maxHealth;
-    player.speedMult = 2.5; player.scaleMult = 1.5; credits += 10000; saveProgress();
+    player.aimbot = true; player.shieldActive = true; player.wallbang = true;
+    player.health = player.maxHealth; player.speedMult = 2.5; player.scaleMult = 1.5;
+    credits += 10000; saveProgress();
     if (isOwnerUser(player.name)) { player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail }; }
     else { player.equippedWeapon = 'minigun'; player.weaponData = { ...WEAPONS.minigun }; }
     alert("ACTIVATED ALL ADMIN PERKS!"); return;
   }
+
+  // GRANT ADMIN
+  if (action === 'grant' || action === 'giveadmin' || (action === 'give' && parts[1] && parts[1].toLowerCase() === 'admin')) {
+    let target = extractTargetUser();
+    if (target) {
+      adminUsers.add(target.toLowerCase());
+      if (conn && conn.open) conn.send({ type: 'admin_grant', target: target, sender: player.name });
+      alert(`Granted admin privileges to "${target}"!`);
+      showNotificationBanner(`👑 Granted Admin to ${target}`);
+    } else { alert("Usage: grant <username>"); }
+    return;
+  }
+
+  // REVOKE ADMIN
+  if (action === 'revoke' || action === 'removeadmin') {
+    let target = extractTargetUser();
+    if (target) {
+      if (isOwnerUser(target)) { alert("Cannot revoke owner admin status from piggy or sphinx!"); return; }
+      adminUsers.delete(target.toLowerCase());
+      if (conn && conn.open) conn.send({ type: 'admin_revoke', target: target, sender: player.name });
+      alert(`Revoked admin privileges from "${target}"!`);
+      showNotificationBanner(`⚠️ Revoked Admin from ${target}`, true);
+    } else { alert("Usage: revoke <username>"); }
+    return;
+  }
+
+  const targetUser = parts[1];
+  if (isGuardedOwner(targetUser)) return;
 
   switch(action) {
     case 'god': player.godMode = !player.godMode; alert(`Godmode: ${player.godMode}`); break;
     case 'fly': player.flyMode = !player.flyMode; alert(`Flymode: ${player.flyMode}`); break;
     case 'invis': player.invisible = !player.invisible; alert(`Invisibility: ${player.invisible}`); break;
     case 'aimbot': player.aimbot = !player.aimbot; alert(`Aimbot: ${player.aimbot}`); break;
+    case 'wallbang':
+    case 'pierce':
+      player.wallbang = !player.wallbang;
+      alert(`Wallbang (Shoot through walls): ${player.wallbang}`);
+      showNotificationBanner(`🎯 Shoot Through Walls: ${player.wallbang ? "ENABLED" : "DISABLED"}`);
+      break;
     case 'heal': player.health = player.maxHealth; alert("Healed!"); break;
     case 'shield': player.shieldActive = !player.shieldActive; alert(`Shield: ${player.shieldActive}`); break;
     case 'speed': player.speedMult = parseFloat(parts[1]) || 2.0; alert(`Speed: ${player.speedMult}x`); break;
     
-    // UPDATED & ENHANCED CREDITS COMMAND WITH ON-SCREEN POPUP
     case 'credits':
       const amount = parseInt(parts[1] || 1000);
       let targetName = parts[2] ? parts[2].toLowerCase() : player.name.toLowerCase();
 
-      // Self or AI Bot Gifting
       if (targetName === player.name.toLowerCase()) {
-        credits += amount;
-        saveProgress();
-        showGiftPopup(amount, player.name);
+        credits += amount; saveProgress();
+        showNotificationBanner(`🎁 You were gifted ${amount} credits by ${player.name}!`);
       } else {
-        // Send over WebRTC to another online player if connected
         if (conn && conn.open) {
           conn.send({ type: 'admin_credits', amount: amount, sender: player.name, target: targetName });
         }
@@ -1291,9 +1343,22 @@ function setupPeerConnection(connection) {
   connection.on('data', data => {
     if (data.type === 'admin_credits') {
       if (data.target.toLowerCase() === player.name.toLowerCase() || !data.target) {
-        credits += data.amount;
-        saveProgress();
-        showGiftPopup(data.amount, data.sender);
+        credits += data.amount; saveProgress();
+        showNotificationBanner(`🎁 You were gifted ${data.amount} credits by ${data.sender}!`);
+      }
+    } else if (data.type === 'admin_grant') {
+      if (data.target.toLowerCase() === player.name.toLowerCase()) {
+        adminUsers.add(player.name.toLowerCase());
+        refreshAdminUI();
+        showNotificationBanner(`👑 You were granted Admin permissions by ${data.sender}!`);
+      }
+    } else if (data.type === 'admin_revoke') {
+      if (data.target.toLowerCase() === player.name.toLowerCase()) {
+        if (!isOwnerUser(player.name)) {
+          adminUsers.delete(player.name.toLowerCase());
+          refreshAdminUI();
+          showNotificationBanner(`⚠️ Your Admin permissions were revoked by ${data.sender}!`, true);
+        }
       }
     }
   });
