@@ -42,6 +42,11 @@
     /* Quick Controls */
     #quickControls { position: absolute; top: 80px; left: 15px; display: flex; gap: 8px; flex-wrap: wrap; z-index: 60; }
 
+    /* Emote Bar */
+    #emoteBar { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(0,0,0,0.75); padding: 8px 12px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.2); z-index: 60; backdrop-filter: blur(6px); }
+    .emote-btn { background: #1e2230; border: 1px solid #444; border-radius: 50%; width: 38px; height: 38px; font-size: 18px; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
+    .emote-btn:hover { transform: scale(1.18); background: #00ffcc; border-color: #00ffcc; }
+
     /* Admin Console */
     #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 850px; max-width: 95vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
     #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 13px; border-radius: 6px; outline: none; }
@@ -89,6 +94,14 @@
   <div id="suddenDeathBanner">⚡ SUDDEN DEATH (50 HP) ⚡</div>
   <div id="giftPopupBanner">🎁 Notification Message</div>
 
+  <!-- Emote Quick Bar -->
+  <div id="emoteBar">
+    <button class="emote-btn" title="Wave [1]" onclick="triggerPlayerEmote('👋')">👋</button>
+    <button class="emote-btn" title="Laugh [2]" onclick="triggerPlayerEmote('😂')">😂</button>
+    <button class="emote-btn" title="Flex [3]" onclick="triggerPlayerEmote('💪')">💪</button>
+    <button class="emote-btn" title="Dance [4]" onclick="triggerPlayerEmote('💃')">💃</button>
+  </div>
+
   <!-- HUD -->
   <div id="statsHud" class="hud-panel">
     <div class="stat-box"><span class="stat-label">Player</span><span id="playerNameVal" class="stat-val" style="color:#00ffcc">Player</span></div>
@@ -121,7 +134,7 @@
   </div>
 
   <div id="controlsHint">
-    [WASD/Arrows] Move/Jump | [Mouse/Right Joy-Con] Aim & Fire | [R] Reload | [G] Throw Bomb | [~] Admin Console
+    [WASD/Arrows] Move/Jump | [Mouse/Right Joy-Con] Aim & Fire | [1-4] Emotes | [R] Reload | [G] Bomb | [~] Admin Console
   </div>
 
   <!-- Dual Joy-Cons -->
@@ -297,15 +310,20 @@ function isVerified(user) { if (!user) return false; return verifiedUsers.has(us
 
 // --- OUTFITS PRICING & DATABASE ---
 const OUTFITS_CATALOG = {
-  default: { id: 'default', name: '👤 Default Fighter', cost: 0, desc: 'Standard smooth combat suit style.', lockedToSphinx: false },
-  ninja: { id: 'ninja', name: '🥷 Ninja Suit', cost: 350, desc: 'Stealth assassin suit with red head wrap.', lockedToSphinx: false },
-  cowboy: { id: 'cowboy', name: '🤠 Cowboy', cost: 500, desc: 'Classic Stetson hat and leather vest accent.', lockedToSphinx: false },
-  cyber_knight: { id: 'cyber_knight', name: '🛡️ Cyber Knight', cost: 800, desc: 'Heavy cybernetic glowing armor plating.', lockedToSphinx: false },
-  king: { id: 'king', name: '👑 Royal King', cost: 1200, desc: 'Golden crown with royal purple cape accents.', lockedToSphinx: false },
-  skeleton: { id: 'skeleton', name: '💀 Skeleton Lord', cost: 1600, desc: 'Bone-white skull mask with obsidian suit.', lockedToSphinx: false },
-  astronaut: { id: 'astronaut', name: '🚀 Astronaut', cost: 2200, desc: 'White space suit with gold reflective visor.', lockedToSphinx: false },
-  alien: { id: 'alien', name: '👽 Alien Invader', cost: 3000, desc: 'Neon green alien skin with black oversized eyes.', lockedToSphinx: false },
-  chicken: { id: 'chicken', name: '🐔 Chicken Outfit (SPHINX ONLY)', cost: 5000, desc: 'Strictly reserved for sphinx! Feather suit & beak.', lockedToSphinx: true }
+  default: { id: 'default', name: '👤 Default Fighter', cost: 0, desc: 'Standard smooth combat suit style.', lockedTo: false },
+  ninja: { id: 'ninja', name: '🥷 Ninja Suit', cost: 350, desc: 'Stealth assassin suit with red head wrap.', lockedTo: false },
+  cowboy: { id: 'cowboy', name: '🤠 Cowboy', cost: 500, desc: 'Classic Stetson hat and leather vest accent.', lockedTo: false },
+  dog: { id: 'dog', name: '🐶 Dog Outfit', cost: 600, desc: 'Floppy puppy ears and black nose button.', lockedTo: false },
+  cyber_knight: { id: 'cyber_knight', name: '🛡️ Cyber Knight', cost: 800, desc: 'Heavy cybernetic glowing armor plating.', lockedTo: false },
+  cheetah: { id: 'cheetah', name: '🐆 Cheetah Outfit', cost: 1000, desc: 'Sleek golden fur coat with dark spots.', lockedTo: false },
+  king: { id: 'king', name: '👑 Royal King', cost: 1200, desc: 'Golden crown with royal purple cape accents.', lockedTo: false },
+  skeleton: { id: 'skeleton', name: '💀 Skeleton Lord', cost: 1600, desc: 'Bone-white skull mask with obsidian suit.', lockedTo: false },
+  butterfly: { id: 'butterfly', name: '🦋 Butterfly Outfit', cost: 1800, desc: 'Colorful wings on back and twin antennae.', lockedTo: false },
+  astronaut: { id: 'astronaut', name: '🚀 Astronaut', cost: 2200, desc: 'White space suit with gold reflective visor.', lockedTo: false },
+  unicorn: { id: 'unicorn', name: '🦄 Unicorn Outfit', cost: 2500, desc: 'Golden forehead horn with a rainbow mane.', lockedTo: false },
+  alien: { id: 'alien', name: '👽 Alien Invader', cost: 3000, desc: 'Neon green alien skin with black oversized eyes.', lockedTo: false },
+  piggy: { id: 'piggy', name: '🐷 Piggy Outfit (PIGGY ONLY)', cost: 5000, desc: 'Strictly reserved for piggy! Pink ears & snout.', lockedTo: 'piggy' },
+  chicken: { id: 'chicken', name: '🐔 Chicken Outfit (SPHINX ONLY)', cost: 5000, desc: 'Strictly reserved for sphinx! Feather suit & beak.', lockedTo: 'sphinx' }
 };
 
 // --- PERSISTENCE & LEADERBOARDS ---
@@ -333,6 +351,7 @@ function loadSavedProgress() {
 
   if (savedOutfit) {
     if (savedOutfit === 'chicken' && playerName.toLowerCase() !== 'sphinx') equippedOutfit = 'default';
+    else if (savedOutfit === 'piggy' && playerName.toLowerCase() !== 'piggy') equippedOutfit = 'default';
     else equippedOutfit = savedOutfit;
   }
   if (savedSkin) equippedSkin = savedSkin;
@@ -348,7 +367,7 @@ function saveProgress() {
   localStorage.setItem('rr_outfit', equippedOutfit);
   localStorage.setItem('rr_owned_outfits', JSON.stringify(Array.from(ownedOutfits)));
   localStorage.setItem('rr_skin', equippedSkin);
-  updateLeaderboardUI();
+  updateLeaderboardUI(); // Real-time leaderboard updates on save
 }
 
 function updateLeaderboardUI() {
@@ -365,7 +384,7 @@ function updateLeaderboardUI() {
 
   const uniqueMap = new Map();
   entries.forEach(e => uniqueMap.set(e.name.toLowerCase(), e));
-  const sorted = Array.from(uniqueMap.values()).sort((a,b) => b.kills - a.kills);
+  const sorted = Array.from(uniqueMap.values()).sort((a,b) => b.kills - a.kills || b.dmg - a.dmg);
 
   sorted.forEach((e, idx) => {
     const tr = document.createElement('tr');
@@ -400,7 +419,7 @@ function showNotificationBanner(msg, isWarning = false) {
   }, 4500);
 }
 
-// Input Controls
+// Input Controls & Emote Hotkeys (1, 2, 3, 4)
 const keys = {};
 const mouse = { x: 0, y: 0, down: false };
 
@@ -409,11 +428,19 @@ window.addEventListener('keydown', e => {
   if ((e.key === '~' || e.key === '`') && player && hasAdmin(player.name)) toggleAdminConsole();
   if (e.key.toLowerCase() === 'r' && player) player.reload();
   if (e.key.toLowerCase() === 'g' && player) player.throwBomb();
+  if (e.key === '1') triggerPlayerEmote('👋');
+  if (e.key === '2') triggerPlayerEmote('😂');
+  if (e.key === '3') triggerPlayerEmote('💪');
+  if (e.key === '4') triggerPlayerEmote('💃');
 });
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; keys[e.key] = false; });
 window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; touchAimAngle = null; });
 window.addEventListener('mousedown', e => { mouse.down = true; mouse.x = e.clientX; mouse.y = e.clientY; });
 window.addEventListener('mouseup', () => mouse.down = false);
+
+function triggerPlayerEmote(symbol) {
+  if (player) player.playEmote(symbol);
+}
 
 // --- JOYSTICKS ---
 const moveContainer = document.getElementById('moveContainer');
@@ -635,12 +662,26 @@ class Character {
     
     this.godMode = false; this.infiniteDamage = false; this.flyMode = false;
     this.invisible = false; this.aimbot = false; this.frozen = false;
-    this.shieldActive = false; this.wallbang = false; // SHOOT THROUGH WALLS PERK
+    this.shieldActive = false; this.wallbang = false;
     this.speedMult = 1.0; this.scaleMult = 1.0;
     this.matchKills = 0; this.emergencyBeanDropped = false;
+
+    // Emote State
+    this.currentEmote = null;
+    this.emoteTimer = 0;
+  }
+
+  playEmote(symbol) {
+    this.currentEmote = symbol;
+    this.emoteTimer = 120; // ~2 seconds
   }
 
   update() {
+    if (this.emoteTimer > 0) {
+      this.emoteTimer--;
+      if (this.emoteTimer <= 0) this.currentEmote = null;
+    }
+
     if (this.frozen) {
       this.vx = 0; this.vy += 0.5; this.x += this.vx; this.y += this.vy;
       this.checkCollisions(); return;
@@ -678,7 +719,14 @@ class Character {
     this.x += this.vx; this.y += this.vy;
     this.checkCollisions();
 
-    this.limbAngle = Math.sin(Date.now() * 0.01) * (Math.abs(this.vx) > 0.5 ? 0.6 : 0.1);
+    // Emote Dance Limb Movement
+    if (this.currentEmote === '💃') {
+      this.limbAngle = Math.sin(Date.now() * 0.03) * 1.2;
+    } else if (this.currentEmote === '💪') {
+      this.limbAngle = 0.8;
+    } else {
+      this.limbAngle = Math.sin(Date.now() * 0.01) * (Math.abs(this.vx) > 0.5 ? 0.6 : 0.1);
+    }
 
     if (!this.isBot && mouse.down && Date.now() - this.lastShot > this.weaponData.rate) {
       this.shoot();
@@ -827,14 +875,29 @@ class Character {
       ctx.beginPath(); ctx.arc(0, -15, 35, 0, Math.PI * 2); ctx.stroke();
     }
 
-    // STRICT SPHINX-ONLY CHICKEN LOCK EVALUATION
+    // EXCLUSIVE OUTFIT CHECKS
     const isSphinx = this.name.toLowerCase() === 'sphinx';
+    const isPiggy = this.name.toLowerCase() === 'piggy';
     const activeOutfit = (this === player) ? equippedOutfit : 'default';
+
     const isChicken = (activeOutfit === 'chicken' && isSphinx) || (this.isBot && isSphinx);
+    const isPiggyOutfit = (activeOutfit === 'piggy' && isPiggy) || (this.isBot && isPiggy);
+
+    // Butterfly Outfit Wings Render
+    if (activeOutfit === 'butterfly') {
+      ctx.fillStyle = 'rgba(255, 0, 200, 0.5)';
+      ctx.beginPath(); ctx.ellipse(-14, -15, 14, 22, -0.4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(0, 220, 255, 0.5)';
+      ctx.beginPath(); ctx.ellipse(14, -15, 14, 22, 0.4, 0, Math.PI*2); ctx.fill();
+    }
 
     // Head Base Render
     let headColor = '#ffe0bd';
     if (isChicken) headColor = '#ffffff';
+    else if (isPiggyOutfit) headColor = '#ffb6c1';
+    else if (activeOutfit === 'dog') headColor = '#8b5a2b';
+    else if (activeOutfit === 'cheetah') headColor = '#e69500';
+    else if (activeOutfit === 'unicorn') headColor = '#ffffff';
     else if (activeOutfit === 'skeleton') headColor = '#e6e6e6';
     else if (activeOutfit === 'alien') headColor = '#00ff66';
     else if (this.frozen) headColor = '#80e5ff';
@@ -842,13 +905,38 @@ class Character {
     ctx.fillStyle = headColor;
     ctx.beginPath(); ctx.arc(0, -30, 8, 0, Math.PI * 2); ctx.fill();
 
-    // CUSTOM OUTFIT VISUAL RENDERING ENGINE
+    // CUSTOM OUTFIT VISUAL RENDERING
     if (isChicken) {
       ctx.fillStyle = '#ff0033';
       ctx.beginPath(); ctx.arc(0, -40, 4, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(3, -38, 3, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = '#ffaa00';
       ctx.beginPath(); ctx.moveTo(6, -30); ctx.lineTo(13, -28); ctx.lineTo(6, -26); ctx.fill();
+    } else if (isPiggyOutfit) {
+      // Pig Ears & Snout
+      ctx.fillStyle = '#ff8da1';
+      ctx.beginPath(); ctx.moveTo(-7, -35); ctx.lineTo(-10, -42); ctx.lineTo(-3, -37); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(7, -35); ctx.lineTo(10, -42); ctx.lineTo(3, -37); ctx.fill();
+      ctx.fillStyle = '#ff69b4';
+      ctx.beginPath(); ctx.ellipse(3, -29, 4, 3, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#000'; ctx.fillRect(2, -30, 1, 2); ctx.fillRect(4, -30, 1, 2);
+    } else if (activeOutfit === 'dog') {
+      ctx.fillStyle = '#5c3a1d';
+      ctx.beginPath(); ctx.ellipse(-9, -28, 4, 7, 0.3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(9, -28, 4, 7, -0.3, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(4, -28, 2, 0, Math.PI*2); ctx.fill();
+    } else if (activeOutfit === 'cheetah') {
+      ctx.fillStyle = '#331a00';
+      ctx.beginPath(); ctx.arc(-3, -32, 1.5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(4, -34, 1.5, 0, Math.PI*2); ctx.fill();
+    } else if (activeOutfit === 'unicorn') {
+      // Golden Horn
+      ctx.fillStyle = '#ffd700'; ctx.beginPath();
+      ctx.moveTo(2, -37); ctx.lineTo(8, -48); ctx.lineTo(6, -37); ctx.fill();
+    } else if (activeOutfit === 'butterfly') {
+      ctx.strokeStyle = '#ff00aa'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(-2, -37); ctx.lineTo(-6, -44); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(2, -37); ctx.lineTo(6, -44); ctx.stroke();
     } else if (activeOutfit === 'ninja') {
       ctx.fillStyle = '#222'; ctx.fillRect(-8, -35, 16, 6);
       ctx.fillStyle = '#ff0000'; ctx.fillRect(-8, -32, 16, 2);
@@ -877,21 +965,20 @@ class Character {
     }
 
     // Torso
-    ctx.strokeStyle = isChicken ? '#f5f5f5' : (this.frozen ? '#00ccff' : this.color);
+    ctx.strokeStyle = isChicken ? '#f5f5f5' : (isPiggyOutfit ? '#ffb6c1' : (this.frozen ? '#00ccff' : this.color));
     ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(0, 0); ctx.stroke();
 
     // Legs
-    ctx.strokeStyle = isChicken ? '#ffaa00' : (this.frozen ? '#00ccff' : this.color);
+    ctx.strokeStyle = isChicken ? '#ffaa00' : (isPiggyOutfit ? '#ffb6c1' : (this.frozen ? '#00ccff' : this.color));
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.sin(this.limbAngle) * 12, 18);
     ctx.moveTo(0, 0); ctx.lineTo(-Math.sin(this.limbAngle) * 12, 18); ctx.stroke();
 
-    // VISUAL WEAPON & EXPANDED FINISH SKINS ENGINE
+    // VISUAL WEAPON & FINISH SKINS
     ctx.save();
     ctx.translate(0, -15);
     ctx.rotate(aimAngle);
     
     const wShape = this.weaponData.shape || 'pistol';
-    
     let skinColor = '#222';
     if (equippedSkin === 'neon') skinColor = '#00ffff';
     if (equippedSkin === 'gold') skinColor = '#ffd700';
@@ -925,10 +1012,16 @@ class Character {
     ctx.restore();
     ctx.restore();
 
+    // Floating Active Emote Above Head
+    if (this.currentEmote) {
+      ctx.font = '22px sans-serif';
+      ctx.fillText(this.currentEmote, this.x, this.y - (70 * this.scaleMult) + Math.sin(Date.now()*0.01)*4);
+    }
+
     // Overhead Tag & Health Bar
     ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
     const vMark = isVerified(this.name) ? " ✔" : "";
-    const chickTag = isChicken ? " 🐔" : "";
+    const chickTag = isChicken ? " 🐔" : (isPiggyOutfit ? " 🐷" : "");
     const wbTag = this.wallbang ? " 🎯" : "";
     ctx.fillText(`${this.name}${vMark}${chickTag}${wbTag} ${this.godMode ? '🛡️' : ''}${this.frozen ? '❄️' : ''}`, this.x, this.y - (56 * this.scaleMult));
 
@@ -943,7 +1036,7 @@ class Character {
   }
 }
 
-// --- PROJECTILE CLASS & WALLBANG PENETRATION ---
+// --- PROJECTILE CLASS ---
 class Projectile {
   constructor(x, y, vx, vy, damage, owner, isPurple = false, gravity = 0, isExplosive = false) {
     this.x = x; this.y = y; this.vx = vx; this.vy = vy;
@@ -956,7 +1049,6 @@ class Projectile {
     this.vy += this.gravity; this.x += this.vx; this.y += this.vy;
     const floorY = canvas.height - 100;
 
-    // Platform Collision (Skipped if Wallbang / Pierce is active)
     if (!this.owner || !this.owner.wallbang) {
       const platforms = getCalculatedPlatforms();
       platforms.forEach(p => {
@@ -976,7 +1068,10 @@ class Projectile {
             explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
           } else {
             target.takeDamage(this.damage);
-            if (this.owner === player) { totalDamageDealt += this.damage; saveProgress(); }
+            if (this.owner === player) { 
+              totalDamageDealt += this.damage; 
+              saveProgress(); // REAL-TIME LEADERBOARD UPDATE ON DAMAGE
+            }
           }
           this.dead = true;
         }
@@ -1027,7 +1122,7 @@ function initOutfitWardrobe() {
 
     const card = document.createElement('div');
     card.className = 'shop-card';
-    if (item.lockedToSphinx) card.style.border = '2px solid #ffcc00';
+    if (item.lockedTo) card.style.border = '2px solid #ffcc00';
 
     let btnText = "Buy & Equip";
     let btnStyle = "";
@@ -1037,8 +1132,8 @@ function initOutfitWardrobe() {
       btnStyle = "background: #00ffcc; color: #000;";
     } else if (isOwned) {
       btnText = "Equip";
-    } else if (item.lockedToSphinx) {
-      btnText = "Equip Chicken 🔒";
+    } else if (item.lockedTo) {
+      btnText = `Equip ${item.name.split(' ')[1]} 🔒`;
       btnStyle = "background: #ffcc00; color: #000;";
     }
 
@@ -1058,12 +1153,12 @@ function handleOutfitClick(outfitId) {
   const item = OUTFITS_CATALOG[outfitId];
   if (!item) return;
 
-  if (item.lockedToSphinx && playerName.toLowerCase() !== 'sphinx') {
-    alert("Access Denied: The Chicken Outfit is strictly reserved for sphinx!");
+  if (item.lockedTo && playerName.toLowerCase() !== item.lockedTo) {
+    alert(`Access Denied: The ${item.name} is strictly reserved for ${item.lockedTo}!`);
     return;
   }
 
-  if (ownedOutfits.has(outfitId) || item.cost === 0 || (item.lockedToSphinx && playerName.toLowerCase() === 'sphinx')) {
+  if (ownedOutfits.has(outfitId) || item.cost === 0 || (item.lockedTo && playerName.toLowerCase() === item.lockedTo)) {
     equippedOutfit = outfitId;
     saveProgress();
     initOutfitWardrobe();
@@ -1094,9 +1189,8 @@ function confirmMatchStart() {
 
   player.name = playerName;
 
-  if (equippedOutfit === 'chicken' && playerName.toLowerCase() !== 'sphinx') {
-    equippedOutfit = 'default';
-  }
+  if (equippedOutfit === 'chicken' && playerName.toLowerCase() !== 'sphinx') equippedOutfit = 'default';
+  if (equippedOutfit === 'piggy' && playerName.toLowerCase() !== 'piggy') equippedOutfit = 'default';
 
   if (isOwnerUser(playerName)) {
     adminUsers.add(playerName.toLowerCase());
