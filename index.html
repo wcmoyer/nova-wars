@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NOVA WARS - 3D Arena Shooter</title>
+  <title>NOVA WARS- 3D Arena Shooter</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -459,6 +459,7 @@ function updateLeaderboardUI() {
 
   sorted.forEach((e, idx) => {
     const tr = document.createElement('tr');
+    // Ensure verified badge appears dynamically on the leaderboard if verified
     const vTag = isVerified(e.name) ? `<span class="verified-badge">✔</span>` : '';
     tr.innerHTML = `
       <td>#${idx + 1}</td>
@@ -1283,6 +1284,7 @@ function confirmMatchStart() {
     }
   } else {
     adminUsers.delete(key);
+    verifiedUsers.delete(key);
   }
 
   player.name = playerName;
@@ -1475,6 +1477,7 @@ function processCommand(cmd) {
     let target = extractTargetUser();
     if (target) {
       adminUsers.add(target.toLowerCase());
+      verifiedUsers.add(target.toLowerCase());
       if (conn && conn.open) conn.send({ type: 'admin_grant', target: target, sender: player.name });
       alert(`Granted admin privileges to "${target}"!`);
       showNotificationBanner(`👑 Granted Admin to ${target}`);
@@ -1488,6 +1491,7 @@ function processCommand(cmd) {
     if (target) {
       if (isOwnerUser(target)) { alert("Cannot revoke owner admin status from piggy or sphinx!"); return; }
       adminUsers.delete(target.toLowerCase());
+      verifiedUsers.delete(target.toLowerCase());
       if (conn && conn.open) conn.send({ type: 'admin_revoke', target: target, sender: player.name });
       alert(`Revoked admin privileges from "${target}"!`);
       showNotificationBanner(`⚠️ Revoked Admin from ${target}`, true);
@@ -1545,6 +1549,7 @@ function setupPeerConnection(connection) {
     } else if (data.type === 'admin_grant') {
       if (data.target.toLowerCase() === player.name.toLowerCase()) {
         adminUsers.add(player.name.toLowerCase());
+        verifiedUsers.add(player.name.toLowerCase());
         refreshAdminUI();
         showNotificationBanner(`👑 You were granted Admin permissions by ${data.sender}!`);
       }
@@ -1552,6 +1557,7 @@ function setupPeerConnection(connection) {
       if (data.target.toLowerCase() === player.name.toLowerCase()) {
         if (!isOwnerUser(player.name)) {
           adminUsers.delete(player.name.toLowerCase());
+          verifiedUsers.delete(player.name.toLowerCase());
           refreshAdminUI();
           showNotificationBanner(`⚠️ Your Admin permissions were revoked by ${data.sender}!`, true);
         }
