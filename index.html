@@ -175,8 +175,8 @@
       <p style="font-size: 12px; color: #aaa;">Select a game mode, choose an arena style, and launch into 3D combat!</p>
       
       <div style="margin: 15px 0;">
-        <label style="font-size: 11px; text-transform: uppercase; color: #aaa;">Player Name</label>
-        <input type="text" id="usernameInput" class="input-field" maxlength="16" value="piggy" style="margin-top: 5px;">
+        <label style="font-size: 11px; text-transform: uppercase; color: #aaa;">Player Name Login</label>
+        <input type="text" id="usernameInput" class="input-field" maxlength="16" value="piggy" style="margin-top: 5px;" placeholder="Enter username...">
       </div>
 
       <h3>Select Game Mode</h3>
@@ -246,7 +246,7 @@
   <!-- Outfits Wardrobe Modal -->
   <div id="outfitModal" class="modal" style="display:none;">
     <div class="modal-content">
-      <h2>Character Outfits Wardrobe</h2>
+      <h2>Outfits Wardrobe</h2>
       <p>Purchase or equip distinct outfits for your ragdoll warrior using earned credits!</p>
 
       <div class="grid-3col" id="outfitWardrobeGrid"></div>
@@ -371,7 +371,6 @@ function loadSavedProgress() {
   if (savedKills !== null) playerKills = parseInt(savedKills, 10);
   if (savedDmg !== null) totalDamageDealt = parseInt(savedDmg, 10);
 
-  // Sync active local player into the global registry
   globalLeaderboardRegistry.set(playerName.toLowerCase(), {
     name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt
   });
@@ -415,7 +414,6 @@ function updateLeaderboardUI() {
   if (!lbBody) return;
   lbBody.innerHTML = '';
 
-  // Sort by Kills (Primary), Damage (Secondary), Credits (Tertiary)
   const sorted = Array.from(globalLeaderboardRegistry.values()).sort((a,b) => {
     if (b.kills !== a.kills) return b.kills - a.kills;
     if (b.dmg !== a.dmg) return b.dmg - a.dmg;
@@ -707,7 +705,6 @@ class Character {
     this.currentEmote = null;
     this.emoteTimer = 0;
 
-    // Record or register character on creation
     recordPlayerStats(this.name, 0, 0, 0);
   }
 
@@ -759,7 +756,6 @@ class Character {
     this.x += this.vx; this.y += this.vy;
     this.checkCollisions();
 
-    // Emote Dance Limb Movement
     if (this.currentEmote === '💃') {
       this.limbAngle = Math.sin(Date.now() * 0.03) * 1.2;
     } else if (this.currentEmote === '💪') {
@@ -874,7 +870,7 @@ class Character {
       if (this.team === 'A' && this !== player) teamAScore++;
       if (this.team !== 'A') {
         player.matchKills++; 
-        recordPlayerStats(player.name, 1, 50, 0); // RECORD KILL & EARNED CREDITS TO LEADERBOARD
+        recordPlayerStats(player.name, 1, 50, 0);
         teamAScore++; 
       } else { teamBScore++; }
       updateScoreboard();
@@ -1108,7 +1104,7 @@ class Projectile {
           } else {
             target.takeDamage(this.damage);
             if (this.owner) { 
-              recordPlayerStats(this.owner.name, 0, 0, this.damage); // RECORD DAMAGE TO LEADERBOARD IN REAL-TIME
+              recordPlayerStats(this.owner.name, 0, 0, this.damage);
             }
           }
           this.dead = true;
@@ -1221,18 +1217,29 @@ function triggerSuddenDeath() {
   allEntities.forEach(e => { if (e) { e.maxHealth = 50; e.health = 50; } });
 }
 
+// LOGIN VERIFICATION & OUTFIT AUDIT
 function confirmMatchStart() {
   const pInput = document.getElementById('usernameInput').value.trim();
   if (pInput.length > 0) playerName = pInput;
 
   player.name = playerName;
 
-  if (equippedOutfit === 'chicken' && playerName.toLowerCase() !== 'sphinx') equippedOutfit = 'default';
-  if (equippedOutfit === 'piggy' && playerName.toLowerCase() !== 'piggy') equippedOutfit = 'default';
+  // STRICT LOGIN AUDIT FOR RESTRICTED OUTFITS
+  if (equippedOutfit === 'chicken' && playerName.toLowerCase() !== 'sphinx') {
+    equippedOutfit = 'default';
+    showNotificationBanner("⚠️ Access Denied: Chicken Outfit is reserved for sphinx! Reset to default.", true);
+  }
+  if (equippedOutfit === 'piggy' && playerName.toLowerCase() !== 'piggy') {
+    equippedOutfit = 'default';
+    showNotificationBanner("⚠️ Access Denied: Piggy Outfit is reserved for piggy! Reset to default.", true);
+  }
 
+  // DYNAMIC LOGIN PERMISSION SETUP
   if (isOwnerUser(playerName)) {
     adminUsers.add(playerName.toLowerCase());
     verifiedUsers.add(playerName.toLowerCase());
+  } else {
+    adminUsers.delete(playerName.toLowerCase());
   }
 
   document.getElementById('playerNameVal').innerText = playerName;
@@ -1457,7 +1464,7 @@ function processCommand(cmd) {
       const amount = parseInt(parts[1] || 1000);
       let targetName = parts[2] ? parts[2].toLowerCase() : player.name.toLowerCase();
 
-      recordPlayerStats(targetName, 0, amount, 0); // RECORD GIFTED CREDITS TO LEADERBOARD
+      recordPlayerStats(targetName, 0, amount, 0);
       saveProgress();
 
       if (targetName === player.name.toLowerCase()) {
