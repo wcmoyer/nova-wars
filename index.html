@@ -196,7 +196,11 @@
         <button class="btn btn-secondary" onclick="setMap('warehouse')">Warehouse 3D</button>
       </div>
 
+      <!-- LAUNCH MATCH BUTTON -->
       <button class="btn" style="width: 100%; padding: 14px; font-size: 16px; margin-top: 10px;" onclick="confirmMatchStart()">LAUNCH MATCH</button>
+
+      <!-- HOW TO PLAY / TUTORIAL BUTTON -->
+      <button class="btn btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; margin-top: 8px; border-color: #00ffcc; color: #00ffcc;" onclick="toggleTutorialModal(true)">📖 HOW TO PLAY / TUTORIAL</button>
 
       <hr style="border: 0; border-top: 1px solid #2d3244; margin: 20px 0;">
 
@@ -213,6 +217,34 @@
         </thead>
         <tbody id="leaderboardBody"></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- How To Play / Tutorial Modal -->
+  <div id="tutorialModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width: 650px;">
+      <h2>📖 How to Play - Rivals Guide</h2>
+      <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 15px;">
+        <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #00ffcc;">
+          <h4 style="color: #00ffcc; margin-bottom: 4px;">1. Movement & Jumping</h4>
+          <p style="font-size: 13px; color: #ccc;">Use <strong>WASD</strong> or <strong>Arrow Keys</strong> to run and jump across 3D platforms. On mobile or touch devices, use the left joystick to move around the arena.</p>
+        </div>
+        <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #ff4444;">
+          <h4 style="color: #ff4444; margin-bottom: 4px;">2. Aiming & Combat Controls</h4>
+          <p style="font-size: 13px; color: #ccc;">Aim with your <strong>Mouse Cursor</strong> and Left-Click to shoot. Press <strong>[R]</strong> to reload ammo and <strong>[G]</strong> to lob explosive bombs at rival fighters!</p>
+        </div>
+        <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #ffcc00;">
+          <h4 style="color: #ffcc00; margin-bottom: 4px;">3. Earn Credits & Dynamic Leaderboards</h4>
+          <p style="font-size: 13px; color: #ccc;">Score kills (+50 Credits) and deal damage to climb the real-time Leaderboard rankings! Spend credits in the Wardrobe to buy Outfits (Dog, Cheetah, Unicorn, etc.) and Weapon Finish Skins.</p>
+        </div>
+        <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #a800ff;">
+          <h4 style="color: #a800ff; margin-bottom: 4px;">4. Emotes & Admin Console</h4>
+          <p style="font-size: 13px; color: #ccc;">Express yourself during battle using hotkeys <strong>[1-4]</strong> to wave, laugh, flex, or dance! Authorized admins can press <strong>[~]</strong> to open the Admin Console for commands like <code>wallbang</code>, <code>god</code>, and gifting <code>credits</code>.</p>
+        </div>
+      </div>
+      <div style="margin-top: 22px; text-align: center;">
+        <button class="btn" style="width: 100%; padding: 14px; font-size: 15px;" onclick="toggleTutorialModal(false)">GOT IT, LET'S PLAY!</button>
+      </div>
     </div>
   </div>
 
@@ -246,7 +278,7 @@
   <!-- Outfits Wardrobe Modal -->
   <div id="outfitModal" class="modal" style="display:none;">
     <div class="modal-content">
-      <h2>Outfits Wardrobe</h2>
+      <h2> Outfit Wardrobe</h2>
       <p>Purchase or equip distinct outfits for your ragdoll warrior using earned credits!</p>
 
       <div class="grid-3col" id="outfitWardrobeGrid"></div>
@@ -451,6 +483,10 @@ function showNotificationBanner(msg, isWarning = false) {
   bannerTimer = setTimeout(() => {
     popup.style.display = 'none';
   }, 4500);
+}
+
+function toggleTutorialModal(show) {
+  document.getElementById('tutorialModal').style.display = show ? 'flex' : 'none';
 }
 
 // Input Controls & Emote Hotkeys (1, 2, 3, 4)
