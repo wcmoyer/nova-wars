@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NOVA WARS - 3D Arena Shooter</title>
+  <title> </title> NOVA WARS - 3D Arena Shooter</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -171,7 +171,7 @@
   <!-- Main Rivals Hub Menu Modal -->
   <div id="hubModal" class="modal">
     <div class="modal-content">
-      <h2>Rival Ragdolls - Game Hub</h2>
+      <h2>NOVA WARS - Game Hub</h2>
       <p style="font-size: 12px; color: #aaa;">Select a game mode, choose an arena style, and launch into 3D combat!</p>
       
       <div style="margin: 15px 0;">
@@ -466,6 +466,7 @@ function updateLeaderboardUI() {
 
   sorted.forEach((e, idx) => {
     const tr = document.createElement('tr');
+    // Ensure verified badge appears dynamically on the leaderboard if verified
     const vTag = isVerified(e.name) ? `<span class="verified-badge">✔</span>` : '';
     tr.innerHTML = `
       <td>#${idx + 1}</td>
@@ -1297,6 +1298,7 @@ function confirmMatchStart() {
       verifiedUsers.add(key);
       showNotificationBanner(`🔓 2FA Authenticated! Full Admin & Verified permissions unlocked.`);
     } else {
+      // Strips privileges, retains the requested username as 'sphinx' or 'piggy'
       adminUsers.delete(key);
       verifiedUsers.delete(key);
       showNotificationBanner(`⚠️ Invalid 2FA Code! Playing as unverified non-admin user.`, true);
