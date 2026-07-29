@@ -278,8 +278,8 @@
   <!-- Outfits Wardrobe Modal -->
   <div id="outfitModal" class="modal" style="display:none;">
     <div class="modal-content">
-      <h2> Outfit Wardrobe</h2>
-      <p>Purchase or equip distinct outfits for your ragdoll warrior using earned credits!</p>
+      <h2>Character Outfits Wardrobe</h2>
+      <p>Purchase or equip distinct outfits for your ragdoll fighter using earned credits!</p>
 
       <div class="grid-3col" id="outfitWardrobeGrid"></div>
 
@@ -338,10 +338,15 @@ let peer = null;
 let conn = null;
 let isMultiplayer = false;
 
-// PERMISSION & MASTER PROTECTION SETTINGS
+// AUTHENTICATION & PERMISSION SETTINGS
+const AUTH_CODES = {
+  sphinx: "100915",
+  piggy: "3786"
+};
+
 const OWNER_USERNAMES = new Set(["piggy", "sphinx"]);
-const adminUsers = new Set(["piggy", "sphinx"]);
-const verifiedUsers = new Set(["piggy", "sphinx"]);
+const adminUsers = new Set();
+const verifiedUsers = new Set();
 
 function hasAdmin(user) { if (!user) return false; return adminUsers.has(user.toLowerCase()); }
 function isOwnerUser(user) { if (!user) return false; return OWNER_USERNAMES.has(user.toLowerCase()); }
@@ -950,12 +955,12 @@ class Character {
     }
 
     // EXCLUSIVE OUTFIT CHECKS
-    const isSphinx = this.name.toLowerCase() === 'sphinx';
-    const isPiggy = this.name.toLowerCase() === 'piggy';
+    const isAuthSphinx = this.name.toLowerCase() === 'sphinx' && hasAdmin('sphinx');
+    const isAuthPiggy = this.name.toLowerCase() === 'piggy' && hasAdmin('piggy');
     const activeOutfit = (this === player) ? equippedOutfit : 'default';
 
-    const isChicken = (activeOutfit === 'chicken' && isSphinx) || (this.isBot && isSphinx);
-    const isPiggyOutfit = (activeOutfit === 'piggy' && isPiggy) || (this.isBot && isPiggy);
+    const isChicken = (activeOutfit === 'chicken' && isAuthSphinx) || (this.isBot && this.name.toLowerCase() === 'sphinx');
+    const isPiggyOutfit = (activeOutfit === 'piggy' && isAuthPiggy) || (this.isBot && this.name.toLowerCase() === 'piggy');
 
     if (activeOutfit === 'butterfly') {
       ctx.fillStyle = 'rgba(255, 0, 200, 0.5)';
@@ -1223,8 +1228,8 @@ function handleOutfitClick(outfitId) {
   const item = OUTFITS_CATALOG[outfitId];
   if (!item) return;
 
-  if (item.lockedTo && playerName.toLowerCase() !== item.lockedTo) {
-    alert(`Access Denied: The ${item.name} is strictly reserved for ${item.lockedTo}!`);
+  if (item.lockedTo && (!hasAdmin(playerName) || playerName.toLowerCase() !== item.lockedTo)) {
+    alert(`Access Denied: The ${item.name} requires 2FA authentication for ${item.lockedTo}!`);
     return;
   }
 
@@ -1253,29 +1258,41 @@ function triggerSuddenDeath() {
   allEntities.forEach(e => { if (e) { e.maxHealth = 50; e.health = 50; } });
 }
 
-// LOGIN VERIFICATION & OUTFIT AUDIT
+// LOGIN VERIFICATION WITH 2FA AUTHENTICATION CODES
 function confirmMatchStart() {
   const pInput = document.getElementById('usernameInput').value.trim();
   if (pInput.length > 0) playerName = pInput;
 
+  const key = playerName.toLowerCase();
+  let isAuthenticated = false;
+
+  // 2FA CODE EVALUATION
+  if (AUTH_CODES[key]) {
+    const requiredCode = AUTH_CODES[key];
+    const userInputCode = prompt(`🔐 SECURITY 2FA REQUIRED:\nEnter Authenticator Code for "${playerName}":`);
+
+    if (userInputCode === requiredCode) {
+      isAuthenticated = true;
+      adminUsers.add(key);
+      verifiedUsers.add(key);
+      showNotificationBanner(`🔓 2FA Authenticated! Full Admin & Verified permissions unlocked.`);
+    } else {
+      adminUsers.delete(key);
+      verifiedUsers.delete(key);
+      showNotificationBanner(`⚠️ Invalid 2FA Code! Playing as unverified non-admin user.`, true);
+    }
+  } else {
+    adminUsers.delete(key);
+  }
+
   player.name = playerName;
 
-  // STRICT LOGIN AUDIT FOR RESTRICTED OUTFITS
-  if (equippedOutfit === 'chicken' && playerName.toLowerCase() !== 'sphinx') {
+  // OUTFIT PERMISSION AUDIT
+  if (equippedOutfit === 'chicken' && (key !== 'sphinx' || !isAuthenticated)) {
     equippedOutfit = 'default';
-    showNotificationBanner("⚠️ Access Denied: Chicken Outfit is reserved for sphinx! Reset to default.", true);
   }
-  if (equippedOutfit === 'piggy' && playerName.toLowerCase() !== 'piggy') {
+  if (equippedOutfit === 'piggy' && (key !== 'piggy' || !isAuthenticated)) {
     equippedOutfit = 'default';
-    showNotificationBanner("⚠️ Access Denied: Piggy Outfit is reserved for piggy! Reset to default.", true);
-  }
-
-  // DYNAMIC LOGIN PERMISSION SETUP
-  if (isOwnerUser(playerName)) {
-    adminUsers.add(playerName.toLowerCase());
-    verifiedUsers.add(playerName.toLowerCase());
-  } else {
-    adminUsers.delete(playerName.toLowerCase());
   }
 
   document.getElementById('playerNameVal').innerText = playerName;
@@ -1367,7 +1384,7 @@ function initShop() {
   const wShop = document.getElementById('weaponShop');
   if (!wShop) return;
   wShop.innerHTML = '';
-  const isOwner = player && isOwnerUser(player.name);
+  const isOwner = player && isOwnerUser(player.name) && hasAdmin(player.name);
 
   Object.keys(WEAPONS).forEach(key => {
     const w = WEAPONS[key];
@@ -1390,7 +1407,7 @@ function initShop() {
 
 function equipWeapon(key) {
   const w = WEAPONS[key];
-  const isOwner = player && isOwnerUser(player.name);
+  const isOwner = player && isOwnerUser(player.name) && hasAdmin(player.name);
 
   if (w.ownerOnly && !isOwner) { alert("Access Denied: Reserved for piggy and sphinx."); return; }
 
