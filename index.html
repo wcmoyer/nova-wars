@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NOVA WARS - Arena Shooter</title>
+  <title>NOVA WARS - 3D Arena Shooter</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -247,7 +247,7 @@
   <div id="outfitModal" class="modal" style="display:none;">
     <div class="modal-content">
       <h2>Character Outfits Wardrobe</h2>
-      <p>Purchase or equip distinct outfits for your ragdoll fighter using earned credits!</p>
+      <p>Purchase or equip distinct outfits for your ragdoll warrior using earned credits!</p>
 
       <div class="grid-3col" id="outfitWardrobeGrid"></div>
 
@@ -284,6 +284,13 @@ let isSuddenDeath = false;
 let equippedSkin = 'default';
 let equippedOutfit = 'default';
 let ownedOutfits = new Set(['default']);
+
+// Dynamic Leaderboard Global Registry
+let globalLeaderboardRegistry = new Map([
+  ["sphinx", { name: "sphinx", kills: 142, credits: 8500, dmg: 4200 }],
+  ["piggy", { name: "piggy", kills: 135, credits: 7900, dmg: 3950 }],
+  ["rivalbotpro", { name: "RivalBotPro", kills: 52, credits: 1400, dmg: 1600 }]
+]);
 
 // Match State
 let selectedMode = '1v1';
@@ -326,7 +333,30 @@ const OUTFITS_CATALOG = {
   chicken: { id: 'chicken', name: '🐔 Chicken Outfit (SPHINX ONLY)', cost: 5000, desc: 'Strictly reserved for sphinx! Feather suit & beak.', lockedTo: 'sphinx' }
 };
 
-// --- PERSISTENCE & LEADERBOARDS ---
+// --- DYNAMIC REAL-TIME LEADERBOARD & PERSISTENCE ---
+function recordPlayerStats(name, addedKills = 0, addedCredits = 0, addedDmg = 0) {
+  if (!name) return;
+  const key = name.toLowerCase();
+
+  let entry = globalLeaderboardRegistry.get(key);
+  if (!entry) {
+    entry = { name: name, kills: 0, credits: 0, dmg: 0 };
+    globalLeaderboardRegistry.set(key, entry);
+  }
+
+  entry.kills += addedKills;
+  entry.credits += addedCredits;
+  entry.dmg += addedDmg;
+
+  if (key === playerName.toLowerCase()) {
+    playerKills = entry.kills;
+    credits = entry.credits;
+    totalDamageDealt = entry.dmg;
+  }
+
+  updateLeaderboardUI();
+}
+
 function loadSavedProgress() {
   const savedName = localStorage.getItem('rr_username');
   const savedCredits = localStorage.getItem('rr_credits');
@@ -340,6 +370,11 @@ function loadSavedProgress() {
   if (savedCredits !== null) credits = parseInt(savedCredits, 10);
   if (savedKills !== null) playerKills = parseInt(savedKills, 10);
   if (savedDmg !== null) totalDamageDealt = parseInt(savedDmg, 10);
+
+  // Sync active local player into the global registry
+  globalLeaderboardRegistry.set(playerName.toLowerCase(), {
+    name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt
+  });
 
   if (savedOwnedOutfits) {
     try {
@@ -367,7 +402,12 @@ function saveProgress() {
   localStorage.setItem('rr_outfit', equippedOutfit);
   localStorage.setItem('rr_owned_outfits', JSON.stringify(Array.from(ownedOutfits)));
   localStorage.setItem('rr_skin', equippedSkin);
-  updateLeaderboardUI(); // Real-time leaderboard updates on save
+
+  globalLeaderboardRegistry.set(playerName.toLowerCase(), {
+    name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt
+  });
+
+  updateLeaderboardUI();
 }
 
 function updateLeaderboardUI() {
@@ -375,16 +415,12 @@ function updateLeaderboardUI() {
   if (!lbBody) return;
   lbBody.innerHTML = '';
 
-  const entries = [
-    { name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt },
-    { name: "sphinx", kills: 142, credits: 8500, dmg: 4200 },
-    { name: "piggy", kills: 135, credits: 7900, dmg: 3950 },
-    { name: "RivalBotPro", kills: 52, credits: 1400, dmg: 1600 }
-  ];
-
-  const uniqueMap = new Map();
-  entries.forEach(e => uniqueMap.set(e.name.toLowerCase(), e));
-  const sorted = Array.from(uniqueMap.values()).sort((a,b) => b.kills - a.kills || b.dmg - a.dmg);
+  // Sort by Kills (Primary), Damage (Secondary), Credits (Tertiary)
+  const sorted = Array.from(globalLeaderboardRegistry.values()).sort((a,b) => {
+    if (b.kills !== a.kills) return b.kills - a.kills;
+    if (b.dmg !== a.dmg) return b.dmg - a.dmg;
+    return b.credits - a.credits;
+  });
 
   sorted.forEach((e, idx) => {
     const tr = document.createElement('tr');
@@ -636,7 +672,9 @@ class Explosion {
         const falloff = 1 - (dist / this.maxRadius);
         const dealt = Math.ceil(this.damage * falloff);
         p.takeDamage(dealt);
-        if (this.owner === player && p !== player) { totalDamageDealt += dealt; saveProgress(); }
+        if (this.owner) {
+          recordPlayerStats(this.owner.name, 0, 0, dealt);
+        }
       }
     });
   }
@@ -666,9 +704,11 @@ class Character {
     this.speedMult = 1.0; this.scaleMult = 1.0;
     this.matchKills = 0; this.emergencyBeanDropped = false;
 
-    // Emote State
     this.currentEmote = null;
     this.emoteTimer = 0;
+
+    // Record or register character on creation
+    recordPlayerStats(this.name, 0, 0, 0);
   }
 
   playEmote(symbol) {
@@ -833,7 +873,9 @@ class Character {
     if (this.health <= 0) {
       if (this.team === 'A' && this !== player) teamAScore++;
       if (this.team !== 'A') {
-        player.matchKills++; playerKills++; credits += 50; teamAScore++; saveProgress();
+        player.matchKills++; 
+        recordPlayerStats(player.name, 1, 50, 0); // RECORD KILL & EARNED CREDITS TO LEADERBOARD
+        teamAScore++; 
       } else { teamBScore++; }
       updateScoreboard();
 
@@ -883,7 +925,6 @@ class Character {
     const isChicken = (activeOutfit === 'chicken' && isSphinx) || (this.isBot && isSphinx);
     const isPiggyOutfit = (activeOutfit === 'piggy' && isPiggy) || (this.isBot && isPiggy);
 
-    // Butterfly Outfit Wings Render
     if (activeOutfit === 'butterfly') {
       ctx.fillStyle = 'rgba(255, 0, 200, 0.5)';
       ctx.beginPath(); ctx.ellipse(-14, -15, 14, 22, -0.4, 0, Math.PI*2); ctx.fill();
@@ -913,7 +954,6 @@ class Character {
       ctx.fillStyle = '#ffaa00';
       ctx.beginPath(); ctx.moveTo(6, -30); ctx.lineTo(13, -28); ctx.lineTo(6, -26); ctx.fill();
     } else if (isPiggyOutfit) {
-      // Pig Ears & Snout
       ctx.fillStyle = '#ff8da1';
       ctx.beginPath(); ctx.moveTo(-7, -35); ctx.lineTo(-10, -42); ctx.lineTo(-3, -37); ctx.fill();
       ctx.beginPath(); ctx.moveTo(7, -35); ctx.lineTo(10, -42); ctx.lineTo(3, -37); ctx.fill();
@@ -930,7 +970,6 @@ class Character {
       ctx.beginPath(); ctx.arc(-3, -32, 1.5, 0, Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.arc(4, -34, 1.5, 0, Math.PI*2); ctx.fill();
     } else if (activeOutfit === 'unicorn') {
-      // Golden Horn
       ctx.fillStyle = '#ffd700'; ctx.beginPath();
       ctx.moveTo(2, -37); ctx.lineTo(8, -48); ctx.lineTo(6, -37); ctx.fill();
     } else if (activeOutfit === 'butterfly') {
@@ -1068,9 +1107,8 @@ class Projectile {
             explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
           } else {
             target.takeDamage(this.damage);
-            if (this.owner === player) { 
-              totalDamageDealt += this.damage; 
-              saveProgress(); // REAL-TIME LEADERBOARD UPDATE ON DAMAGE
+            if (this.owner) { 
+              recordPlayerStats(this.owner.name, 0, 0, this.damage); // RECORD DAMAGE TO LEADERBOARD IN REAL-TIME
             }
           }
           this.dead = true;
@@ -1365,7 +1403,8 @@ function processCommand(cmd) {
     player.godMode = true; player.flyMode = true; player.invisible = true;
     player.aimbot = true; player.shieldActive = true; player.wallbang = true;
     player.health = player.maxHealth; player.speedMult = 2.5; player.scaleMult = 1.5;
-    credits += 10000; saveProgress();
+    recordPlayerStats(player.name, 0, 10000, 0);
+    saveProgress();
     if (isOwnerUser(player.name)) { player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail }; }
     else { player.equippedWeapon = 'minigun'; player.weaponData = { ...WEAPONS.minigun }; }
     alert("ACTIVATED ALL ADMIN PERKS!"); return;
@@ -1418,8 +1457,10 @@ function processCommand(cmd) {
       const amount = parseInt(parts[1] || 1000);
       let targetName = parts[2] ? parts[2].toLowerCase() : player.name.toLowerCase();
 
+      recordPlayerStats(targetName, 0, amount, 0); // RECORD GIFTED CREDITS TO LEADERBOARD
+      saveProgress();
+
       if (targetName === player.name.toLowerCase()) {
-        credits += amount; saveProgress();
         showNotificationBanner(`🎁 You were gifted ${amount} credits by ${player.name}!`);
       } else {
         if (conn && conn.open) {
@@ -1437,7 +1478,8 @@ function setupPeerConnection(connection) {
   connection.on('data', data => {
     if (data.type === 'admin_credits') {
       if (data.target.toLowerCase() === player.name.toLowerCase() || !data.target) {
-        credits += data.amount; saveProgress();
+        recordPlayerStats(player.name, 0, data.amount, 0);
+        saveProgress();
         showNotificationBanner(`🎁 You were gifted ${data.amount} credits by ${data.sender}!`);
       }
     } else if (data.type === 'admin_grant') {
