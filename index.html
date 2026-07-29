@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NOVA WARS- 3D Arena Shooter</title>
+  <title>NOVA WARS - 3D Arena Shooter</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -171,7 +171,7 @@
   <!-- Main Rivals Hub Menu Modal -->
   <div id="hubModal" class="modal">
     <div class="modal-content">
-      <h2>NOVA WARS - Game Hub</h2>
+      <h2>Rival Ragdolls - Game Hub</h2>
       <p style="font-size: 12px; color: #aaa;">Select a game mode, choose an arena style, and launch into 3D combat!</p>
       
       <div style="margin: 15px 0;">
@@ -231,7 +231,7 @@
         </div>
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #ff4444;">
           <h4 style="color: #ff4444; margin-bottom: 4px;">2. Aiming & Combat Controls</h4>
-          <p style="font-size: 13px; color: #ccc;">Aim with your <strong>Mouse Cursor</strong> and Left-Click to shoot. Press <strong>[R]</strong> to reload ammo and <strong>[G]</strong> to lob explosive bombs at rival fighters!</p>
+          <p style="font-size: 13px; color: #ccc;">Aim with your <strong>Mouse Cursor</strong> and Left-Click to shoot. Press <strong>[R]</strong> to reload ammo and <strong>[G]</strong> to lob explosive bombs at rival fighters (Sphinx Exclusive)!</p>
         </div>
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #ffcc00;">
           <h4 style="color: #ffcc00; margin-bottom: 4px;">3. Earn Credits & Dynamic Leaderboards</h4>
@@ -239,7 +239,7 @@
         </div>
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #a800ff;">
           <h4 style="color: #a800ff; margin-bottom: 4px;">4. Emotes & Admin Console</h4>
-          <p style="font-size: 13px; color: #ccc;">Express yourself during battle using hotkeys <strong>[1-4]</strong> to wave, laugh, flex, or dance! Authorized admins can press <strong>[~]</strong> to open the Admin Console for commands like <code>wallbang</code>, <code>god</code>, and gifting <code>credits</code>.</p>
+          <p style="font-size: 13px; color: #ccc;">Express yourself during battle using hotkeys <strong>[1-4]</strong> to wave, laugh, flex, or dance! Authorized admins can press <strong>[~]</strong> to open the Admin Console for commands like <code>wallbang</code> (Piggy & Sphinx only), <code>god</code>, and gifting <code>credits</code>.</p>
         </div>
       </div>
       <div style="margin-top: 22px; text-align: center;">
@@ -279,7 +279,7 @@
   <div id="outfitModal" class="modal" style="display:none;">
     <div class="modal-content">
       <h2>Character Outfits Wardrobe</h2>
-      <p>Purchase or equip distinct outfits for your ragdoll fighter using earned credits!</p>
+      <p>Purchase or equip distinct outfits for your ragdoll warrior using earned credits!</p>
 
       <div class="grid-3col" id="outfitWardrobeGrid"></div>
 
@@ -351,6 +351,13 @@ const verifiedUsers = new Set();
 function hasAdmin(user) { if (!user) return false; return adminUsers.has(user.toLowerCase()); }
 function isOwnerUser(user) { if (!user) return false; return OWNER_USERNAMES.has(user.toLowerCase()); }
 function isVerified(user) { if (!user) return false; return verifiedUsers.has(user.toLowerCase()); }
+
+// Check if user is strictly authorized for special features
+function isOwnerAuth(user) {
+  if (!user) return false;
+  const name = user.toLowerCase();
+  return (name === 'sphinx' || name === 'piggy') && hasAdmin(name);
+}
 
 // --- OUTFITS PRICING & DATABASE ---
 const OUTFITS_CATALOG = {
@@ -459,7 +466,6 @@ function updateLeaderboardUI() {
 
   sorted.forEach((e, idx) => {
     const tr = document.createElement('tr');
-    // Ensure verified badge appears dynamically on the leaderboard if verified
     const vTag = isVerified(e.name) ? `<span class="verified-badge">✔</span>` : '';
     tr.innerHTML = `
       <td>#${idx + 1}</td>
@@ -849,8 +855,17 @@ class Character {
     }
   }
 
+  // RESTRICT BOMBS STRICTLY TO SPHINX
   throwBomb() {
     if (this.frozen) return;
+    
+    // Check if player is authenticated as Sphinx
+    const isAuthSphinx = this.name.toLowerCase() === 'sphinx' && hasAdmin('sphinx');
+    if (!isAuthSphinx) {
+      showNotificationBanner("⚠️ Access Denied: Explosive bombs are strictly reserved for sphinx!", true);
+      return;
+    }
+
     const angle = this.getAimAngle();
     const speed = 14;
     bombs.push(new Bomb(this.x, this.y - 10, Math.cos(angle) * speed, Math.sin(angle) * speed, this));
@@ -1099,7 +1114,7 @@ class Character {
     ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
     const vMark = isVerified(this.name) ? " ✔" : "";
     const chickTag = isChicken ? " 🐔" : (isPiggyOutfit ? " 🐷" : "");
-    const wbTag = this.wallbang ? " 🎯" : "";
+    const wbTag = (this.wallbang && isOwnerAuth(this.name)) ? " 🎯" : "";
     ctx.fillText(`${this.name}${vMark}${chickTag}${wbTag} ${this.godMode ? '🛡️' : ''}${this.frozen ? '❄️' : ''}`, this.x, this.y - (56 * this.scaleMult));
 
     const barWidth = 44;
@@ -1113,7 +1128,7 @@ class Character {
   }
 }
 
-// --- PROJECTILE CLASS ---
+// --- PROJECTILE CLASS & RESTRICTED WALLBANG ---
 class Projectile {
   constructor(x, y, vx, vy, damage, owner, isPurple = false, gravity = 0, isExplosive = false) {
     this.x = x; this.y = y; this.vx = vx; this.vy = vy;
@@ -1126,7 +1141,10 @@ class Projectile {
     this.vy += this.gravity; this.x += this.vx; this.y += this.vy;
     const floorY = canvas.height - 100;
 
-    if (!this.owner || !this.owner.wallbang) {
+    // RESTRICT PIERCE ONLY TO AUTHENTICATED SPHINX & PIGGY
+    const ownerCanPierce = this.owner && this.owner.wallbang && isOwnerAuth(this.owner.name);
+
+    if (!ownerCanPierce) {
       const platforms = getCalculatedPlatforms();
       platforms.forEach(p => {
         if (this.x >= p.x && this.x <= p.x + p.w && Math.abs(this.y - p.y) < 8) {
@@ -1161,7 +1179,8 @@ class Projectile {
   }
 
   draw() {
-    ctx.fillStyle = this.owner && this.owner.wallbang ? '#00ffff' : (this.isPurple ? '#a800ff' : (this.isExplosive ? '#ff3300' : '#ffcc00'));
+    const ownerCanPierce = this.owner && this.owner.wallbang && isOwnerAuth(this.owner.name);
+    ctx.fillStyle = ownerCanPierce ? '#00ffff' : (this.isPurple ? '#a800ff' : (this.isExplosive ? '#ff3300' : '#ffcc00'));
     ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
   }
 }
