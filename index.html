@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title> </title> NOVA WARS - 3D Arena Shooter</title>
+  <title>NOVA WARS - The Great Ragdoll Wars</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -63,9 +63,14 @@
     #touchActions { position: absolute; bottom: 20px; right: 160px; display: flex; gap: 10px; pointer-events: auto; z-index: 60; }
 
     /* Modal / Overlay UI */
-    .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); display: flex; justify-content: center; align-items: center; z-index: 200; }
-    .modal-content { background: #181a24; border: 2px solid #333748; width: 880px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 25px; overflow-y: auto; color: #fff; }
-    h2 { margin-bottom: 12px; color: #00ffcc; border-bottom: 2px solid #2a2e40; padding-bottom: 8px; }
+    .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); display: flex; justify-content: center; align-items: center; z-index: 200; cursor: pointer; }
+    .modal-content { position: relative; background: #181a24; border: 2px solid #333748; width: 880px; max-width: 95vw; max-height: 90vh; border-radius: 12px; padding: 25px; overflow-y: auto; color: #fff; cursor: default; }
+    
+    /* Top-Right Modal Close Button */
+    .modal-close-btn { position: absolute; top: 15px; right: 18px; background: rgba(255, 68, 68, 0.2); border: 1px solid #ff4444; color: #ff4444; font-size: 14px; font-weight: bold; padding: 6px 12px; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; z-index: 10; }
+    .modal-close-btn:hover { background: #ff4444; color: #fff; transform: scale(1.05); }
+
+    h2 { margin-bottom: 12px; color: #00ffcc; border-bottom: 2px solid #2a2e40; padding-bottom: 8px; padding-right: 70px; }
     
     .grid-3col { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px; }
     .shop-card { background: #222534; padding: 15px; border-radius: 8px; border: 1px solid #3a3f56; text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
@@ -134,7 +139,7 @@
   </div>
 
   <div id="controlsHint">
-    [WASD/Arrows] Move/Jump | [Mouse/Right Joy-Con] Aim & Fire | [1-4] Emotes | [R] Reload | [G] Bomb | [~] Admin Console
+    [WASD/Arrows] Move/Jump | [Mouse/Right Joy-Con] Aim & Fire | [1-4] Emotes | [R] Reload | [G] Bomb | [X] Close Menus | [~] Admin Console
   </div>
 
   <!-- Dual Joy-Cons -->
@@ -190,10 +195,10 @@
 
       <div style="margin: 15px 0;">
         <h3>Select 3D Arena Environment</h3>
-        <button class="btn btn-secondary" onclick="setMap('cyber')">Cyber City 3D</button>
-        <button class="btn btn-secondary" onclick="setMap('lava')">Lava Crater 3D</button>
-        <button class="btn btn-secondary" onclick="setMap('islands')">Sky Isles 3D</button>
-        <button class="btn btn-secondary" onclick="setMap('warehouse')">Warehouse 3D</button>
+        <button class="btn btn-secondary" onclick="setMap('cyber')">Cyber City </button>
+        <button class="btn btn-secondary" onclick="setMap('lava')">Lava Crater </button>
+        <button class="btn btn-secondary" onclick="setMap('islands')">Sky Isles </button>
+        <button class="btn btn-secondary" onclick="setMap('warehouse')">Warehouse </button>
       </div>
 
       <!-- LAUNCH MATCH BUTTON -->
@@ -223,6 +228,7 @@
   <!-- How To Play / Tutorial Modal -->
   <div id="tutorialModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width: 650px;">
+      <button class="modal-close-btn" onclick="toggleTutorialModal(false)" title="Close">✖ Close [X]</button>
       <h2>📖 How to Play - Rivals Guide</h2>
       <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 15px;">
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #00ffcc;">
@@ -251,6 +257,7 @@
   <!-- Weapon Shop & Skins Modal -->
   <div id="shopModal" class="modal" style="display:none;">
     <div class="modal-content">
+      <button class="modal-close-btn" onclick="toggleShopModal(false)" title="Close">✖ Close [X]</button>
       <h2>Weapon Shop & Finish Skins</h2>
       <p>Equip weapons or customize their visual finish skins!</p>
       
@@ -268,24 +275,17 @@
 
       <h3>Weapon Arsenal</h3>
       <div class="grid-3col" id="weaponShop"></div>
-
-      <div style="margin-top: 25px;">
-        <button class="btn" onclick="toggleShopModal(false)">Close Shop</button>
-      </div>
     </div>
   </div>
 
   <!-- Outfits Wardrobe Modal -->
   <div id="outfitModal" class="modal" style="display:none;">
     <div class="modal-content">
+      <button class="modal-close-btn" onclick="toggleOutfitModal(false)" title="Close">✖ Close [X]</button>
       <h2>Character Outfits Wardrobe</h2>
       <p>Purchase or equip distinct outfits for your ragdoll warrior using earned credits!</p>
 
       <div class="grid-3col" id="outfitWardrobeGrid"></div>
-
-      <div style="margin-top: 25px;">
-        <button class="btn" onclick="toggleOutfitModal(false)">Close Wardrobe</button>
-      </div>
     </div>
   </div>
 </div>
@@ -359,6 +359,13 @@ function isOwnerAuth(user) {
   return (name === 'sphinx' || name === 'piggy') && hasAdmin(name);
 }
 
+// Close all active modals helper
+function closeAllModals() {
+  document.querySelectorAll('.modal').forEach(m => {
+    m.style.display = 'none';
+  });
+}
+
 // --- OUTFITS PRICING & DATABASE ---
 const OUTFITS_CATALOG = {
   default: { id: 'default', name: '👤 Default Fighter', cost: 0, desc: 'Standard smooth combat suit style.', lockedTo: false },
@@ -376,6 +383,13 @@ const OUTFITS_CATALOG = {
   piggy: { id: 'piggy', name: '🐷 Piggy Outfit (PIGGY ONLY)', cost: 5000, desc: 'Strictly reserved for piggy! Pink ears & snout.', lockedTo: 'piggy' },
   chicken: { id: 'chicken', name: '🐔 Chicken Outfit (SPHINX ONLY)', cost: 5000, desc: 'Strictly reserved for sphinx! Feather suit & beak.', lockedTo: 'sphinx' }
 };
+
+// --- CLICK OUTSIDE MODAL BACKGROUND TO CLOSE ---
+window.addEventListener('click', e => {
+  if (e.target.classList.contains('modal')) {
+    e.target.style.display = 'none';
+  }
+});
 
 // --- DYNAMIC REAL-TIME LEADERBOARD & PERSISTENCE ---
 function recordPlayerStats(name, addedKills = 0, addedCredits = 0, addedDmg = 0) {
@@ -502,12 +516,18 @@ function toggleTutorialModal(show) {
   document.getElementById('tutorialModal').style.display = show ? 'flex' : 'none';
 }
 
-// Input Controls & Emote Hotkeys (1, 2, 3, 4)
+// Input Controls & Emote Hotkeys (1, 2, 3, 4) & [X] Key to Close Menus
 const keys = {};
 const mouse = { x: 0, y: 0, down: false };
 
 window.addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true; keys[e.key] = true;
+  
+  // Pressing [X] key immediately closes active menus & returns to match
+  if (e.key.toLowerCase() === 'x') {
+    closeAllModals();
+  }
+
   if ((e.key === '~' || e.key === '`') && player && hasAdmin(player.name)) toggleAdminConsole();
   if (e.key.toLowerCase() === 'r' && player) player.reload();
   if (e.key.toLowerCase() === 'g' && player) player.throwBomb();
