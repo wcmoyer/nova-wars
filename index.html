@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>NOVA WARS - Let The Great Ragdoll Wars Commence!</title>
+  <title>NOVA WARS - LET THE RAGDOLL WARS COMMENCE</title>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -76,9 +76,6 @@
     .shop-card h4 { color: #ffcc00; margin-bottom: 5px; }
     .shop-card .cost-tag { font-size: 12px; color: #00ffcc; font-weight: bold; margin: 4px 0 8px 0; }
 
-    /* Silhouette Card Style for Blueprints */
-    .blueprint-silhouette { filter: brightness(0) drop-shadow(0 0 8px rgba(0,255,204,0.4)); height: 60px; margin: 10px auto; display: block; }
-
     /* Mode Selection Grid */
     .mode-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 15px 0; }
     .mode-card { background: #222534; border: 2px solid #3d425c; padding: 12px; border-radius: 8px; cursor: pointer; text-align: center; font-weight: bold; transition: 0.2s; }
@@ -98,9 +95,15 @@
     .lb-table th, .lb-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #2d3244; }
     .lb-table th { color: #00ffcc; text-transform: uppercase; font-size: 10px; }
 
-    /* Progress bar for Fragments & Blueprints */
     .progress-bar-bg { width: 100%; background: #111; border-radius: 10px; height: 12px; overflow: hidden; border: 1px solid #444; margin: 6px 0; }
     .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #00ffcc, #00aaff); width: 0%; transition: 0.3s; }
+
+    /* Faction Choice Cards */
+    .faction-card { flex: 1; padding: 25px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.3s; border: 3px solid transparent; }
+    .faction-dark { background: linear-gradient(135deg, #120326, #2d004d); border-color: #a800ff; }
+    .faction-dark:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(168,0,255,0.6); }
+    .faction-light { background: linear-gradient(135deg, #261f03, #4d3d00); border-color: #ffcc00; }
+    .faction-light:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(255,204,0,0.6); }
   </style>
 </head>
 <body>
@@ -122,6 +125,7 @@
   <!-- HUD -->
   <div id="statsHud" class="hud-panel">
     <div class="stat-box"><span class="stat-label">Player</span><span id="playerNameVal" class="stat-val" style="color:#00ffcc">Player</span></div>
+    <div class="stat-box"><span class="stat-label">Faction</span><span id="factionHudVal" class="stat-val" style="color:#a800ff">None</span></div>
     <div class="stat-box"><span class="stat-label">Health</span><span id="hpVal" class="stat-val" style="color:#ff4444">50 / 50</span></div>
     <div class="stat-box"><span class="stat-label">Credits</span><span id="creditsVal" class="stat-val">0</span></div>
     <div class="stat-box"><span class="stat-label">Weapon</span><span id="weaponVal" class="stat-val" style="color:#fff">Pistol</span></div>
@@ -141,8 +145,9 @@
     <button class="btn" onclick="toggleShopModal(true)">Weapon Shop & Skins</button>
     <button class="btn btn-secondary" onclick="toggleOutfitModal(true)">Outfits Wardrobe</button>
     <button class="btn btn-secondary" style="border-color: #ffcc00; color: #ffcc00;" onclick="toggleBlueprintModal(true)">📜 Blueprints & Fragments</button>
-    <button class="btn btn-secondary" style="border-color: #a800ff; color: #a800ff;" onclick="toggleChallengeModal(true)">🎯 Daily Challenges</button>
+    <button class="btn btn-secondary" id="challengeBtnNav" style="border-color: #a800ff; color: #a800ff;" onclick="toggleChallengeModal(true)">🎯 Faction Challenges</button>
     <button class="btn btn-secondary" style="border-color: #00ffcc; color: #00ffcc;" onclick="toggleWheelModal(true)">🎡 Daily Wheel</button>
+    <button class="btn btn-secondary" style="border-color: #ff0055; color: #ff0055;" onclick="togglePromoModal(true)">🎟️ Promo Codes</button>
     <button class="btn btn-secondary" onclick="toggleHubModal(true)">Lobby Hub & Modes</button>
     <button class="btn btn-secondary" id="adminBtn" style="display:none;" onclick="toggleAdminConsole()">Admin Console [~]</button>
   </div>
@@ -157,7 +162,7 @@
     [WASD/Arrows] Fast Move/Jump | [Mouse/Right Joy-Con] Aim & Fire | [1-4] Emotes | [R] Reload | [G] Bomb | [X] Close Menus | [~] Admin Console
   </div>
 
-  <!-- Dual Joy-Cons -->
+  <!-- Touch Controls Overlay -->
   <div id="touchOverlay">
     <div id="moveContainer" class="joy-container">
       <span class="joy-label">Move</span>
@@ -176,7 +181,41 @@
 
   <!-- Admin Input Console -->
   <div id="adminConsole">
-    <input type="text" id="adminInput" placeholder="Commands: grant <user>, revoke <user>, verify <user>, unverify <user>, wallbang, ALL ADMIN, stop all admin, freeze <user>, nuke, god, fly, invis, aimbot, heal, shield, speed <mult>, size <mult>, give <weapon>, credits <amt> [user], kill <user>, kick <user>">
+    <input type="text" id="adminInput" placeholder="Commands: blueprint <name/all> <amt>, grant <user>, revoke <user>, verify <user>, unverify <user>, wallbang, ALL ADMIN, stop all admin, freeze <user>, nuke, god, fly, invis, aimbot, heal, shield, speed <mult>, size <mult>, give <weapon>, credits <amt> [user]">
+  </div>
+
+  <!-- FIRST LOGIN FACTION SELECTION MODAL -->
+  <div id="factionModal" class="modal" style="display:none; z-index: 300;">
+    <div class="modal-content" style="max-width: 650px; text-align: center;">
+      <h2 style="border: none; padding: 0;">⚔️ CHOOSE YOUR ALLEGIANCE</h2>
+      <p style="color: #aaa; font-size: 13px; margin-bottom: 25px;">A great war has broken out! Choose your faction to unlock exclusive Phantom or Celestial challenges and rewards.</p>
+
+      <div style="display: flex; gap: 20px; justify-content: center;">
+        <div class="faction-card faction-dark" onclick="selectFaction('dark')">
+          <div style="font-size: 40px; margin-bottom: 10px;">👁️</div>
+          <h3 style="color: #a800ff; margin-bottom: 5px;">DARK FACTION</h3>
+          <p style="font-size: 11px; color: #ddd;">Follow sphinx into darkness. Unlocks Phantom Challenges, Void/Phantom Blueprints, & Dark Rewards!</p>
+        </div>
+
+        <div class="faction-card faction-light" onclick="selectFaction('light')">
+          <div style="font-size: 40px; margin-bottom: 10px;">👑</div>
+          <h3 style="color: #ffcc00; margin-bottom: 5px;">LIGHT FACTION</h3>
+          <p style="font-size: 11px; color: #ddd;">Join piggy in radiant glory. Unlocks Celestial Challenges, Excalibur/Wing Blueprints, & Light Rewards!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMO CODE MODAL -->
+  <div id="promoModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width: 450px; text-align: center;">
+      <button class="modal-close-btn" onclick="togglePromoModal(false)" title="Close">✖ Close [X]</button>
+      <h2>🎟️ Redeem Promo Codes</h2>
+      <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;">Enter secret developer codes for free Credits, Fragments, & Blueprints!</p>
+
+      <input type="text" id="promoCodeInput" class="input-field" placeholder="ENTER CODE HERE..." style="text-transform: uppercase; margin-bottom: 12px;">
+      <button class="btn" style="width: 100%; padding: 12px; font-size: 14px;" onclick="redeemPromoCode()">REDEEM CODE</button>
+    </div>
   </div>
 
   <!-- Win/Loss Modal -->
@@ -215,6 +254,7 @@
           <button class="btn btn-secondary" onclick="setMap('lava')">Lava Crater</button>
           <button class="btn btn-secondary" onclick="setMap('islands')">Sky Isles</button>
           <button class="btn btn-secondary" onclick="setMap('warehouse')">Warehouse</button>
+          <button class="btn btn-secondary" style="border-color: #ffaa00; color: #ffaa00;" onclick="setMap('temple')">🛕 Temple Pyramid (5 Platforms)</button>
           <button class="btn btn-secondary" style="border-color: #00ffcc; color: #00ffcc;" onclick="setMap('skyscraper')">🏙️ Skyscraper (6 Platforms)</button>
           <button class="btn btn-secondary" style="border-color: #ffcc00; color: #ffcc00;" onclick="setMap('castle')">🏰 Cyber Castle (7 Platforms)</button>
         </div>
@@ -268,8 +308,8 @@
           <p style="font-size: 13px; color: #ccc;">Score kills (+50 Credits) and win matches (+50 Victory Bonus Credits) to climb 3 separate Global Leaderboards: Kills, Credits, and Damage!</p>
         </div>
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #a800ff;">
-          <h4 style="color: #a800ff; margin-bottom: 4px;">4. Fragments, Blueprints & Daily Wheel</h4>
-          <p style="font-size: 13px; color: #ccc;">Collect <strong>200 Weapon Fragments</strong> to permanently unlock high-tier weapons! Spin the Daily Wheel or complete Daily Challenges to discover secret item blueprints and unreleased previews.</p>
+          <h4 style="color: #a800ff; margin-bottom: 4px;">4. Factions, Fragments & Blueprints</h4>
+          <p style="font-size: 13px; color: #ccc;">Pick Dark or Light allegiance to complete <strong>Phantom/Celestial Challenges</strong>! Collect <strong>200 Weapon Fragments</strong> to unlock weapons or spin the Daily Wheel for secret blueprints.</p>
         </div>
       </div>
       <div style="margin-top: 22px; text-align: center;">
@@ -297,7 +337,7 @@
         <button class="btn btn-secondary" onclick="setWeaponSkin('acid')">Toxic Acid</button>
       </div>
 
-      <h3>Weapon Arsenal (Reach 200 Fragments or Spend Credits)</h3>
+      <h3>Upgraded Weapon Arsenal (Reach 200 Fragments or Spend Credits)</h3>
       <div class="grid-3col" id="weaponShop"></div>
     </div>
   </div>
@@ -318,7 +358,7 @@
     <div class="modal-content">
       <button class="modal-close-btn" onclick="toggleBlueprintModal(false)" title="Close">✖ Close [X]</button>
       <h2>📜 Blueprints Vault & Weapon Fragments</h2>
-      <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;">Collect 200 Fragments to mark weapons unlocked. Collect Blueprints via Daily Challenges or the Wheel to view Secret & Unreleased Previews!</p>
+      <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;">Collect 200 Fragments to mark weapons unlocked. Collect Blueprints via Faction Challenges or the Wheel to view Secret & Unreleased Previews!</p>
 
       <h3>Fragment Unlocks (200 Required)</h3>
       <div class="grid-3col" id="fragmentGrid"></div>
@@ -330,12 +370,12 @@
     </div>
   </div>
 
-  <!-- Daily Challenges Modal -->
+  <!-- Faction Challenges Modal -->
   <div id="challengeModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width: 600px;">
       <button class="modal-close-btn" onclick="toggleChallengeModal(false)" title="Close">✖ Close [X]</button>
-      <h2>🎯 Daily Challenges</h2>
-      <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;">Complete tasks during battle to earn Fragments, Blueprints, and Credits!</p>
+      <h2 id="challengeHeaderTitle">🎯 Faction Challenges</h2>
+      <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;" id="challengeSubTitle">Complete tasks during battle to earn Fragments, Blueprints, and Credits!</p>
 
       <div style="display: flex; flex-direction: column; gap: 12px;" id="challengeList"></div>
     </div>
@@ -372,6 +412,7 @@ resize();
 
 // Global Game Variables
 let playerName = "piggy";
+let playerFaction = null; // 'dark' or 'light'
 let credits = 0;
 let playerKills = 0;
 let totalDamageDealt = 0;
@@ -385,6 +426,9 @@ let currentLeaderboardTab = 'kills';
 let equippedSkin = 'default';
 let equippedOutfit = 'default';
 let ownedOutfits = new Set(['default']);
+
+// PROMO CODES TRACKER
+let redeemedCodes = new Set();
 
 // FRAGMENTS & BLUEPRINTS DATABASE
 let weaponFragments = {
@@ -402,11 +446,17 @@ let blueprints = {
   cyber_wings: { count: 12, max: 100, name: "🪽 Cybernetic Exo-Wings", type: "Unreleased Outfit", stats: "Perk: Quadruple High Jump", unreleased: true }
 };
 
-// Challenges Registry
-let dailyChallenges = [
-  { id: 1, text: "Score 5 Kills in Arena", reward: "50 Fragments", done: false, type: "kills", target: 5 },
-  { id: 2, text: "Deal 250 Total Damage", reward: "25 Blueprints", done: false, type: "dmg", target: 250 },
-  { id: 3, text: "Win 1 Match Victory", reward: "+100 Credits", done: false, type: "win", target: 1 }
+// FACTION SPECIFIC CHALLENGES
+let darkChallenges = [
+  { id: 1, text: "Score 5 Phantom Kills", reward: "50 Minigun Fragments", done: false, type: "kills", target: 5 },
+  { id: 2, text: "Deal 250 Void Damage", reward: "25 Dark Matter Blueprints", done: false, type: "dmg", target: 250 },
+  { id: 3, text: "Win 1 Dark Victory", reward: "+150 Dark Credits", done: false, type: "win", target: 1 }
+];
+
+let lightChallenges = [
+  { id: 1, text: "Score 5 Celestial Kills", reward: "50 Laser Fragments", done: false, type: "kills", target: 5 },
+  { id: 2, text: "Deal 250 Radiant Damage", reward: "25 Excalibur Blueprints", done: false, type: "dmg", target: 250 },
+  { id: 3, text: "Win 1 Light Victory", reward: "+150 Light Credits", done: false, type: "win", target: 1 }
 ];
 
 // Dynamic Leaderboard Global Registry
@@ -452,7 +502,7 @@ function isOwnerAuth(user) {
 
 function closeAllModals() {
   document.querySelectorAll('.modal').forEach(m => {
-    m.style.display = 'none';
+    if (m.id !== 'factionModal') m.style.display = 'none';
   });
 }
 
@@ -476,10 +526,55 @@ const OUTFITS_CATALOG = {
 
 // --- CLICK OUTSIDE MODAL BACKGROUND TO CLOSE ---
 window.addEventListener('click', e => {
-  if (e.target.classList.contains('modal')) {
+  if (e.target.classList.contains('modal') && e.target.id !== 'factionModal') {
     e.target.style.display = 'none';
   }
 });
+
+// --- FACTION SELECTION SYSTEM ---
+function selectFaction(fChoice) {
+  playerFaction = fChoice;
+  localStorage.setItem('rr_faction', fChoice);
+  document.getElementById('factionModal').style.display = 'none';
+
+  const fVal = document.getElementById('factionHudVal');
+  if (fChoice === 'dark') {
+    fVal.innerText = "Dark (Sphinx)"; fVal.style.color = "#a800ff";
+    showNotificationBanner("👁️ Joined the Dark Faction! Phantom Challenges Unlocked.");
+  } else {
+    fVal.innerText = "Light (Piggy)"; fVal.style.color = "#ffcc00";
+    showNotificationBanner("👑 Joined the Light Faction! Celestial Challenges Unlocked.");
+  }
+}
+
+// --- PROMO CODE ENGINE ---
+function togglePromoModal(show) {
+  document.getElementById('promoModal').style.display = show ? 'flex' : 'none';
+}
+
+function redeemPromoCode() {
+  const code = document.getElementById('promoCodeInput').value.trim().toUpperCase();
+  if (redeemedCodes.has(code)) {
+    alert("Code already redeemed!"); return;
+  }
+
+  if (code === 'SPHINX2026') {
+    credits += 500; weaponFragments.laser = (weaponFragments.laser || 0) + 50; blueprints.excalibur.count += 10;
+    redeemedCodes.add(code); saveProgress(); alert("Redeemed! +500 Credits, +50 Laser Fragments, & +10 Excalibur Blueprints!");
+  } else if (code === 'PIGGYWIN') {
+    credits += 1000; weaponFragments.minigun = (weaponFragments.minigun || 0) + 100;
+    redeemedCodes.add(code); saveProgress(); alert("Redeemed! +1,000 Credits & +100 Minigun Fragments!");
+  } else if (code === 'DARKPHANTOM') {
+    blueprints.dark_matter.count += 30; blueprints.void_suit.count += 20;
+    redeemedCodes.add(code); saveProgress(); alert("Redeemed! Phantom Blueprints Unlocked!");
+  } else if (code === 'LIGHTCELESTIAL') {
+    blueprints.excalibur.count += 30; blueprints.cyber_wings.count += 20;
+    redeemedCodes.add(code); saveProgress(); alert("Redeemed! Celestial Blueprints Unlocked!");
+  } else {
+    alert("Invalid Promo Code!");
+  }
+  document.getElementById('promoCodeInput').value = '';
+}
 
 // --- DYNAMIC REAL-TIME LEADERBOARD & PERSISTENCE ---
 function recordPlayerStats(name, addedKills = 0, addedCredits = 0, addedDmg = 0) {
@@ -514,15 +609,19 @@ function loadSavedProgress() {
   const savedOwnedOutfits = localStorage.getItem('rr_owned_outfits');
   const savedSkin = localStorage.getItem('rr_skin');
   const savedFrags = localStorage.getItem('rr_fragments');
+  const savedBps = localStorage.getItem('rr_blueprints');
+  const savedFaction = localStorage.getItem('rr_faction');
 
   if (savedName) { playerName = savedName; document.getElementById('usernameInput').value = savedName; }
   if (savedCredits !== null) credits = parseInt(savedCredits, 10);
   if (savedKills !== null) playerKills = parseInt(savedKills, 10);
   if (savedDmg !== null) totalDamageDealt = parseInt(savedDmg, 10);
 
-  if (savedFrags) {
-    try { weaponFragments = JSON.parse(savedFrags); } catch(e){}
-  }
+  if (savedFrags) { try { weaponFragments = JSON.parse(savedFrags); } catch(e){} }
+  if (savedBps) { try { blueprints = JSON.parse(savedBps); } catch(e){} }
+
+  if (savedFaction) { selectFaction(savedFaction); }
+  else { document.getElementById('factionModal').style.display = 'flex'; }
 
   globalLeaderboardRegistry.set(playerName.toLowerCase(), {
     name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt
@@ -555,6 +654,7 @@ function saveProgress() {
   localStorage.setItem('rr_owned_outfits', JSON.stringify(Array.from(ownedOutfits)));
   localStorage.setItem('rr_skin', equippedSkin);
   localStorage.setItem('rr_fragments', JSON.stringify(weaponFragments));
+  localStorage.setItem('rr_blueprints', JSON.stringify(blueprints));
 
   globalLeaderboardRegistry.set(playerName.toLowerCase(), {
     name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt
@@ -625,12 +725,7 @@ function showNotificationBanner(msg, isWarning = false) {
   }, 4500);
 }
 
-function toggleTutorialModal(show) { document.getElementById('tutorialModal').style.display = show ? 'flex' : 'none'; }
-function toggleBlueprintModal(show) { document.getElementById('blueprintModal').style.display = show ? 'flex' : 'none'; if(show) initBlueprintVault(); }
-function toggleChallengeModal(show) { document.getElementById('challengeModal').style.display = show ? 'flex' : 'none'; if(show) initChallengesUI(); }
-function toggleWheelModal(show) { document.getElementById('wheelModal').style.display = show ? 'flex' : 'none'; }
-
-// Input Controls & Emote Hotkeys (1, 2, 3, 4) & [X] Key to Close Menus
+// Input Controls & Keybinds
 const keys = {};
 const mouse = { x: 0, y: 0, down: false };
 
@@ -711,21 +806,21 @@ canvas.addEventListener('touchstart', e => { if (e.touches.length > 0) { mouse.x
 canvas.addEventListener('touchmove', e => { if (e.touches.length > 0) { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; touchAimAngle = null; } });
 canvas.addEventListener('touchend', () => mouse.down = false);
 
-// --- WEAPONS DATABASE ---
+// --- WEAPONS DATABASE (SNIPER BUFFED: 5 BASE / 10 HEADSHOT) ---
 const WEAPONS = {
-  pistol: { name: 'Pistol', tier: 'Basic Tier', damage: 1, rate: 280, ammo: 15, maxAmmo: 15, speed: 20, cost: 0, gravity: 0, ownerOnly: false, multishot: 1, shape: 'pistol' },
-  smg: { name: 'Tactical SMG', tier: 'Tier 1 - Rapid Burst', damage: 1, rate: 75, ammo: 35, maxAmmo: 35, speed: 23, cost: 250, gravity: 0, ownerOnly: false, multishot: 1, shape: 'smg' },
-  assault: { name: 'Assault Rifle', tier: 'Tier 1 - Fast Fire', damage: 1, rate: 110, ammo: 30, maxAmmo: 30, speed: 22, cost: 200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'rifle' },
-  shotgun: { name: 'Shotgun', tier: 'Tier 2 - Burst Spread', damage: 1, rate: 550, ammo: 8, maxAmmo: 8, speed: 18, cost: 400, gravity: 0, ownerOnly: false, multishot: 3, shape: 'shotgun' },
-  db_shotgun: { name: 'Double Barrel', tier: 'Tier 2 - Heavy Burst', damage: 2, rate: 450, ammo: 4, maxAmmo: 4, speed: 20, cost: 550, gravity: 0, ownerOnly: false, multishot: 5, shape: 'db_shotgun' },
-  sniper: { name: 'Sniper Rifle', tier: 'Tier 3 - High Speed', damage: 3, rate: 700, ammo: 6, maxAmmo: 6, speed: 42, cost: 700, gravity: 0, ownerOnly: false, multishot: 1, shape: 'sniper' },
-  laser: { name: 'Laser Beam Rifle', tier: 'Tier 3 - Beam Velocity', damage: 5, rate: 400, ammo: 10, maxAmmo: 10, speed: 50, cost: 950, gravity: 0, ownerOnly: false, multishot: 1, shape: 'laser', special: 'cyan' },
-  crossbow: { name: 'Heavy Crossbow', tier: 'Tier 3 - Silent Bolt', damage: 4, rate: 600, ammo: 8, maxAmmo: 8, speed: 28, cost: 850, gravity: 0.05, ownerOnly: false, multishot: 1, shape: 'crossbow' },
-  minigun: { name: 'Minigun', tier: 'Tier 4 - Ultra Rapid', damage: 1, rate: 30, ammo: 250, maxAmmo: 250, speed: 24, cost: 1200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'minigun' },
-  plasma: { name: 'Plasma Cannon', tier: 'Tier 4 - Sci-Fi Energy', damage: 6, rate: 300, ammo: 12, maxAmmo: 12, speed: 30, cost: 1450, gravity: 0, ownerOnly: false, multishot: 1, shape: 'plasma', special: 'purple' },
-  flame_m: { name: 'Flame Mortar', tier: 'Tier 5 - Fire Artillery', damage: 14, rate: 1000, ammo: 5, maxAmmo: 5, speed: 17, cost: 1700, gravity: 0.2, ownerOnly: false, multishot: 1, shape: 'flame_m', isExplosive: true },
-  grenade_l: { name: 'Grenade Launcher', tier: 'Tier 5 - AoE Shells', damage: 12, rate: 900, ammo: 6, maxAmmo: 6, speed: 15, cost: 1600, gravity: 0.25, ownerOnly: false, multishot: 1, shape: 'grenade_l', isExplosive: true },
-  rocket: { name: 'Rocket Launcher', tier: 'Tier 5 - Explosive Arc', damage: 15, rate: 1200, ammo: 4, maxAmmo: 4, speed: 16, cost: 1800, gravity: 0.1, ownerOnly: false, multishot: 1, shape: 'rocket', isExplosive: true },
+  pistol: { name: 'Pistol', tier: 'Basic Tier', damage: 2, rate: 220, ammo: 18, maxAmmo: 18, speed: 22, cost: 0, gravity: 0, ownerOnly: false, multishot: 1, shape: 'pistol' },
+  smg: { name: 'Tactical SMG', tier: 'Tier 1 - Rapid Burst', damage: 2, rate: 60, ammo: 45, maxAmmo: 45, speed: 25, cost: 250, gravity: 0, ownerOnly: false, multishot: 1, shape: 'smg' },
+  assault: { name: 'Assault Rifle (UPGRADED)', tier: 'Tier 1 - Fast Fire', damage: 3, rate: 90, ammo: 40, maxAmmo: 40, speed: 26, cost: 200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'rifle' },
+  shotgun: { name: 'Shotgun', tier: 'Tier 2 - Burst Spread', damage: 3, rate: 500, ammo: 10, maxAmmo: 10, speed: 20, cost: 400, gravity: 0, ownerOnly: false, multishot: 4, shape: 'shotgun' },
+  db_shotgun: { name: 'Double Barrel', tier: 'Tier 2 - Heavy Burst', damage: 4, rate: 400, ammo: 6, maxAmmo: 6, speed: 22, cost: 550, gravity: 0, ownerOnly: false, multishot: 6, shape: 'db_shotgun' },
+  sniper: { name: 'Sniper Rifle (5/10 HP)', tier: 'Tier 3 - High Speed', damage: 5, headshotDamage: 10, rate: 550, ammo: 8, maxAmmo: 8, speed: 55, cost: 700, gravity: 0, ownerOnly: false, multishot: 1, shape: 'sniper' },
+  laser: { name: 'Laser Beam Rifle', tier: 'Tier 3 - Beam Velocity', damage: 8, rate: 320, ammo: 15, maxAmmo: 15, speed: 60, cost: 950, gravity: 0, ownerOnly: false, multishot: 1, shape: 'laser', special: 'cyan' },
+  crossbow: { name: 'Heavy Crossbow', tier: 'Tier 3 - Silent Bolt', damage: 7, rate: 500, ammo: 10, maxAmmo: 10, speed: 32, cost: 850, gravity: 0.04, ownerOnly: false, multishot: 1, shape: 'crossbow' },
+  minigun: { name: 'Minigun (UPGRADED)', tier: 'Tier 4 - Ultra Rapid', damage: 2, rate: 20, ammo: 500, maxAmmo: 500, speed: 28, cost: 1200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'minigun' },
+  plasma: { name: 'Plasma Cannon (UPGRADED)', tier: 'Tier 4 - Sci-Fi Energy', damage: 18, rate: 250, ammo: 16, maxAmmo: 16, speed: 38, cost: 1450, gravity: 0, ownerOnly: false, multishot: 1, shape: 'plasma', special: 'purple' },
+  flame_m: { name: 'Flame Mortar', tier: 'Tier 5 - Fire Artillery', damage: 25, rate: 900, ammo: 8, maxAmmo: 8, speed: 20, cost: 1700, gravity: 0.18, ownerOnly: false, multishot: 1, shape: 'flame_m', isExplosive: true },
+  grenade_l: { name: 'Grenade Launcher', tier: 'Tier 5 - AoE Shells', damage: 22, rate: 800, ammo: 8, maxAmmo: 8, speed: 18, cost: 1600, gravity: 0.22, ownerOnly: false, multishot: 1, shape: 'grenade_l', isExplosive: true },
+  rocket: { name: 'Rocket Launcher (UPGRADED)', tier: 'Tier 5 - Explosive Arc', damage: 35, rate: 1000, ammo: 6, maxAmmo: 6, speed: 22, cost: 1800, gravity: 0.08, ownerOnly: false, multishot: 1, shape: 'rocket', isExplosive: true },
   
   // Master Weapons (piggy & sphinx)
   khopesh: { name: 'Khopesh Blade', tier: 'Master Weapon', damage: 50, rate: 200, ammo: 999, maxAmmo: 999, speed: 0, cost: 0, ownerOnly: true, multishot: 1, shape: 'khopesh' },
@@ -733,14 +828,23 @@ const WEAPONS = {
   crook: { name: 'Healer Crook', tier: 'Master Weapon', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal', multishot: 1, shape: 'crook' }
 };
 
-// --- EXPANDED 3D BLOCK MAP LAYOUTS ---
+// --- EXPANDED 3D BLOCK MAP LAYOUTS (NEW TEMPLE PYRAMID MAP) ---
 const maps = {
   cyber: { bg: '#0b0c16', floor: '#1e2238', side: '#121526', top: '#2c3352', platforms: [{ x: 180, y: 0.70, w: 220, h: 20 }, { x: 0.50, y: 0.50, w: 260, h: 20, isCenter: true }, { x: 0.82, y: 0.70, w: 220, h: 20, isRelRight: true }] },
   lava: { bg: '#1c0808', floor: '#3d1212', side: '#260a0a', top: '#5e1b1b', platforms: [{ x: 150, y: 0.65, w: 180, h: 20 }, { x: 0.35, y: 0.45, w: 200, h: 20 }, { x: 0.65, y: 0.45, w: 200, h: 20 }, { x: 0.85, y: 0.65, w: 180, h: 20, isRelRight: true }] },
   islands: { bg: '#08171f', floor: '#16313d', side: '#0d1f28', top: '#224a59', platforms: [{ x: 200, y: 0.60, w: 240, h: 20 }, { x: 0.50, y: 0.40, w: 280, h: 20, isCenter: true }, { x: 0.80, y: 0.60, w: 240, h: 20, isRelRight: true }] },
   warehouse: { bg: '#121318', floor: '#2b2e3b', side: '#1c1e26', top: '#3e4254', platforms: [{ x: 120, y: 0.72, w: 280, h: 20 }, { x: 0.50, y: 0.52, w: 320, h: 20, isCenter: true }, { x: 0.88, y: 0.72, w: 280, h: 20, isRelRight: true }] },
   
-  // HIGH-PLATFORM MAPS
+  // NEW TEMPLE MAP (5 PLATFORMS PYRAMID FORMATION)
+  temple: { 
+    bg: '#14120c', floor: '#3d331f', side: '#241e12', top: '#5c4e30', 
+    platforms: [
+      { x: 0.18, y: 0.72, w: 240, h: 22 }, { x: 0.82, y: 0.72, w: 240, h: 22, isRelRight: true }, // Base 2
+      { x: 0.32, y: 0.52, w: 200, h: 22 }, { x: 0.68, y: 0.52, w: 200, h: 22, isRelRight: true }, // Mid 2
+      { x: 0.50, y: 0.32, w: 220, h: 22, isCenter: true }                                        // Apex 1 Peak
+    ] 
+  },
+
   skyscraper: { 
     bg: '#050c1e', floor: '#112244', side: '#0a162d', top: '#1b3866', 
     platforms: [
@@ -885,7 +989,7 @@ class Explosion {
   }
 }
 
-// --- RAGDOLL CHARACTER ENGINE ---
+// --- RAGDOLL CHARACTER ENGINE (BUG FIX FOR POSITION GLITCHES) ---
 class Character {
   constructor(x, y, isBot = false, name = "Player", team = 'A') {
     this.x = x; this.y = y; this.vx = 0; this.vy = 0;
@@ -1048,7 +1152,7 @@ class Character {
     if (Date.now() - this.lastShot > (this.weaponData.rate * 1.4)) this.shoot();
   }
 
-  // INFINITE PLATFORM JUMPING WITH ZERO FALL-THROUGH
+  // REFACTORED SMOOTH COLLISION DETECTION (PREVENTS JITTER & GLITCHES)
   checkCollisions() {
     this.grounded = false;
     const floorY = canvas.height - 100;
@@ -1057,8 +1161,8 @@ class Character {
     const prevFeetY = feetY - this.vy;
 
     platforms.forEach(p => {
-      if (this.x >= p.x - 12 && this.x <= p.x + p.w + 12) {
-        if (this.vy >= 0 && prevFeetY <= p.y + 6 && feetY >= p.y - 2) {
+      if (this.x >= p.x - 14 && this.x <= p.x + p.w + 14) {
+        if (this.vy >= 0 && prevFeetY <= p.y + 10 && feetY >= p.y - 4) {
           this.y = p.y - (24 * this.scaleMult);
           this.vy = 0;
           this.grounded = true;
@@ -1072,8 +1176,35 @@ class Character {
       this.grounded = true;
     }
 
-    if (this.x < 20) this.x = 20;
-    if (this.x > canvas.width - 20) this.x = canvas.width - 20;
+    if (this.x < 20) { this.x = 20; this.vx = 0; }
+    if (this.x > canvas.width - 20) { this.x = canvas.width - 20; this.vx = 0; }
+  }
+
+  takeDamage(amount) {
+    if (this.godMode || this.invisible) return;
+    this.health -= amount;
+
+    if (this.health <= 0) {
+      if (this.team === 'A' && this !== player) teamAScore++;
+      if (this.team !== 'A') {
+        player.matchKills++; 
+        recordPlayerStats(player.name, 1, 50, 0);
+        teamAScore++; 
+      } else { teamBScore++; }
+      updateScoreboard();
+
+      if (teamAScore === 4 && teamBScore === 4 && !isSuddenDeath) {
+        triggerSuddenDeath(); resetMatchPositions(); return;
+      }
+
+      if (teamAScore >= 5) {
+        showVictoryModal("VICTORY!", "Your team reached 5 kills first!");
+      } else if (teamBScore >= 5) {
+        showVictoryModal("DEFEAT!", "Enemy squad reached 5 kills first.");
+      } else {
+        resetMatchPositions();
+      }
+    }
   }
 
   draw() {
@@ -1253,7 +1384,7 @@ class Character {
   }
 }
 
-// --- PROJECTILE CLASS ---
+// --- PROJECTILE CLASS (SNIPER HEADSHOT CALCULATION) ---
 class Projectile {
   constructor(x, y, vx, vy, damage, owner, isPurple = false, gravity = 0, isExplosive = false) {
     this.x = x; this.y = y; this.vx = vx; this.vy = vy;
@@ -1286,9 +1417,21 @@ class Projectile {
           if (this.isExplosive) {
             explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
           } else {
-            target.takeDamage(this.damage);
+            // SNIPER HEADSHOT DAMAGE CALCULATION (10 HP ON HEADSHOT, 5 ON BODY)
+            let finalDmg = this.damage;
+            if (this.owner && this.owner.equippedWeapon === 'sniper') {
+              const headYThreshold = target.y - (20 * target.scaleMult);
+              if (this.y <= headYThreshold) {
+                finalDmg = 10;
+                showNotificationBanner("🎯 SNIPER HEADSHOT! (10 DMG)");
+              } else {
+                finalDmg = 5;
+              }
+            }
+
+            target.takeDamage(finalDmg);
             if (this.owner) { 
-              recordPlayerStats(this.owner.name, 0, 0, this.damage);
+              recordPlayerStats(this.owner.name, 0, 0, finalDmg);
             }
           }
           this.dead = true;
@@ -1402,7 +1545,6 @@ function triggerSuddenDeath() {
   allEntities.forEach(e => { if (e) { e.maxHealth = 50; e.health = 50; } });
 }
 
-// LOGIN VERIFICATION WITH 2FA AUTHENTICATION CODES
 function confirmMatchStart() {
   const pInput = document.getElementById('usernameInput').value.trim();
   if (pInput.length > 0) playerName = pInput;
@@ -1516,13 +1658,12 @@ function showVictoryModal(title, text) {
   document.getElementById('victoryTitle').style.color = title === "VICTORY!" ? "#00ffcc" : "#ff4444";
   document.getElementById('victoryText').innerText = text;
 
-  // AWARDS EXACTLY 50 CREDITS ON MATCH VICTORY
   if (title === "VICTORY!") {
     recordPlayerStats(player.name, 0, 50, 0);
     
-    // Check challenges
-    dailyChallenges.forEach(c => {
-      if (c.type === 'win') { c.done = true; credits += 100; showNotificationBanner(`🎯 Challenge Complete! ${c.reward}`); }
+    const activeList = playerFaction === 'dark' ? darkChallenges : lightChallenges;
+    activeList.forEach(c => {
+      if (c.type === 'win') { c.done = true; credits += 150; showNotificationBanner(`🎯 Faction Challenge Complete! ${c.reward}`); }
     });
 
     saveProgress();
@@ -1536,7 +1677,7 @@ function toggleHubModal(show) { document.getElementById('hubModal').style.displa
 function toggleShopModal(show) { document.getElementById('shopModal').style.display = show ? 'flex' : 'none'; if(show) initShop(); }
 function toggleOutfitModal(show) { document.getElementById('outfitModal').style.display = show ? 'flex' : 'none'; if(show) initOutfitWardrobe(); }
 
-// --- WEAPON SHOP SYSTEM & FRAGMENTS UNLOCKING ---
+// --- WEAPON SHOP SYSTEM ---
 function initShop() {
   const wShop = document.getElementById('weaponShop');
   if (!wShop) return;
@@ -1617,18 +1758,32 @@ function initBlueprintVault() {
   });
 }
 
-// --- CHALLENGES ENGINE ---
+// --- FACTION CHALLENGES UI ---
 function initChallengesUI() {
   const container = document.getElementById('challengeList');
+  const title = document.getElementById('challengeHeaderTitle');
+  const subTitle = document.getElementById('challengeSubTitle');
   container.innerHTML = '';
 
-  dailyChallenges.forEach(c => {
+  const activeList = playerFaction === 'dark' ? darkChallenges : lightChallenges;
+  
+  if (playerFaction === 'dark') {
+    title.innerText = "👁️ Phantom Dark Challenges";
+    title.style.color = "#a800ff";
+    subTitle.innerText = "Complete Phantom objectives to earn Dark Matter & Void Blueprints!";
+  } else {
+    title.innerText = "👑 Celestial Light Challenges";
+    title.style.color = "#ffcc00";
+    subTitle.innerText = "Complete Celestial objectives to earn Excalibur & Radiant Blueprints!";
+  }
+
+  activeList.forEach(c => {
     const card = document.createElement('div');
     card.style.cssText = "background: #222534; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #3a3f56;";
     card.innerHTML = `
       <div>
-        <h4 style="color:#00ffcc; font-size: 13px;">${c.text}</h4>
-        <span style="font-size: 11px; color:#ffcc00;">Reward: ${c.reward}</span>
+        <h4 style="color:${playerFaction === 'dark' ? '#a800ff' : '#ffcc00'}; font-size: 13px;">${c.text}</h4>
+        <span style="font-size: 11px; color:#00ffcc;">Reward: ${c.reward}</span>
       </div>
       <button class="btn ${c.done ? 'btn-secondary' : ''}" ${c.done ? 'disabled' : ''}>
         ${c.done ? 'Completed ✔' : 'In Progress'}
@@ -1722,6 +1877,23 @@ function processCommand(cmd) {
     if (isOwnerUser(player.name)) { player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail }; }
     else { player.equippedWeapon = 'minigun'; player.weaponData = { ...WEAPONS.minigun }; }
     alert("ACTIVATED ALL ADMIN PERKS!"); return;
+  }
+
+  if (action === 'blueprint' || action === 'blueprints' || action === 'bp') {
+    const bpTarget = parts[1] ? parts[1].toLowerCase() : 'all';
+    const amt = parseInt(parts[2] || 50);
+
+    if (bpTarget === 'all') {
+      Object.keys(blueprints).forEach(k => { blueprints[k].count += amt; });
+      alert(`Granted ${amt} Blueprints to ALL items!`);
+    } else if (blueprints[bpTarget]) {
+      blueprints[bpTarget].count += amt;
+      alert(`Granted ${amt} Blueprints to ${blueprints[bpTarget].name}!`);
+    } else {
+      alert(`Unknown blueprint key: "${bpTarget}". Available: excalibur, dark_matter, void_suit, cyber_wings, all`);
+    }
+    saveProgress();
+    return;
   }
 
   if (action === 'grant' || action === 'giveadmin' || (action === 'give' && parts[1] && parts[1].toLowerCase() === 'admin')) {
