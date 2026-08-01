@@ -230,7 +230,7 @@
   <!-- Main Rivals Hub Menu Modal -->
   <div id="hubModal" class="modal">
     <div class="modal-content">
-      <h2>NOVA WARS - Game Hub</h2>
+      <h2>Rival Ragdolls - Game Hub</h2>
       <p style="font-size: 12px; color: #aaa;">Select a game mode, choose an arena style, and launch into 3D combat!</p>
       
       <div style="margin: 15px 0;">
@@ -293,7 +293,7 @@
   <div id="tutorialModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width: 650px;">
       <button class="modal-close-btn" onclick="toggleTutorialModal(false)" title="Close">✖ Close [X]</button>
-      <h2>📖 How to Play - Rivals Guide</h2>
+      <h2>📖 How to Play - NOVA WARS Guide</h2>
       <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 15px;">
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #00ffcc;">
           <h4 style="color: #00ffcc; margin-bottom: 4px;">1. Fast Movement & Platform Jumping</h4>
@@ -354,7 +354,7 @@
   </div>
 
   <!-- Blueprints & Fragments Vault Modal -->
-  <div id="blueprintModal" class="modal" style="display:none;">
+  <div id="blueprintModal" class="modal" style="display:none; z-index: 250;">
     <div class="modal-content">
       <button class="modal-close-btn" onclick="toggleBlueprintModal(false)" title="Close">✖ Close [X]</button>
       <h2>📜 Blueprints Vault & Weapon Fragments</h2>
@@ -371,10 +371,10 @@
   </div>
 
   <!-- Faction Challenges Modal -->
-  <div id="challengeModal" class="modal" style="display:none;">
+  <div id="challengeModal" class="modal" style="display:none; z-index: 250;">
     <div class="modal-content" style="max-width: 600px;">
       <button class="modal-close-btn" onclick="toggleChallengeModal(false)" title="Close">✖ Close [X]</button>
-      <h2 id="challengeHeaderTitle">🎯 Faction Challenges</h2>
+      <h2 id="challengeHeaderTitle"> Challenges</h2>
       <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;" id="challengeSubTitle">Complete tasks during battle to earn Fragments, Blueprints, and Credits!</p>
 
       <div style="display: flex; flex-direction: column; gap: 12px;" id="challengeList"></div>
@@ -382,10 +382,10 @@
   </div>
 
   <!-- Daily Wheel Spinner Modal -->
-  <div id="wheelModal" class="modal" style="display:none;">
+  <div id="wheelModal" class="modal" style="display:none; z-index: 250;">
     <div class="modal-content" style="max-width: 450px; text-align: center;">
       <button class="modal-close-btn" onclick="toggleWheelModal(false)" title="Close">✖ Close [X]</button>
-      <h2>🎡 Daily Prize Wheel</h2>
+      <h2></h2>Daily Prize Wheel</h2>
       <p style="color: #aaa; font-size: 12px; margin-bottom: 20px;">Spin the wheel to win Credits, Fragments, or Secret Blueprints!</p>
 
       <div id="wheelDisplay" style="width: 220px; height: 220px; border-radius: 50%; border: 6px solid #00ffcc; margin: 0 auto; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle, #222534, #11121a); box-shadow: 0 0 25px rgba(0,255,204,0.3); font-weight: bold; font-size: 18px; color: #ffcc00; text-shadow: 0 0 8px #ffcc00;">
@@ -429,6 +429,8 @@ let ownedOutfits = new Set(['default']);
 
 // PROMO CODES TRACKER
 let redeemedCodes = new Set();
+let hasSpunWheelToday = false;
+let lastResetDatePortland = "";
 
 // FRAGMENTS & BLUEPRINTS DATABASE
 let weaponFragments = {
@@ -504,6 +506,25 @@ function closeAllModals() {
   document.querySelectorAll('.modal').forEach(m => {
     if (m.id !== 'factionModal') m.style.display = 'none';
   });
+}
+
+// --- PORTLAND TIME (12:00 AM) DAILY RESET CHECKER ---
+function getPortlandDateString() {
+  const options = { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' };
+  return new Intl.DateTimeFormat('en-US', options).format(new Date());
+}
+
+function checkDailyPortlandReset() {
+  const todayPDT = getPortlandDateString();
+  if (lastResetDatePortland !== todayPDT) {
+    hasSpunWheelToday = false;
+    darkChallenges.forEach(c => c.done = false);
+    lightChallenges.forEach(c => c.done = false);
+    lastResetDatePortland = todayPDT;
+    localStorage.setItem('rr_last_reset_pdt', todayPDT);
+    localStorage.setItem('rr_wheel_spun_today', 'false');
+    showNotificationBanner("🌅 Daily Reset (12:00 AM Portland Time)! Wheel & Challenges Refreshed!");
+  }
 }
 
 // --- OUTFITS PRICING & DATABASE ---
@@ -611,6 +632,9 @@ function loadSavedProgress() {
   const savedFrags = localStorage.getItem('rr_fragments');
   const savedBps = localStorage.getItem('rr_blueprints');
   const savedFaction = localStorage.getItem('rr_faction');
+  
+  lastResetDatePortland = localStorage.getItem('rr_last_reset_pdt') || "";
+  hasSpunWheelToday = localStorage.getItem('rr_wheel_spun_today') === 'true';
 
   if (savedName) { playerName = savedName; document.getElementById('usernameInput').value = savedName; }
   if (savedCredits !== null) credits = parseInt(savedCredits, 10);
@@ -619,6 +643,8 @@ function loadSavedProgress() {
 
   if (savedFrags) { try { weaponFragments = JSON.parse(savedFrags); } catch(e){} }
   if (savedBps) { try { blueprints = JSON.parse(savedBps); } catch(e){} }
+
+  checkDailyPortlandReset();
 
   if (savedFaction) { selectFaction(savedFaction); }
   else { document.getElementById('factionModal').style.display = 'flex'; }
@@ -655,6 +681,7 @@ function saveProgress() {
   localStorage.setItem('rr_skin', equippedSkin);
   localStorage.setItem('rr_fragments', JSON.stringify(weaponFragments));
   localStorage.setItem('rr_blueprints', JSON.stringify(blueprints));
+  localStorage.setItem('rr_wheel_spun_today', hasSpunWheelToday ? 'true' : 'false');
 
   globalLeaderboardRegistry.set(playerName.toLowerCase(), {
     name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt
@@ -806,7 +833,7 @@ canvas.addEventListener('touchstart', e => { if (e.touches.length > 0) { mouse.x
 canvas.addEventListener('touchmove', e => { if (e.touches.length > 0) { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; touchAimAngle = null; } });
 canvas.addEventListener('touchend', () => mouse.down = false);
 
-// --- WEAPONS DATABASE (SNIPER BUFFED: 5 BASE / 10 HEADSHOT) ---
+// --- WEAPONS DATABASE ---
 const WEAPONS = {
   pistol: { name: 'Pistol', tier: 'Basic Tier', damage: 2, rate: 220, ammo: 18, maxAmmo: 18, speed: 22, cost: 0, gravity: 0, ownerOnly: false, multishot: 1, shape: 'pistol' },
   smg: { name: 'Tactical SMG', tier: 'Tier 1 - Rapid Burst', damage: 2, rate: 60, ammo: 45, maxAmmo: 45, speed: 25, cost: 250, gravity: 0, ownerOnly: false, multishot: 1, shape: 'smg' },
@@ -828,20 +855,19 @@ const WEAPONS = {
   crook: { name: 'Healer Crook', tier: 'Master Weapon', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal', multishot: 1, shape: 'crook' }
 };
 
-// --- EXPANDED 3D BLOCK MAP LAYOUTS (NEW TEMPLE PYRAMID MAP) ---
+// --- EXPANDED 3D BLOCK MAP LAYOUTS ---
 const maps = {
   cyber: { bg: '#0b0c16', floor: '#1e2238', side: '#121526', top: '#2c3352', platforms: [{ x: 180, y: 0.70, w: 220, h: 20 }, { x: 0.50, y: 0.50, w: 260, h: 20, isCenter: true }, { x: 0.82, y: 0.70, w: 220, h: 20, isRelRight: true }] },
   lava: { bg: '#1c0808', floor: '#3d1212', side: '#260a0a', top: '#5e1b1b', platforms: [{ x: 150, y: 0.65, w: 180, h: 20 }, { x: 0.35, y: 0.45, w: 200, h: 20 }, { x: 0.65, y: 0.45, w: 200, h: 20 }, { x: 0.85, y: 0.65, w: 180, h: 20, isRelRight: true }] },
   islands: { bg: '#08171f', floor: '#16313d', side: '#0d1f28', top: '#224a59', platforms: [{ x: 200, y: 0.60, w: 240, h: 20 }, { x: 0.50, y: 0.40, w: 280, h: 20, isCenter: true }, { x: 0.80, y: 0.60, w: 240, h: 20, isRelRight: true }] },
   warehouse: { bg: '#121318', floor: '#2b2e3b', side: '#1c1e26', top: '#3e4254', platforms: [{ x: 120, y: 0.72, w: 280, h: 20 }, { x: 0.50, y: 0.52, w: 320, h: 20, isCenter: true }, { x: 0.88, y: 0.72, w: 280, h: 20, isRelRight: true }] },
   
-  // NEW TEMPLE MAP (5 PLATFORMS PYRAMID FORMATION)
   temple: { 
     bg: '#14120c', floor: '#3d331f', side: '#241e12', top: '#5c4e30', 
     platforms: [
-      { x: 0.18, y: 0.72, w: 240, h: 22 }, { x: 0.82, y: 0.72, w: 240, h: 22, isRelRight: true }, // Base 2
-      { x: 0.32, y: 0.52, w: 200, h: 22 }, { x: 0.68, y: 0.52, w: 200, h: 22, isRelRight: true }, // Mid 2
-      { x: 0.50, y: 0.32, w: 220, h: 22, isCenter: true }                                        // Apex 1 Peak
+      { x: 0.18, y: 0.72, w: 240, h: 22 }, { x: 0.82, y: 0.72, w: 240, h: 22, isRelRight: true },
+      { x: 0.32, y: 0.52, w: 200, h: 22 }, { x: 0.68, y: 0.52, w: 200, h: 22, isRelRight: true },
+      { x: 0.50, y: 0.32, w: 220, h: 22, isCenter: true }
     ] 
   },
 
@@ -989,7 +1015,7 @@ class Explosion {
   }
 }
 
-// --- RAGDOLL CHARACTER ENGINE (BUG FIX FOR POSITION GLITCHES) ---
+// --- RAGDOLL CHARACTER ENGINE ---
 class Character {
   constructor(x, y, isBot = false, name = "Player", team = 'A') {
     this.x = x; this.y = y; this.vx = 0; this.vy = 0;
@@ -1152,7 +1178,6 @@ class Character {
     if (Date.now() - this.lastShot > (this.weaponData.rate * 1.4)) this.shoot();
   }
 
-  // REFACTORED SMOOTH COLLISION DETECTION (PREVENTS JITTER & GLITCHES)
   checkCollisions() {
     this.grounded = false;
     const floorY = canvas.height - 100;
@@ -1384,40 +1409,56 @@ class Character {
   }
 }
 
-// --- PROJECTILE CLASS (SNIPER HEADSHOT CALCULATION) ---
+// --- REFACTORED PROJECTILE CLASS (STRICT PLATFORM COLLISION) ---
 class Projectile {
   constructor(x, y, vx, vy, damage, owner, isPurple = false, gravity = 0, isExplosive = false) {
     this.x = x; this.y = y; this.vx = vx; this.vy = vy;
     this.damage = damage; this.owner = owner; this.isPurple = isPurple;
     this.gravity = gravity; this.isExplosive = isExplosive;
     this.radius = isPurple ? 10 : (isExplosive ? 7 : 4);
+    this.dead = false;
   }
 
   update() {
-    this.vy += this.gravity; this.x += this.vx; this.y += this.vy;
+    if (this.dead) return;
+
+    const prevX = this.x;
+    const prevY = this.y;
+
+    this.vy += this.gravity; 
+    this.x += this.vx; 
+    this.y += this.vy;
+    
     const floorY = canvas.height - 100;
 
     const ownerCanPierce = this.owner && this.owner.wallbang && isOwnerAuth(this.owner.name);
 
+    // Platform Blocking (Stops bullets from penetrating through platforms)
     if (!ownerCanPierce) {
       const platforms = getCalculatedPlatforms();
       platforms.forEach(p => {
-        if (this.x >= p.x && this.x <= p.x + p.w && Math.abs(this.y - p.y) < 8) {
+        const minX = Math.min(prevX, this.x);
+        const maxX = Math.max(prevX, this.x);
+        const minY = Math.min(prevY, this.y);
+        const maxY = Math.max(prevY, this.y);
+
+        if (maxX >= p.x && minX <= p.x + p.w && maxY >= p.y && minY <= p.y + p.h + 6) {
           if (this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
           this.dead = true;
         }
       });
     }
 
+    if (this.dead) return;
+
     allEntities.filter(Boolean).forEach(target => {
-      if (target !== this.owner && target.team !== this.owner.team && Math.hypot(target.x - this.x, target.y - this.y) < (18 * target.scaleMult) + this.radius) {
+      if (!this.dead && target !== this.owner && target.team !== this.owner.team && Math.hypot(target.x - this.x, target.y - this.y) < (18 * target.scaleMult) + this.radius) {
         if (target.shieldActive) {
           this.vx = -this.vx * 1.2; this.vy = -this.vy * 1.2; this.owner = target;
         } else {
           if (this.isExplosive) {
             explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
           } else {
-            // SNIPER HEADSHOT DAMAGE CALCULATION (10 HP ON HEADSHOT, 5 ON BODY)
             let finalDmg = this.damage;
             if (this.owner && this.owner.equippedWeapon === 'sniper') {
               const headYThreshold = target.y - (20 * target.scaleMult);
@@ -1440,7 +1481,7 @@ class Projectile {
     });
 
     if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > floorY) {
-      if (this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
+      if (!this.dead && this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
       this.dead = true;
     }
   }
@@ -1677,6 +1718,31 @@ function toggleHubModal(show) { document.getElementById('hubModal').style.displa
 function toggleShopModal(show) { document.getElementById('shopModal').style.display = show ? 'flex' : 'none'; if(show) initShop(); }
 function toggleOutfitModal(show) { document.getElementById('outfitModal').style.display = show ? 'flex' : 'none'; if(show) initOutfitWardrobe(); }
 
+// MODAL CONTROLLERS (FIXED PREVENTING OVERLAY LOCK)
+function toggleBlueprintModal(show) {
+  document.getElementById('blueprintModal').style.display = show ? 'flex' : 'none';
+  if (show) initBlueprintVault();
+}
+
+function toggleChallengeModal(show) {
+  document.getElementById('challengeModal').style.display = show ? 'flex' : 'none';
+  if (show) initChallengesUI();
+}
+
+function toggleWheelModal(show) {
+  checkDailyPortlandReset();
+  document.getElementById('wheelModal').style.display = show ? 'flex' : 'none';
+  
+  const spinBtn = document.getElementById('spinBtn');
+  if (hasSpunWheelToday) {
+    spinBtn.disabled = true;
+    spinBtn.innerText = "ALREADY SPUN TODAY (RESETS 12:00 AM PDT)";
+  } else {
+    spinBtn.disabled = false;
+    spinBtn.innerText = "SPIN THE WHEEL!";
+  }
+}
+
 // --- WEAPON SHOP SYSTEM ---
 function initShop() {
   const wShop = document.getElementById('weaponShop');
@@ -1760,6 +1826,7 @@ function initBlueprintVault() {
 
 // --- FACTION CHALLENGES UI ---
 function initChallengesUI() {
+  checkDailyPortlandReset();
   const container = document.getElementById('challengeList');
   const title = document.getElementById('challengeHeaderTitle');
   const subTitle = document.getElementById('challengeSubTitle');
@@ -1796,7 +1863,7 @@ function initChallengesUI() {
 // --- DAILY WHEEL SPINNER ENGINE ---
 let wheelSpinning = false;
 function spinDailyWheel() {
-  if (wheelSpinning) return;
+  if (wheelSpinning || hasSpunWheelToday) return;
   wheelSpinning = true;
 
   const display = document.getElementById('wheelDisplay');
@@ -1818,7 +1885,14 @@ function spinDailyWheel() {
       const finalReward = rewards[Math.floor(Math.random() * rewards.length)];
       display.innerText = finalReward.text;
       finalReward.action();
+      
+      hasSpunWheelToday = true;
       saveProgress();
+      
+      const spinBtn = document.getElementById('spinBtn');
+      spinBtn.disabled = true;
+      spinBtn.innerText = "ALREADY SPUN TODAY (RESETS 12:00 AM PDT)";
+
       showNotificationBanner(`🎉 WHEEL PRIZE: ${finalReward.text}!`);
       wheelSpinning = false;
     }
