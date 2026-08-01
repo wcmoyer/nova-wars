@@ -38,6 +38,8 @@
     .btn-secondary { background: #252836; color: #fff; border: 1px solid #44475a; }
     .btn-secondary:hover { background: #34384c; }
     .btn-danger { background: #ff4444; color: #fff; }
+    .btn-ability { background: linear-gradient(135deg, #a800ff, #00ffcc); color: #fff; font-size: 13px; font-weight: 800; border: 1px solid #00ffcc; text-shadow: 0 0 4px #000; }
+    .btn-ability:disabled { background: #333; color: #777; border-color: #555; cursor: not-allowed; }
 
     /* Quick Controls */
     #quickControls { position: absolute; top: 80px; left: 15px; display: flex; gap: 8px; flex-wrap: wrap; z-index: 60; }
@@ -76,7 +78,6 @@
     .shop-card h4 { color: #ffcc00; margin-bottom: 5px; }
     .shop-card .cost-tag { font-size: 12px; color: #00ffcc; font-weight: bold; margin: 4px 0 8px 0; }
 
-    /* Mode Selection Grid */
     .mode-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 15px 0; }
     .mode-card { background: #222534; border: 2px solid #3d425c; padding: 12px; border-radius: 8px; cursor: pointer; text-align: center; font-weight: bold; transition: 0.2s; }
     .mode-card:hover, .mode-card.active { border-color: #00ffcc; background: #00ffcc22; color: #00ffcc; }
@@ -86,7 +87,6 @@
     #controlsHint { position: absolute; bottom: 15px; left: 15px; font-size: 11px; color: #888; pointer-events: none; }
     .verified-badge { color: #00ffcc; font-weight: bold; margin-left: 3px; text-shadow: 0 0 6px rgba(0,255,204,0.8); }
 
-    /* Leaderboard Tabs */
     .lb-tabs { display: flex; gap: 8px; margin-top: 15px; }
     .lb-tab-btn { flex: 1; padding: 8px; background: #222534; border: 1px solid #3a3f56; color: #aaa; font-weight: bold; font-size: 12px; border-radius: 6px; cursor: pointer; text-align: center; transition: 0.2s; }
     .lb-tab-btn.active { background: #00ffcc; color: #000; border-color: #00ffcc; }
@@ -98,7 +98,6 @@
     .progress-bar-bg { width: 100%; background: #111; border-radius: 10px; height: 12px; overflow: hidden; border: 1px solid #444; margin: 6px 0; }
     .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #00ffcc, #00aaff); width: 0%; transition: 0.3s; }
 
-    /* Faction Choice Cards */
     .faction-card { flex: 1; padding: 25px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.3s; border: 3px solid transparent; }
     .faction-dark { background: linear-gradient(135deg, #120326, #2d004d); border-color: #a800ff; }
     .faction-dark:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(168,0,255,0.6); }
@@ -159,7 +158,7 @@
   </div>
 
   <div id="controlsHint">
-    [WASD/Arrows] Fast Move/Jump | [Mouse/Right Joy-Con] Aim & Fire | [1-4] Emotes | [R] Reload | [G] Bomb | [X] Close Menus | [~] Admin Console
+    [WASD/Arrows] Move/Jump | [Mouse/Right Joy] Aim & Fire | [E] Ability | [1-4] Emotes | [R] Reload | [G] Bomb | [X] Close Menus | [~] Admin
   </div>
 
   <!-- Touch Controls Overlay -->
@@ -175,13 +174,14 @@
   </div>
 
   <div id="touchActions">
+    <button id="abilityBtn" class="btn btn-ability" onclick="activateOutfitAbility()">⚡ ABILITY [E]</button>
     <button class="btn btn-secondary" onclick="if(player) player.reload();">RELOAD [R]</button>
     <button class="btn btn-danger" onclick="if(player) player.throwBomb();">BOMB [G]</button>
   </div>
 
   <!-- Admin Input Console -->
   <div id="adminConsole">
-    <input type="text" id="adminInput" placeholder="Commands: blueprint <name/all> <amt>, grant <user>, revoke <user>, verify <user>, unverify <user>, wallbang, ALL ADMIN, stop all admin, freeze <user>, nuke, god, fly, invis, aimbot, heal, shield, speed <mult>, size <mult>, give <weapon>, credits <amt> [user]">
+    <input type="text" id="adminInput" placeholder="Commands: dodge, aimbot, homing, blueprint <name/all> <amt> [user], fragment <wep/all> <amt> [user], grant <user>, revoke <user>, verify <user>, unverify <user>, wallbang, ALL ADMIN, stop all admin, freeze <user>, god, fly, invis, heal, shield, speed <mult>, credits <amt>">
   </div>
 
   <!-- FIRST LOGIN FACTION SELECTION MODAL -->
@@ -230,7 +230,7 @@
   <!-- Main Rivals Hub Menu Modal -->
   <div id="hubModal" class="modal">
     <div class="modal-content">
-      <h2>Rival Ragdolls - Game Hub</h2>
+      <h2>NOVA WARS - Game Hub</h2>
       <p style="font-size: 12px; color: #aaa;">Select a game mode, choose an arena style, and launch into 3D combat!</p>
       
       <div style="margin: 15px 0;">
@@ -260,16 +260,12 @@
         </div>
       </div>
 
-      <!-- LAUNCH MATCH BUTTON -->
       <button class="btn" style="width: 100%; padding: 14px; font-size: 16px; margin-top: 10px;" onclick="confirmMatchStart()">LAUNCH MATCH</button>
-
-      <!-- HOW TO PLAY / TUTORIAL BUTTON -->
       <button class="btn btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; margin-top: 8px; border-color: #00ffcc; color: #00ffcc;" onclick="toggleTutorialModal(true)">📖 HOW TO PLAY / TUTORIAL</button>
 
       <hr style="border: 0; border-top: 1px solid #2d3244; margin: 20px 0;">
 
       <h3>Global Leaderboards</h3>
-      <!-- 3 SEPARATE LEADERBOARD TAB SWITCHERS -->
       <div class="lb-tabs">
         <div id="lbTab-kills" class="lb-tab-btn active" onclick="switchLeaderboardTab('kills')">⚔️ Kills Board</div>
         <div id="lbTab-credits" class="lb-tab-btn" onclick="switchLeaderboardTab('credits')">💰 Credits Board</div>
@@ -293,23 +289,23 @@
   <div id="tutorialModal" class="modal" style="display:none;">
     <div class="modal-content" style="max-width: 650px;">
       <button class="modal-close-btn" onclick="toggleTutorialModal(false)" title="Close">✖ Close [X]</button>
-      <h2>📖 How to Play - NOVA WARS Guide</h2>
+      <h2>📖 How to Play - Rivals Guide</h2>
       <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 15px;">
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #00ffcc;">
           <h4 style="color: #00ffcc; margin-bottom: 4px;">1. Fast Movement & Platform Jumping</h4>
           <p style="font-size: 13px; color: #ccc;">Use <strong>WASD</strong> or <strong>Arrow Keys</strong> to sprint and jump across 3D platforms endlessly. On mobile, pull the left joystick for rapid movement.</p>
         </div>
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #ff4444;">
-          <h4 style="color: #ff4444; margin-bottom: 4px;">2. Aiming & Combat Controls</h4>
-          <p style="font-size: 13px; color: #ccc;">Aim with your <strong>Mouse Cursor</strong> and Left-Click to shoot. Press <strong>[R]</strong> to reload ammo and <strong>[G]</strong> to lob explosive bombs at rival fighters (Sphinx Exclusive)!</p>
+          <h4 style="color: #ff4444; margin-bottom: 4px;">2. Aiming & Outfit Abilities</h4>
+          <p style="font-size: 13px; color: #ccc;">Aim with your <strong>Mouse Cursor</strong> and Left-Click to shoot. Press <strong>[E]</strong> or tap the on-screen Ability button to trigger your outfit's active ability (e.g. Cheetah Speed, Ninja Cloak, Cyber Shield)!</p>
         </div>
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #ffcc00;">
-          <h4 style="color: #ffcc00; margin-bottom: 4px;">3. Earn Victory Credits & 3 Leaderboards</h4>
-          <p style="font-size: 13px; color: #ccc;">Score kills (+50 Credits) and win matches (+50 Victory Bonus Credits) to climb 3 separate Global Leaderboards: Kills, Credits, and Damage!</p>
+          <h4 style="color: #ffcc00; margin-bottom: 4px;">3. Weapon Mastery Skins (500 Damage)</h4>
+          <p style="font-size: 13px; color: #ccc;">Deal <strong>500 Damage</strong> with any weapon to permanently unlock its exclusive <strong>Mastery Gold Finish Skin</strong>! Finish skins can also be bought for credits in the shop.</p>
         </div>
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #a800ff;">
-          <h4 style="color: #a800ff; margin-bottom: 4px;">4. Factions, Fragments & Blueprints</h4>
-          <p style="font-size: 13px; color: #ccc;">Pick Dark or Light allegiance to complete <strong>Phantom/Celestial Challenges</strong>! Collect <strong>200 Weapon Fragments</strong> to unlock weapons or spin the Daily Wheel for secret blueprints.</p>
+          <h4 style="color: #a800ff; margin-bottom: 4px;">4. Admin Commands</h4>
+          <p style="font-size: 13px; color: #ccc;">Authorized admins can press <strong>[~]</strong> to run commands: <code>dodge</code> (auto-dodge incoming bullets), <code>aimbot</code> (auto-target opponents), and <code>homing</code> (tracking projectiles)!</p>
         </div>
       </div>
       <div style="margin-top: 22px; text-align: center;">
@@ -318,36 +314,31 @@
     </div>
   </div>
 
-  <!-- Weapon Shop & Skins Modal -->
+  <!-- Weapon Shop & Realistic Finish Skins Modal -->
   <div id="shopModal" class="modal" style="display:none;">
     <div class="modal-content">
       <button class="modal-close-btn" onclick="toggleShopModal(false)" title="Close">✖ Close [X]</button>
       <h2>Weapon Shop & Finish Skins</h2>
-      <p>Equip weapons or customize their visual finish skins!</p>
+      <p>Equip weapons, buy finish skins with Credits, or earn Mastery Skins at 500 Damage!</p>
       
       <div style="margin: 15px 0;">
-        <h3>Select Weapon Finish Skin</h3>
-        <button class="btn btn-secondary" onclick="setWeaponSkin('default')">Default Finish</button>
-        <button class="btn btn-secondary" onclick="setWeaponSkin('neon')">Neon Cyan</button>
-        <button class="btn btn-secondary" onclick="setWeaponSkin('gold')">Pure Gold</button>
-        <button class="btn btn-secondary" onclick="setWeaponSkin('galaxy')">Galaxy Purple</button>
-        <button class="btn btn-secondary" onclick="setWeaponSkin('lava')">Magma Red</button>
-        <button class="btn btn-secondary" onclick="setWeaponSkin('frost')">Diamond Frost</button>
-        <button class="btn btn-secondary" onclick="setWeaponSkin('void')">Void Darkness</button>
-        <button class="btn btn-secondary" onclick="setWeaponSkin('acid')">Toxic Acid</button>
+        <h3>Select Weapon Finish Skin (Credit Cost or 500 Damage Mastery)</h3>
+        <div class="grid-3col" id="skinShopGrid"></div>
       </div>
+
+      <hr style="border: 0; border-top: 1px solid #2d3244; margin: 20px 0;">
 
       <h3>Upgraded Weapon Arsenal (Reach 200 Fragments or Spend Credits)</h3>
       <div class="grid-3col" id="weaponShop"></div>
     </div>
   </div>
 
-  <!-- Outfits Wardrobe Modal -->
+  <!-- Advanced Outfits Wardrobe Modal -->
   <div id="outfitModal" class="modal" style="display:none;">
     <div class="modal-content">
       <button class="modal-close-btn" onclick="toggleOutfitModal(false)" title="Close">✖ Close [X]</button>
-      <h2>Character Outfits Wardrobe</h2>
-      <p>Purchase or equip distinct outfits for your ragdoll warrior using earned credits!</p>
+      <h2>Advanced Character Outfits & Abilities</h2>
+      <p>Purchase or equip complex outfits with active abilities (3-second cooldown)!</p>
 
       <div class="grid-3col" id="outfitWardrobeGrid"></div>
     </div>
@@ -374,7 +365,7 @@
   <div id="challengeModal" class="modal" style="display:none; z-index: 250;">
     <div class="modal-content" style="max-width: 600px;">
       <button class="modal-close-btn" onclick="toggleChallengeModal(false)" title="Close">✖ Close [X]</button>
-      <h2 id="challengeHeaderTitle"> Challenges</h2>
+      <h2 id="challengeHeaderTitle">🎯 Faction Challenges</h2>
       <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;" id="challengeSubTitle">Complete tasks during battle to earn Fragments, Blueprints, and Credits!</p>
 
       <div style="display: flex; flex-direction: column; gap: 12px;" id="challengeList"></div>
@@ -385,7 +376,7 @@
   <div id="wheelModal" class="modal" style="display:none; z-index: 250;">
     <div class="modal-content" style="max-width: 450px; text-align: center;">
       <button class="modal-close-btn" onclick="toggleWheelModal(false)" title="Close">✖ Close [X]</button>
-      <h2></h2>Daily Prize Wheel</h2>
+      <h2>🎡 Daily Prize Wheel</h2>
       <p style="color: #aaa; font-size: 12px; margin-bottom: 20px;">Spin the wheel to win Credits, Fragments, or Secret Blueprints!</p>
 
       <div id="wheelDisplay" style="width: 220px; height: 220px; border-radius: 50%; border: 6px solid #00ffcc; margin: 0 auto; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle, #222534, #11121a); box-shadow: 0 0 25px rgba(0,255,204,0.3); font-weight: bold; font-size: 18px; color: #ffcc00; text-shadow: 0 0 8px #ffcc00;">
@@ -422,10 +413,16 @@ let aiDifficulty = 'medium';
 let isSuddenDeath = false;
 let currentLeaderboardTab = 'kills';
 
-// Customization Systems
+// Customization & Weapon Mastery Damage Tracking
 let equippedSkin = 'default';
 let equippedOutfit = 'default';
 let ownedOutfits = new Set(['default']);
+let ownedSkins = new Set(['default']);
+let weaponDamageStats = {}; // Tracks damage dealt per weapon for 500 Dmg Mastery Skins
+
+// Outfit Ability Cooldown State
+let abilityCooldownTimer = 0;
+let abilityActiveTimer = 0;
 
 // PROMO CODES TRACKER
 let redeemedCodes = new Set();
@@ -442,22 +439,22 @@ let weaponFragments = {
 };
 
 let blueprints = {
-  excalibur: { count: 35, max: 100, name: "🗡️ Secret Excalibur Blade", type: "Secret Weapon", stats: "Damage: 75 | Speed: Instant", unreleased: false },
-  dark_matter: { count: 18, max: 100, name: "🌌 Dark Matter Staff", type: "Secret Weapon", stats: "Damage: 90 | AoE Black Hole", unreleased: false },
-  void_suit: { count: 50, max: 100, name: "👻 Void Phantom Suit", type: "Unreleased Outfit", stats: "Perk: Permanent Phase Shifting", unreleased: true },
-  cyber_wings: { count: 12, max: 100, name: "🪽 Cybernetic Exo-Wings", type: "Unreleased Outfit", stats: "Perk: Quadruple High Jump", unreleased: true }
+  excalibur: { count: 35, max: 100, realName: "🗡️ Secret Excalibur Blade", genericName: "Unreleased Weapon", type: "Secret Weapon", stats: "Damage: 75 | Speed: Instant", unreleased: true },
+  dark_matter: { count: 18, max: 100, realName: "🌌 Dark Matter Staff", genericName: "Unreleased Weapon", type: "Secret Weapon", stats: "Damage: 90 | AoE Black Hole", unreleased: true },
+  void_suit: { count: 50, max: 100, realName: "👻 Void Phantom Suit", genericName: "Unreleased Outfit", type: "Unreleased Outfit", stats: "Perk: Permanent Phase Shifting", unreleased: true },
+  cyber_wings: { count: 12, max: 100, realName: "🪽 Cybernetic Exo-Wings", genericName: "Unreleased Outfit", type: "Unreleased Outfit", stats: "Perk: Quadruple High Jump", unreleased: true }
 };
 
 // FACTION SPECIFIC CHALLENGES
 let darkChallenges = [
   { id: 1, text: "Score 5 Phantom Kills", reward: "50 Minigun Fragments", done: false, type: "kills", target: 5 },
-  { id: 2, text: "Deal 250 Void Damage", reward: "25 Dark Matter Blueprints", done: false, type: "dmg", target: 250 },
+  { id: 2, text: "Deal 250 Void Damage", reward: "25 Unreleased Weapon Blueprints", done: false, type: "dmg", target: 250 },
   { id: 3, text: "Win 1 Dark Victory", reward: "+150 Dark Credits", done: false, type: "win", target: 1 }
 ];
 
 let lightChallenges = [
   { id: 1, text: "Score 5 Celestial Kills", reward: "50 Laser Fragments", done: false, type: "kills", target: 5 },
-  { id: 2, text: "Deal 250 Radiant Damage", reward: "25 Excalibur Blueprints", done: false, type: "dmg", target: 250 },
+  { id: 2, text: "Deal 250 Radiant Damage", reward: "25 Unreleased Weapon Blueprints", done: false, type: "dmg", target: 250 },
   { id: 3, text: "Win 1 Light Victory", reward: "+150 Light Credits", done: false, type: "win", target: 1 }
 ];
 
@@ -527,22 +524,34 @@ function checkDailyPortlandReset() {
   }
 }
 
-// --- OUTFITS PRICING & DATABASE ---
+// --- ADVANCED OUTFITS DATABASE WITH ABILITIES & PRICING ---
 const OUTFITS_CATALOG = {
-  default: { id: 'default', name: '👤 Default Fighter', cost: 0, desc: 'Standard smooth combat suit style.', lockedTo: false },
-  ninja: { id: 'ninja', name: '🥷 Ninja Suit', cost: 350, desc: 'Stealth assassin suit with red head wrap.', lockedTo: false },
-  cowboy: { id: 'cowboy', name: '🤠 Cowboy', cost: 500, desc: 'Classic Stetson hat and leather vest accent.', lockedTo: false },
-  dog: { id: 'dog', name: '🐶 Dog Outfit', cost: 600, desc: 'Floppy puppy ears and black nose button.', lockedTo: false },
-  cyber_knight: { id: 'cyber_knight', name: '🛡️ Cyber Knight', cost: 800, desc: 'Heavy cybernetic glowing armor plating.', lockedTo: false },
-  cheetah: { id: 'cheetah', name: '🐆 Cheetah Outfit', cost: 1000, desc: 'Sleek golden fur coat with dark spots.', lockedTo: false },
-  king: { id: 'king', name: '👑 Royal King', cost: 1200, desc: 'Golden crown with royal purple cape accents.', lockedTo: false },
-  skeleton: { id: 'skeleton', name: '💀 Skeleton Lord', cost: 1600, desc: 'Bone-white skull mask with obsidian suit.', lockedTo: false },
-  butterfly: { id: 'butterfly', name: '🦋 Butterfly Outfit', cost: 1800, desc: 'Colorful wings on back and twin antennae.', lockedTo: false },
-  astronaut: { id: 'astronaut', name: '🚀 Astronaut', cost: 2200, desc: 'White space suit with gold reflective visor.', lockedTo: false },
-  unicorn: { id: 'unicorn', name: '🦄 Unicorn Outfit', cost: 2500, desc: 'Golden forehead horn with a rainbow mane.', lockedTo: false },
-  alien: { id: 'alien', name: '👽 Alien Invader', cost: 3000, desc: 'Neon green alien skin with black oversized eyes.', lockedTo: false },
-  piggy: { id: 'piggy', name: '🐷 Piggy Outfit (PIGGY ONLY)', cost: 5000, desc: 'Strictly reserved for piggy! Pink ears & snout.', lockedTo: 'piggy' },
-  chicken: { id: 'chicken', name: '🐔 Chicken Outfit (SPHINX ONLY)', cost: 5000, desc: 'Strictly reserved for sphinx! Feather suit & beak.', lockedTo: 'sphinx' }
+  default: { id: 'default', name: '👤 Default Fighter', cost: 0, desc: 'Standard combat suit style.', ability: 'None', lockedTo: false },
+  ninja: { id: 'ninja', name: '🥷 Ninja Assassin', cost: 450, desc: 'Stealth assassin suit with red wrap.', ability: 'Shadow Cloak (Invisibility 3s)', lockedTo: false },
+  cowboy: { id: 'cowboy', name: '🤠 Outlaw Cowboy', cost: 550, desc: 'Classic leather vest & Stetson hat.', ability: 'Quick Draw (Dual Burst Shot)', lockedTo: false },
+  dog: { id: 'dog', name: '🐶 Cyber Puppy', cost: 650, desc: 'Floppy puppy ears & button nose.', ability: 'Bark Blast (Pushes Enemies Away)', lockedTo: false },
+  cyber_knight: { id: 'cyber_knight', name: '🛡️ Cyber Knight', cost: 950, desc: 'Heavy cybernetic glowing armor.', ability: 'Cyber Shield (Invincible 3s)', lockedTo: false },
+  cheetah: { id: 'cheetah', name: '🐆 Apex Cheetah', cost: 1100, desc: 'Sleek golden fur coat with spots.', ability: 'Cheetah Dash (2x Speed Boost 3s)', lockedTo: false },
+  king: { id: 'king', name: '👑 Royal Monarch', cost: 1350, desc: 'Golden crown with royal purple cape.', ability: 'Monarch Rally (Heals +20 HP)', lockedTo: false },
+  skeleton: { id: 'skeleton', name: '💀 Skeleton Lord', cost: 1750, desc: 'Bone-white skull mask & dark armor.', ability: 'Soul Drain (Steals Enemy HP)', lockedTo: false },
+  butterfly: { id: 'butterfly', name: '🦋 Neon Butterfly', cost: 1950, desc: 'Glowing wings & twin antennae.', ability: 'Gutter Glide (Slow Fall Gravity)', lockedTo: false },
+  astronaut: { id: 'astronaut', name: '🚀 Void Astronaut', cost: 2400, desc: 'White space suit with gold visor.', ability: 'Zero-G Jump (Super Jump High)', lockedTo: false },
+  unicorn: { id: 'unicorn', name: '🦄 Cosmic Unicorn', cost: 2800, desc: 'Golden horn & rainbow mane.', ability: 'Rainbow Flare (Blinds Enemies)', lockedTo: false },
+  alien: { id: 'alien', name: '👽 Alien Invader', cost: 3500, desc: 'Neon green skin & oversized black eyes.', ability: 'Phase Warp (Teleport Forward)', lockedTo: false },
+  piggy: { id: 'piggy', name: '🐷 Piggy Suit (PIGGY ONLY)', cost: 5000, desc: 'Pink ears & snout reserved for piggy!', ability: 'Royal Truffle (+50 Overheal)', lockedTo: 'piggy' },
+  chicken: { id: 'chicken', name: '🐔 Chicken Suit (SPHINX ONLY)', cost: 5000, desc: 'Feather suit & beak reserved for sphinx!', ability: 'Egg Barrage (Cluster Grenades)', lockedTo: 'sphinx' }
+};
+
+// --- FINISH SKINS PRICING & MASTERY DATABASE ---
+const SKINS_CATALOG = {
+  default: { id: 'default', name: 'Default Finish', cost: 0, desc: 'Standard tactical dark metallic finish.' },
+  obsidian_gold: { id: 'obsidian_gold', name: '✨ Obsidian Gold', cost: 350, desc: 'Pitch-black obsidian plated with gold accents.' },
+  ruby_fade: { id: 'ruby_fade', name: '🔥 Ruby Fade', cost: 450, desc: 'Crimson metallic sheen with animated dark fade.' },
+  electric_neon: { id: 'electric_neon', name: '⚡ Electric Neon', cost: 550, desc: 'High-voltage cyan and magenta energy pulsing skin.' },
+  void_crystal: { id: 'void_crystal', name: '🌌 Void Crystal', cost: 650, desc: 'Ultra-deep purple crystal with dark highlights.' },
+  toxic_hazard: { id: 'toxic_hazard', name: '☣️ Toxic Hazard', cost: 750, desc: 'Acid green biohazard plating with warning trim.' },
+  diamond_frost: { id: 'diamond_frost', name: '❄️ Diamond Frost', cost: 850, desc: 'Icy crystalline white with soft reflection.' },
+  mastery_gold: { id: 'mastery_gold', name: '👑 Gold Mastery (500 DMG)', cost: 0, desc: 'Earned by dealing 500 Damage with a weapon!' }
 };
 
 // --- CLICK OUTSIDE MODAL BACKGROUND TO CLOSE ---
@@ -581,7 +590,7 @@ function redeemPromoCode() {
 
   if (code === 'SPHINX2026') {
     credits += 500; weaponFragments.laser = (weaponFragments.laser || 0) + 50; blueprints.excalibur.count += 10;
-    redeemedCodes.add(code); saveProgress(); alert("Redeemed! +500 Credits, +50 Laser Fragments, & +10 Excalibur Blueprints!");
+    redeemedCodes.add(code); saveProgress(); alert("Redeemed! +500 Credits, +50 Laser Fragments, & +10 Unreleased Weapon Blueprints!");
   } else if (code === 'PIGGYWIN') {
     credits += 1000; weaponFragments.minigun = (weaponFragments.minigun || 0) + 100;
     redeemedCodes.add(code); saveProgress(); alert("Redeemed! +1,000 Credits & +100 Minigun Fragments!");
@@ -616,6 +625,16 @@ function recordPlayerStats(name, addedKills = 0, addedCredits = 0, addedDmg = 0)
     playerKills = entry.kills;
     credits = entry.credits;
     totalDamageDealt = entry.dmg;
+
+    // Track damage dealt with equipped weapon for Mastery Gold Finish (500 Damage)
+    if (player && player.equippedWeapon && addedDmg > 0) {
+      const wepKey = player.equippedWeapon;
+      weaponDamageStats[wepKey] = (weaponDamageStats[wepKey] || 0) + addedDmg;
+      if (weaponDamageStats[wepKey] >= 500 && !ownedSkins.has(`mastery_${wepKey}`)) {
+        ownedSkins.add(`mastery_${wepKey}`);
+        showNotificationBanner(`🏆 UNLOCKED MASTERY GOLD SKIN FOR ${WEAPONS[wepKey].name.toUpperCase()}!`);
+      }
+    }
   }
 
   updateLeaderboardUI();
@@ -628,10 +647,12 @@ function loadSavedProgress() {
   const savedDmg = localStorage.getItem('rr_dmg');
   const savedOutfit = localStorage.getItem('rr_outfit');
   const savedOwnedOutfits = localStorage.getItem('rr_owned_outfits');
+  const savedOwnedSkins = localStorage.getItem('rr_owned_skins');
   const savedSkin = localStorage.getItem('rr_skin');
   const savedFrags = localStorage.getItem('rr_fragments');
   const savedBps = localStorage.getItem('rr_blueprints');
   const savedFaction = localStorage.getItem('rr_faction');
+  const savedWepDmg = localStorage.getItem('rr_wep_dmg');
   
   lastResetDatePortland = localStorage.getItem('rr_last_reset_pdt') || "";
   hasSpunWheelToday = localStorage.getItem('rr_wheel_spun_today') === 'true';
@@ -643,6 +664,7 @@ function loadSavedProgress() {
 
   if (savedFrags) { try { weaponFragments = JSON.parse(savedFrags); } catch(e){} }
   if (savedBps) { try { blueprints = JSON.parse(savedBps); } catch(e){} }
+  if (savedWepDmg) { try { weaponDamageStats = JSON.parse(savedWepDmg); } catch(e){} }
 
   checkDailyPortlandReset();
 
@@ -654,12 +676,14 @@ function loadSavedProgress() {
   });
 
   if (savedOwnedOutfits) {
-    try {
-      const arr = JSON.parse(savedOwnedOutfits);
-      arr.forEach(o => ownedOutfits.add(o));
-    } catch(e) {}
+    try { JSON.parse(savedOwnedOutfits).forEach(o => ownedOutfits.add(o)); } catch(e) {}
   }
   ownedOutfits.add('default');
+
+  if (savedOwnedSkins) {
+    try { JSON.parse(savedOwnedSkins).forEach(s => ownedSkins.add(s)); } catch(e) {}
+  }
+  ownedSkins.add('default');
 
   if (savedOutfit) {
     if (savedOutfit === 'chicken' && playerName.toLowerCase() !== 'sphinx') equippedOutfit = 'default';
@@ -678,9 +702,11 @@ function saveProgress() {
   localStorage.setItem('rr_dmg', totalDamageDealt);
   localStorage.setItem('rr_outfit', equippedOutfit);
   localStorage.setItem('rr_owned_outfits', JSON.stringify(Array.from(ownedOutfits)));
+  localStorage.setItem('rr_owned_skins', JSON.stringify(Array.from(ownedSkins)));
   localStorage.setItem('rr_skin', equippedSkin);
   localStorage.setItem('rr_fragments', JSON.stringify(weaponFragments));
   localStorage.setItem('rr_blueprints', JSON.stringify(blueprints));
+  localStorage.setItem('rr_wep_dmg', JSON.stringify(weaponDamageStats));
   localStorage.setItem('rr_wheel_spun_today', hasSpunWheelToday ? 'true' : 'false');
 
   globalLeaderboardRegistry.set(playerName.toLowerCase(), {
@@ -752,16 +778,15 @@ function showNotificationBanner(msg, isWarning = false) {
   }, 4500);
 }
 
-// Input Controls & Keybinds
+// Input Controls & Keybinds (Added [E] Key for Outfit Abilities)
 const keys = {};
 const mouse = { x: 0, y: 0, down: false };
 
 window.addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true; keys[e.key] = true;
   
-  if (e.key.toLowerCase() === 'x') {
-    closeAllModals();
-  }
+  if (e.key.toLowerCase() === 'x') closeAllModals();
+  if (e.key.toLowerCase() === 'e') activateOutfitAbility();
 
   if ((e.key === '~' || e.key === '`') && player && hasAdmin(player.name)) toggleAdminConsole();
   if (e.key.toLowerCase() === 'r' && player) player.reload();
@@ -778,6 +803,45 @@ window.addEventListener('mouseup', () => mouse.down = false);
 
 function triggerPlayerEmote(symbol) {
   if (player) player.playEmote(symbol);
+}
+
+// OUTFIT ABILITY ACTIVATION SYSTEM WITH 3S COOLDOWN
+function activateOutfitAbility() {
+  if (!player || abilityCooldownTimer > 0) return;
+
+  const item = OUTFITS_CATALOG[equippedOutfit];
+  if (!item || equippedOutfit === 'default') {
+    showNotificationBanner("⚠️ Default suit has no active ability! Equip an Outfit.", true);
+    return;
+  }
+
+  abilityCooldownTimer = 180; // 3 Seconds Cooldown (60 FPS * 3)
+  abilityActiveTimer = 180;   // 3 Seconds Active Duration
+
+  if (equippedOutfit === 'cheetah') {
+    player.speedMult = 2.0;
+    showNotificationBanner("🐆 CHEETAH DASH ACTIVATED! (2x Speed Boost for 3s)");
+  } else if (equippedOutfit === 'ninja') {
+    player.invisible = true;
+    showNotificationBanner("🥷 SHADOW CLOAK ACTIVATED! (Invisibility for 3s)");
+  } else if (equippedOutfit === 'cyber_knight') {
+    player.shieldActive = true;
+    showNotificationBanner("🛡️ CYBER SHIELD ACTIVATED! (Invincible Energy Barrier for 3s)");
+  } else if (equippedOutfit === 'alien') {
+    const angle = player.getAimAngle();
+    player.x += Math.cos(angle) * 160;
+    player.y += Math.sin(angle) * 160;
+    showNotificationBanner("👽 PHASE WARP ACTIVATED! (Forward Teleport)");
+  } else if (equippedOutfit === 'king') {
+    player.health = Math.min(player.maxHealth, player.health + 20);
+    showNotificationBanner("👑 MONARCH RALLY! (+20 HP Healed)");
+  } else if (equippedOutfit === 'astronaut') {
+    player.vy = -18;
+    showNotificationBanner("🚀 ZERO-G JUMP ACTIVATED!");
+  } else {
+    player.speedMult = 1.4;
+    showNotificationBanner(`⚡ ${item.name.toUpperCase()} ABILITY ACTIVATED!`);
+  }
 }
 
 // --- JOYSTICKS ---
@@ -1015,7 +1079,7 @@ class Explosion {
   }
 }
 
-// --- RAGDOLL CHARACTER ENGINE ---
+// --- RAGDOLL CHARACTER ENGINE (WITH AUTO-DODGE ADMIN) ---
 class Character {
   constructor(x, y, isBot = false, name = "Player", team = 'A') {
     this.x = x; this.y = y; this.vx = 0; this.vy = 0;
@@ -1030,6 +1094,8 @@ class Character {
     this.godMode = false; this.infiniteDamage = false; this.flyMode = false;
     this.invisible = false; this.aimbot = false; this.frozen = false;
     this.shieldActive = false; this.wallbang = false;
+    this.autoDodge = false; // New Admin Dodge Command
+    this.homingBullets = false; // New Admin Homing Command
     this.speedMult = 1.0; this.scaleMult = 1.0;
     this.matchKills = 0; this.emergencyBeanDropped = false;
 
@@ -1055,6 +1121,15 @@ class Character {
       this.checkCollisions(); return;
     }
 
+    // AUTO DODGE ADMIN LOGIC (Evasively moves away from close enemy bullets)
+    if (this.autoDodge) {
+      const incomingBullet = projectiles.find(p => p.owner !== this && p.owner.team !== this.team && Math.hypot(p.x - this.x, p.y - this.y) < 120);
+      if (incomingBullet) {
+        this.vx = (incomingBullet.x < this.x) ? 9 : -9;
+        if (this.grounded) { this.vy = -12; this.grounded = false; }
+      }
+    }
+
     if (this.health < 15 && !this.emergencyBeanDropped) {
       this.emergencyBeanDropped = true;
       spawnRandomBean(this.x - 20, this.y - 100);
@@ -1077,9 +1152,11 @@ class Character {
           if (jumpKey) this.vy = -baseFlySpeed * this.speedMult;
           if (keys['s'] || keys['ArrowDown']) this.vy = baseFlySpeed * this.speedMult;
         } else {
-          if (moveLeft) this.vx = -baseRunSpeed * this.speedMult;
-          else if (moveRight) this.vx = baseRunSpeed * this.speedMult;
-          else this.vx *= 0.88;
+          if (!this.autoDodge) {
+            if (moveLeft) this.vx = -baseRunSpeed * this.speedMult;
+            else if (moveRight) this.vx = baseRunSpeed * this.speedMult;
+            else this.vx *= 0.88;
+          }
 
           if (jumpKey && this.grounded) { this.vy = -13.5; this.grounded = false; }
           this.vy += 0.55;
@@ -1098,20 +1175,21 @@ class Character {
       this.limbAngle = Math.sin(Date.now() * 0.01) * (Math.abs(this.vx) > 0.5 ? 0.6 : 0.1);
     }
 
-    if (!this.isBot && mouse.down && Date.now() - this.lastShot > this.weaponData.rate) {
-      this.shoot();
+    // AIMBOT AUTO SHOOT TRIGGER
+    if ((!this.isBot && mouse.down) || (this.aimbot && isMatchActive)) {
+      if (Date.now() - this.lastShot > this.weaponData.rate) {
+        this.shoot();
+      }
     }
   }
 
   getAimAngle() {
-    if (this.isBot) {
+    if (this.isBot || this.aimbot) {
       const enemyTarget = allEntities.find(e => e && e !== this && e.team !== this.team && !e.invisible);
       if (enemyTarget) return Math.atan2(enemyTarget.y - this.y, enemyTarget.x - this.x);
       return Math.random() * Math.PI * 2;
     }
 
-    const enemyTarget = allEntities.find(e => e && e !== this && e.team !== this.team);
-    if (this.aimbot && enemyTarget) return Math.atan2(enemyTarget.y - this.y, enemyTarget.x - this.x);
     if (touchAimAngle !== null) return touchAimAngle;
     return Math.atan2(mouse.y - this.y, mouse.x - this.x);
   }
@@ -1132,12 +1210,14 @@ class Character {
     const count = this.weaponData.multishot || 1;
     for (let i = 0; i < count; i++) {
       const spread = (i - (count - 1) / 2) * 0.12;
-      projectiles.push(new Projectile(
+      const proj = new Projectile(
         this.x, this.y - (10 * this.scaleMult), 
         Math.cos(angle + spread) * this.weaponData.speed, 
         Math.sin(angle + spread) * this.weaponData.speed, 
         dmg, this, isPurple, this.weaponData.gravity || 0, this.weaponData.isExplosive || false
-      ));
+      );
+      proj.isHoming = this.homingBullets;
+      projectiles.push(proj);
     }
   }
 
@@ -1348,23 +1428,25 @@ class Character {
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.sin(this.limbAngle) * 12, 18);
     ctx.moveTo(0, 0); ctx.lineTo(-Math.sin(this.limbAngle) * 12, 18); ctx.stroke();
 
-    // Visual Weapon & Skins
+    // VISUAL WEAPON & REALISTIC RIVALS FINISH SKINS RENDERING
     ctx.save();
     ctx.translate(0, -15);
     ctx.rotate(aimAngle);
     
     const wShape = this.weaponData.shape || 'pistol';
-    let skinColor = '#222';
-    if (equippedSkin === 'neon') skinColor = '#00ffff';
-    if (equippedSkin === 'gold') skinColor = '#ffd700';
-    if (equippedSkin === 'galaxy') skinColor = '#a800ff';
-    if (equippedSkin === 'lava') skinColor = '#ff3300';
-    if (equippedSkin === 'frost') skinColor = '#80e5ff';
-    if (equippedSkin === 'void') skinColor = '#050508';
-    if (equippedSkin === 'acid') skinColor = '#33ff00';
+    let skinColor = '#111218';
+    let strokeColor = '#3a3f56';
+
+    if (equippedSkin === 'obsidian_gold') { skinColor = '#0d0d11'; strokeColor = '#ffd700'; }
+    else if (equippedSkin === 'ruby_fade') { skinColor = '#80001a'; strokeColor = '#ff3366'; }
+    else if (equippedSkin === 'electric_neon') { skinColor = '#003344'; strokeColor = '#00ffff'; }
+    else if (equippedSkin === 'void_crystal') { skinColor = '#1f0033'; strokeColor = '#a800ff'; }
+    else if (equippedSkin === 'toxic_hazard') { skinColor = '#0f2600'; strokeColor = '#33ff00'; }
+    else if (equippedSkin === 'diamond_frost') { skinColor = '#d9f7ff'; strokeColor = '#ffffff'; }
+    else if (equippedSkin.startsWith('mastery_')) { skinColor = '#ffd700'; strokeColor = '#ffffff'; }
 
     ctx.fillStyle = this.weaponData.ownerOnly ? '#a800ff' : skinColor;
-    ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = strokeColor; ctx.lineWidth = 1.8;
 
     if (wShape === 'pistol') {
       ctx.fillRect(2, -3, 14, 6); ctx.fillRect(0, -1, 4, 9); ctx.strokeRect(2, -3, 14, 6);
@@ -1409,7 +1491,7 @@ class Character {
   }
 }
 
-// --- REFACTORED PROJECTILE CLASS (STRICT PLATFORM COLLISION) ---
+// --- PROJECTILE CLASS (HOMING BULLETS SUPPORT) ---
 class Projectile {
   constructor(x, y, vx, vy, damage, owner, isPurple = false, gravity = 0, isExplosive = false) {
     this.x = x; this.y = y; this.vx = vx; this.vy = vy;
@@ -1417,10 +1499,22 @@ class Projectile {
     this.gravity = gravity; this.isExplosive = isExplosive;
     this.radius = isPurple ? 10 : (isExplosive ? 7 : 4);
     this.dead = false;
+    this.isHoming = false;
   }
 
   update() {
     if (this.dead) return;
+
+    // HOMING BULLETS ADMIN STEERING
+    if (this.isHoming) {
+      const targetEnemy = allEntities.find(e => e && e !== this.owner && e.team !== this.owner.team && !e.invisible);
+      if (targetEnemy) {
+        const desiredAngle = Math.atan2(targetEnemy.y - this.y, targetEnemy.x - this.x);
+        const speed = Math.hypot(this.vx, this.vy) || 20;
+        this.vx = Math.cos(desiredAngle) * speed;
+        this.vy = Math.sin(desiredAngle) * speed;
+      }
+    }
 
     const prevX = this.x;
     const prevY = this.y;
@@ -1433,7 +1527,6 @@ class Projectile {
 
     const ownerCanPierce = this.owner && this.owner.wallbang && isOwnerAuth(this.owner.name);
 
-    // Platform Blocking (Stops bullets from penetrating through platforms)
     if (!ownerCanPierce) {
       const platforms = getCalculatedPlatforms();
       platforms.forEach(p => {
@@ -1509,10 +1602,6 @@ function setSelectMode(mode) {
   if (card) card.classList.add('active');
 }
 
-function setWeaponSkin(skin) {
-  equippedSkin = skin; saveProgress(); alert(`Equipped ${skin.toUpperCase()} finish skin!`);
-}
-
 function initOutfitWardrobe() {
   const grid = document.getElementById('outfitWardrobeGrid');
   if (!grid) return;
@@ -1544,9 +1633,10 @@ function initOutfitWardrobe() {
       <div>
         <h4>${item.name}</h4>
         <div class="cost-tag">${item.cost === 0 ? "FREE" : item.cost + " Credits"}</div>
-        <p style="font-size: 11px; color: #aaa; margin-bottom: 8px;">${item.desc}</p>
+        <p style="font-size: 11px; color: #aaa; margin-bottom: 4px;">${item.desc}</p>
+        <p style="font-size: 10px; color: #00ffcc; font-weight: bold;">Ability: ${item.ability}</p>
       </div>
-      <button class="btn" style="${btnStyle}" onclick="handleOutfitClick('${key}')">${btnText}</button>
+      <button class="btn" style="${btnStyle}; margin-top: 8px;" onclick="handleOutfitClick('${key}')">${btnText}</button>
     `;
     grid.appendChild(card);
   });
@@ -1718,7 +1808,6 @@ function toggleHubModal(show) { document.getElementById('hubModal').style.displa
 function toggleShopModal(show) { document.getElementById('shopModal').style.display = show ? 'flex' : 'none'; if(show) initShop(); }
 function toggleOutfitModal(show) { document.getElementById('outfitModal').style.display = show ? 'flex' : 'none'; if(show) initOutfitWardrobe(); }
 
-// MODAL CONTROLLERS (FIXED PREVENTING OVERLAY LOCK)
 function toggleBlueprintModal(show) {
   document.getElementById('blueprintModal').style.display = show ? 'flex' : 'none';
   if (show) initBlueprintVault();
@@ -1743,13 +1832,45 @@ function toggleWheelModal(show) {
   }
 }
 
-// --- WEAPON SHOP SYSTEM ---
+// --- WEAPON SHOP & CREDIT-PRICED FINISH SKINS ENGINE ---
 function initShop() {
   const wShop = document.getElementById('weaponShop');
-  if (!wShop) return;
-  wShop.innerHTML = '';
-  const isOwner = player && isOwnerUser(player.name) && hasAdmin(player.name);
+  const skinGrid = document.getElementById('skinShopGrid');
+  if (!wShop || !skinGrid) return;
+  wShop.innerHTML = ''; skinGrid.innerHTML = '';
 
+  const isOwner = player && isOwnerUser(player.name) && hasAdmin(player.name);
+  const curWepKey = player ? player.equippedWeapon : 'pistol';
+  const curWepDmg = weaponDamageStats[curWepKey] || 0;
+
+  // Render Credit-Priced & Mastery Finish Skins
+  Object.keys(SKINS_CATALOG).forEach(sKey => {
+    const skin = SKINS_CATALOG[sKey];
+    const isMastery = sKey === 'mastery_gold';
+    const activeSkinKey = isMastery ? `mastery_${curWepKey}` : sKey;
+    const isOwned = ownedSkins.has(activeSkinKey) || skin.cost === 0 || (isMastery && curWepDmg >= 500);
+    const isEquipped = (equippedSkin === activeSkinKey);
+
+    const card = document.createElement('div');
+    card.className = 'shop-card';
+
+    let btnText = "Buy Skin";
+    if (isEquipped) btnText = "Equipped ✔";
+    else if (isOwned) btnText = "Equip Finish";
+    else if (isMastery) btnText = `Mastery (${curWepDmg}/500 DMG)`;
+
+    card.innerHTML = `
+      <div>
+        <h4>${isMastery ? `👑 ${WEAPONS[curWepKey].name} Gold Mastery` : skin.name}</h4>
+        <div class="cost-tag">${isMastery ? '500 Damage Mastery' : (skin.cost === 0 ? 'FREE' : skin.cost + ' Credits')}</div>
+        <p style="font-size: 11px; color: #aaa; margin-bottom: 6px;">${skin.desc}</p>
+      </div>
+      <button class="btn" style="margin-top: 8px; ${isEquipped ? 'background:#00ffcc; color:#000;' : ''}" onclick="handleSkinClick('${activeSkinKey}', ${skin.cost}, ${isMastery})">${btnText}</button>
+    `;
+    skinGrid.appendChild(card);
+  });
+
+  // Render Weapons Arsenal
   Object.keys(WEAPONS).forEach(key => {
     const w = WEAPONS[key];
     if (w.ownerOnly && !isOwner) return;
@@ -1768,10 +1889,42 @@ function initShop() {
         <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${Math.min(100, (frags/200)*100)}%;"></div></div>
         <span style="font-size: 10px; color:#aaa;">Fragments: ${frags} / 200</span>
       </div>
-      <button class="btn" style="margin-top: 8px;" onclick="equipWeapon('${key}')">Equip</button>
+      <button class="btn" style="margin-top: 8px;" onclick="equipWeapon('${key}')">Equip Weapon</button>
     `;
     wShop.appendChild(card);
   });
+}
+
+function handleSkinClick(skinKey, cost, isMastery) {
+  if (isMastery) {
+    const curWepKey = player ? player.equippedWeapon : 'pistol';
+    const curWepDmg = weaponDamageStats[curWepKey] || 0;
+    if (curWepDmg >= 500) {
+      equippedSkin = `mastery_${curWepKey}`;
+      ownedSkins.add(equippedSkin);
+      saveProgress(); initShop();
+      alert(`Equipped Gold Mastery Finish for ${WEAPONS[curWepKey].name}!`);
+    } else {
+      alert(`Locked! Deal 500 Damage with ${WEAPONS[curWepKey].name} to unlock Mastery Gold (Current: ${curWepDmg}/500 DMG).`);
+    }
+    return;
+  }
+
+  if (ownedSkins.has(skinKey) || cost === 0) {
+    equippedSkin = skinKey;
+    saveProgress(); initShop();
+    alert(`Equipped ${skinKey.toUpperCase()} Finish Skin!`);
+  } else {
+    if (credits >= cost) {
+      credits -= cost;
+      ownedSkins.add(skinKey);
+      equippedSkin = skinKey;
+      saveProgress(); initShop();
+      alert(`Purchased & Equipped ${skinKey.toUpperCase()} Finish Skin!`);
+    } else {
+      alert(`Not enough credits! Required: ${cost} Credits (You have: ${credits}).`);
+    }
+  }
 }
 
 function equipWeapon(key) {
@@ -1792,6 +1945,8 @@ function initBlueprintVault() {
   const bpGrid = document.getElementById('blueprintGrid');
   fragGrid.innerHTML = ''; bpGrid.innerHTML = '';
 
+  const canAccessUnreleased = isOwnerAuth(playerName);
+
   Object.keys(weaponFragments).forEach(key => {
     const count = weaponFragments[key];
     const w = WEAPONS[key] || { name: key.toUpperCase() };
@@ -1810,13 +1965,17 @@ function initBlueprintVault() {
     const bp = blueprints[key];
     const card = document.createElement('div');
     card.className = 'shop-card';
+
+    const titleText = (bp.unreleased && !canAccessUnreleased) ? bp.genericName : (bp.realName || bp.name);
+    const statsText = (bp.unreleased && !canAccessUnreleased) ? "Stats: [RESTRICTED TO SPHINX & PIGGY]" : `Stats: ${bp.stats}`;
+
     card.innerHTML = `
-      <h4>${bp.name}</h4>
+      <h4>${titleText}</h4>
       <div style="font-size: 10px; color: #ffcc00; font-weight: bold; margin-bottom: 5px;">[ ${bp.type} ]</div>
-      <div style="background: #111; padding: 10px; border-radius: 6px; border: 1px dashed #555;">
-        <span style="font-size: 32px; filter: contrast(0) brightness(0.2);">🗡️</span>
+      <div style="background: #111; padding: 12px; border-radius: 6px; border: 1px dashed #555;">
+        <span style="font-size: 36px; filter: brightness(0) drop-shadow(0 0 8px rgba(0,255,204,0.3));">🗡️</span>
       </div>
-      <p style="font-size: 11px; color: #aaa; margin-top: 6px;">${bp.stats}</p>
+      <p style="font-size: 11px; color: #aaa; margin-top: 6px;">${statsText}</p>
       <p style="font-size: 12px; color: #00ffcc; font-weight: bold; margin-top: 4px;">Blueprints: ${bp.count} / ${bp.max}</p>
       <span style="font-size: 9px; color: ${bp.unreleased ? '#ff4444' : '#ffcc00'};">${bp.unreleased ? '🔒 UNRELEASED SNEAK PEEK' : '📜 SECRET BLUEPRINT'}</span>
     `;
@@ -1899,7 +2058,7 @@ function spinDailyWheel() {
   }, 100);
 }
 
-// --- ADMIN CONSOLE ENGINE ---
+// --- ADMIN CONSOLE ENGINE WITH NEW COMMANDS (dodge, aimbot, homing) ---
 function toggleAdminConsole() {
   if (!player || !hasAdmin(player.name)) return;
   const consoleEl = document.getElementById('adminConsole');
@@ -1938,6 +2097,7 @@ function processCommand(cmd) {
   if (cleanCmd === 'stop all admin' || cleanCmd === 'stopalladmin') {
     player.godMode = false; player.flyMode = false; player.invisible = false;
     player.aimbot = false; player.shieldActive = false; player.wallbang = false;
+    player.autoDodge = false; player.homingBullets = false;
     player.speedMult = 1.0; player.scaleMult = 1.0; player.frozen = false;
     alert("STOPPED ALL ACTIVE ADMIN COMMANDS!"); return;
   }
@@ -1945,12 +2105,35 @@ function processCommand(cmd) {
   if (cleanCmd === 'all admin' || cleanCmd === 'alladmin') {
     player.godMode = true; player.flyMode = true; player.invisible = true;
     player.aimbot = true; player.shieldActive = true; player.wallbang = true;
+    player.autoDodge = true; player.homingBullets = true;
     player.health = player.maxHealth; player.speedMult = 3.5; player.scaleMult = 1.5;
     recordPlayerStats(player.name, 0, 10000, 0);
     saveProgress();
     if (isOwnerUser(player.name)) { player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail }; }
     else { player.equippedWeapon = 'minigun'; player.weaponData = { ...WEAPONS.minigun }; }
     alert("ACTIVATED ALL ADMIN PERKS!"); return;
+  }
+
+  // THREE NEW ADMIN COMMANDS IMPLEMENTATION
+  if (action === 'dodge' || action === 'matrix') {
+    player.autoDodge = !player.autoDodge;
+    alert(`Auto Bullet Dodge: ${player.autoDodge ? "ENABLED" : "DISABLED"}`);
+    showNotificationBanner(`🛡️ Auto Dodge: ${player.autoDodge ? "ENABLED" : "DISABLED"}`);
+    return;
+  }
+
+  if (action === 'aimbot') {
+    player.aimbot = !player.aimbot;
+    alert(`Aimbot Auto Target: ${player.aimbot ? "ENABLED" : "DISABLED"}`);
+    showNotificationBanner(`🎯 Aimbot: ${player.aimbot ? "ENABLED" : "DISABLED"}`);
+    return;
+  }
+
+  if (action === 'homing' || action === 'track' || action === 'tracking') {
+    player.homingBullets = !player.homingBullets;
+    alert(`Homing Tracking Bullets: ${player.homingBullets ? "ENABLED" : "DISABLED"}`);
+    showNotificationBanner(`🚀 Homing Bullets: ${player.homingBullets ? "ENABLED" : "DISABLED"}`);
+    return;
   }
 
   if (action === 'blueprint' || action === 'blueprints' || action === 'bp') {
@@ -1962,9 +2145,24 @@ function processCommand(cmd) {
       alert(`Granted ${amt} Blueprints to ALL items!`);
     } else if (blueprints[bpTarget]) {
       blueprints[bpTarget].count += amt;
-      alert(`Granted ${amt} Blueprints to ${blueprints[bpTarget].name}!`);
+      alert(`Granted ${amt} Blueprints to ${blueprints[bpTarget].realName || bpTarget}!`);
     } else {
       alert(`Unknown blueprint key: "${bpTarget}". Available: excalibur, dark_matter, void_suit, cyber_wings, all`);
+    }
+    saveProgress();
+    return;
+  }
+
+  if (action === 'fragment' || action === 'fragments' || action === 'frag') {
+    const fragTarget = parts[1] ? parts[1].toLowerCase() : 'all';
+    const amt = parseInt(parts[2] || 50);
+
+    if (fragTarget === 'all') {
+      Object.keys(WEAPONS).forEach(k => { weaponFragments[k] = (weaponFragments[k] || 0) + amt; });
+      alert(`Granted ${amt} Fragments to ALL weapons!`);
+    } else {
+      weaponFragments[fragTarget] = (weaponFragments[fragTarget] || 0) + amt;
+      alert(`Granted ${amt} Fragments to ${fragTarget.toUpperCase()}!`);
     }
     saveProgress();
     return;
@@ -2002,7 +2200,6 @@ function processCommand(cmd) {
     case 'god': player.godMode = !player.godMode; alert(`Godmode: ${player.godMode}`); break;
     case 'fly': player.flyMode = !player.flyMode; alert(`Flymode: ${player.flyMode}`); break;
     case 'invis': player.invisible = !player.invisible; alert(`Invisibility: ${player.invisible}`); break;
-    case 'aimbot': player.aimbot = !player.aimbot; alert(`Aimbot: ${player.aimbot}`); break;
     case 'wallbang':
     case 'pierce':
       player.wallbang = !player.wallbang;
@@ -2071,11 +2268,37 @@ function updateScoreboard() {
 
 function setMap(mapKey) { currentMap = mapKey; alert(`Map set to ${mapKey.toUpperCase()} 3D!`); }
 
-// --- MAIN ENGINE LOOP ---
+// --- MAIN ENGINE LOOP (TIMERS & COOLDOWNS) ---
 function loop() {
   const theme = maps[currentMap] || maps.cyber;
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Update Outfit Ability Timers
+  if (abilityActiveTimer > 0) {
+    abilityActiveTimer--;
+    if (abilityActiveTimer <= 0) {
+      if (equippedOutfit === 'cheetah') player.speedMult = 1.0;
+      if (equippedOutfit === 'ninja') player.invisible = false;
+      if (equippedOutfit === 'cyber_knight') player.shieldActive = false;
+    }
+  }
+
+  if (abilityCooldownTimer > 0) {
+    abilityCooldownTimer--;
+    const abBtn = document.getElementById('abilityBtn');
+    if (abBtn) {
+      const remainingSec = (abilityCooldownTimer / 60).toFixed(1);
+      abBtn.disabled = true;
+      abBtn.innerText = `⏳ ABILITY (${remainingSec}s)`;
+    }
+  } else {
+    const abBtn = document.getElementById('abilityBtn');
+    if (abBtn) {
+      abBtn.disabled = false;
+      abBtn.innerText = `⚡ ABILITY [E]`;
+    }
+  }
 
   const floorY = canvas.height - 100;
 
