@@ -260,7 +260,10 @@
         </div>
       </div>
 
+      <!-- LAUNCH MATCH BUTTON -->
       <button class="btn" style="width: 100%; padding: 14px; font-size: 16px; margin-top: 10px;" onclick="confirmMatchStart()">LAUNCH MATCH</button>
+
+      <!-- HOW TO PLAY / TUTORIAL BUTTON -->
       <button class="btn btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; margin-top: 8px; border-color: #00ffcc; color: #00ffcc;" onclick="toggleTutorialModal(true)">📖 HOW TO PLAY / TUTORIAL</button>
 
       <hr style="border: 0; border-top: 1px solid #2d3244; margin: 20px 0;">
@@ -395,8 +398,8 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width = window.innerWidth || 1280;
+  canvas.height = window.innerHeight || 720;
 }
 window.addEventListener('resize', resize);
 resize();
@@ -499,9 +502,10 @@ function isOwnerAuth(user) {
   return (name === 'sphinx' || name === 'piggy') && hasAdmin(name);
 }
 
+// STRICT MODAL CLOSE HELPER (PREVENTS MATCH QUEUE LOCK OR BLACK SCREEN OVERLAYS)
 function closeAllModals() {
   document.querySelectorAll('.modal').forEach(m => {
-    if (m.id !== 'factionModal') m.style.display = 'none';
+    m.style.display = 'none';
   });
 }
 
@@ -626,7 +630,6 @@ function recordPlayerStats(name, addedKills = 0, addedCredits = 0, addedDmg = 0)
     credits = entry.credits;
     totalDamageDealt = entry.dmg;
 
-    // Track damage dealt with equipped weapon for Mastery Gold Finish (500 Damage)
     if (player && player.equippedWeapon && addedDmg > 0) {
       const wepKey = player.equippedWeapon;
       weaponDamageStats[wepKey] = (weaponDamageStats[wepKey] || 0) + addedDmg;
@@ -778,7 +781,7 @@ function showNotificationBanner(msg, isWarning = false) {
   }, 4500);
 }
 
-// Input Controls & Keybinds (Added [E] Key for Outfit Abilities)
+// Input Controls & Keybinds
 const keys = {};
 const mouse = { x: 0, y: 0, down: false };
 
@@ -1094,8 +1097,8 @@ class Character {
     this.godMode = false; this.infiniteDamage = false; this.flyMode = false;
     this.invisible = false; this.aimbot = false; this.frozen = false;
     this.shieldActive = false; this.wallbang = false;
-    this.autoDodge = false; // New Admin Dodge Command
-    this.homingBullets = false; // New Admin Homing Command
+    this.autoDodge = false;
+    this.homingBullets = false;
     this.speedMult = 1.0; this.scaleMult = 1.0;
     this.matchKills = 0; this.emergencyBeanDropped = false;
 
@@ -1121,7 +1124,6 @@ class Character {
       this.checkCollisions(); return;
     }
 
-    // AUTO DODGE ADMIN LOGIC (Evasively moves away from close enemy bullets)
     if (this.autoDodge) {
       const incomingBullet = projectiles.find(p => p.owner !== this && p.owner.team !== this.team && Math.hypot(p.x - this.x, p.y - this.y) < 120);
       if (incomingBullet) {
@@ -1175,7 +1177,6 @@ class Character {
       this.limbAngle = Math.sin(Date.now() * 0.01) * (Math.abs(this.vx) > 0.5 ? 0.6 : 0.1);
     }
 
-    // AIMBOT AUTO SHOOT TRIGGER
     if ((!this.isBot && mouse.down) || (this.aimbot && isMatchActive)) {
       if (Date.now() - this.lastShot > this.weaponData.rate) {
         this.shoot();
@@ -1491,7 +1492,7 @@ class Character {
   }
 }
 
-// --- PROJECTILE CLASS (HOMING BULLETS SUPPORT) ---
+// --- PROJECTILE CLASS ---
 class Projectile {
   constructor(x, y, vx, vy, damage, owner, isPurple = false, gravity = 0, isExplosive = false) {
     this.x = x; this.y = y; this.vx = vx; this.vy = vy;
@@ -1505,7 +1506,6 @@ class Projectile {
   update() {
     if (this.dead) return;
 
-    // HOMING BULLETS ADMIN STEERING
     if (this.isHoming) {
       const targetEnemy = allEntities.find(e => e && e !== this.owner && e.team !== this.owner.team && !e.invisible);
       if (targetEnemy) {
@@ -1602,81 +1602,9 @@ function setSelectMode(mode) {
   if (card) card.classList.add('active');
 }
 
-function initOutfitWardrobe() {
-  const grid = document.getElementById('outfitWardrobeGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-
-  Object.keys(OUTFITS_CATALOG).forEach(key => {
-    const item = OUTFITS_CATALOG[key];
-    const isOwned = ownedOutfits.has(key);
-    const isEquipped = (equippedOutfit === key);
-
-    const card = document.createElement('div');
-    card.className = 'shop-card';
-    if (item.lockedTo) card.style.border = '2px solid #ffcc00';
-
-    let btnText = "Buy & Equip";
-    let btnStyle = "";
-
-    if (isEquipped) {
-      btnText = "Equipped ✔";
-      btnStyle = "background: #00ffcc; color: #000;";
-    } else if (isOwned) {
-      btnText = "Equip";
-    } else if (item.lockedTo) {
-      btnText = `Equip ${item.name.split(' ')[1]} 🔒`;
-      btnStyle = "background: #ffcc00; color: #000;";
-    }
-
-    card.innerHTML = `
-      <div>
-        <h4>${item.name}</h4>
-        <div class="cost-tag">${item.cost === 0 ? "FREE" : item.cost + " Credits"}</div>
-        <p style="font-size: 11px; color: #aaa; margin-bottom: 4px;">${item.desc}</p>
-        <p style="font-size: 10px; color: #00ffcc; font-weight: bold;">Ability: ${item.ability}</p>
-      </div>
-      <button class="btn" style="${btnStyle}; margin-top: 8px;" onclick="handleOutfitClick('${key}')">${btnText}</button>
-    `;
-    grid.appendChild(card);
-  });
-}
-
-function handleOutfitClick(outfitId) {
-  const item = OUTFITS_CATALOG[outfitId];
-  if (!item) return;
-
-  if (item.lockedTo && (!hasAdmin(playerName) || playerName.toLowerCase() !== item.lockedTo)) {
-    alert(`Access Denied: The ${item.name} requires 2FA authentication for ${item.lockedTo}!`);
-    return;
-  }
-
-  if (ownedOutfits.has(outfitId) || item.cost === 0 || (item.lockedTo && playerName.toLowerCase() === item.lockedTo)) {
-    equippedOutfit = outfitId;
-    saveProgress();
-    initOutfitWardrobe();
-    alert(`Equipped ${item.name}!`);
-  } else {
-    if (credits >= item.cost) {
-      credits -= item.cost;
-      ownedOutfits.add(outfitId);
-      equippedOutfit = outfitId;
-      saveProgress();
-      initOutfitWardrobe();
-      alert(`Purchased & Equipped ${item.name}!`);
-    } else {
-      alert(`Not enough credits! Required: ${item.cost} Credits (You have: ${credits}).`);
-    }
-  }
-}
-
-function triggerSuddenDeath() {
-  isSuddenDeath = true;
-  document.getElementById('suddenDeathBanner').style.display = 'block';
-  allEntities.forEach(e => { if (e) { e.maxHealth = 50; e.health = 50; } });
-}
-
 function confirmMatchStart() {
+  closeAllModals(); // Closes all modals completely to prevent black screen or click blocks
+  
   const pInput = document.getElementById('usernameInput').value.trim();
   if (pInput.length > 0) playerName = pInput;
 
@@ -1713,15 +1641,16 @@ function confirmMatchStart() {
 
   document.getElementById('playerNameVal').innerText = playerName;
   saveProgress();
-  document.getElementById('hubModal').style.display = 'none';
 
   refreshAdminUI();
   startMatch(selectedMode);
 }
 
 function startMatch(mode) {
+  closeAllModals();
   isMatchActive = true;
   isSuddenDeath = false;
+  autoMoveDisabled = false;
   teamAScore = 0; teamBScore = 0;
   document.getElementById('suddenDeathBanner').style.display = 'none';
 
@@ -1729,32 +1658,35 @@ function startMatch(mode) {
   const weaponKeys = ['pistol', 'smg', 'assault', 'shotgun', 'sniper', 'laser', 'rocket', 'plasma'];
 
   function createBot(name, x, team) {
-    const b = new Character(x, canvas.height - 124, true, name, team);
+    const safeX = Math.max(50, Math.min(canvas.width - 50, x || 300));
+    const b = new Character(safeX, canvas.height - 124, true, name, team);
     const rWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
     b.equippedWeapon = rWep; b.weaponData = { ...WEAPONS[rWep] };
     return b;
   }
 
+  const cWidth = canvas.width || 1280;
+
   if (mode === '1v1') {
-    allEntities.push(createBot("Opponent AI", canvas.width - 150, 'B'));
+    allEntities.push(createBot("Opponent AI", cWidth - 150, 'B'));
   } else if (mode === '2v1') {
     allEntities.push(createBot("Ally AI", 220, 'A'));
-    allEntities.push(createBot("Boss AI", canvas.width - 150, 'B'));
+    allEntities.push(createBot("Boss AI", cWidth - 150, 'B'));
   } else if (mode === '2v2') {
     allEntities.push(createBot("Teammate", 220, 'A'));
-    allEntities.push(createBot("Enemy 1", canvas.width - 150, 'B'));
-    allEntities.push(createBot("Enemy 2", canvas.width - 250, 'B'));
+    allEntities.push(createBot("Enemy 1", cWidth - 150, 'B'));
+    allEntities.push(createBot("Enemy 2", cWidth - 250, 'B'));
   } else if (mode === '3v3') {
     allEntities.push(createBot("Ally 1", 200, 'A'));
     allEntities.push(createBot("Ally 2", 280, 'A'));
-    allEntities.push(createBot("Enemy 1", canvas.width - 150, 'B'));
-    allEntities.push(createBot("Enemy 2", canvas.width - 230, 'B'));
-    allEntities.push(createBot("Enemy 3", canvas.width - 310, 'B'));
+    allEntities.push(createBot("Enemy 1", cWidth - 150, 'B'));
+    allEntities.push(createBot("Enemy 2", cWidth - 230, 'B'));
+    allEntities.push(createBot("Enemy 3", cWidth - 310, 'B'));
   } else if (mode === 'ffa') {
     player.team = 'P1';
-    allEntities.push(createBot("Rival 1", canvas.width * 0.35, 'B1'));
-    allEntities.push(createBot("Rival 2", canvas.width * 0.65, 'B2'));
-    allEntities.push(createBot("Rival 3", canvas.width - 150, 'B3'));
+    allEntities.push(createBot("Rival 1", cWidth * 0.35, 'B1'));
+    allEntities.push(createBot("Rival 2", cWidth * 0.65, 'B2'));
+    allEntities.push(createBot("Rival 3", cWidth - 150, 'B3'));
   }
 
   document.getElementById('modeTitleText').innerText = `Mode: ${mode.toUpperCase()} Arena`;
@@ -1764,13 +1696,14 @@ function startMatch(mode) {
 
 function returnToHub() {
   isMatchActive = false;
-  document.getElementById('victoryModal').style.display = 'none';
+  closeAllModals();
   document.getElementById('hubModal').style.display = 'flex';
   updateLeaderboardUI();
 }
 
 function resetMatchPositions() {
   projectiles = []; bombs = []; explosions = []; beans = [];
+  const cWidth = canvas.width || 1280;
   allEntities.forEach((ent, idx) => {
     if (!ent) return;
     ent.maxHealth = 50; ent.health = 50;
@@ -1779,7 +1712,7 @@ function resetMatchPositions() {
     ent.reloading = false; ent.frozen = false; ent.emergencyBeanDropped = false;
 
     if (ent.team === 'A' || ent.team === 'P1') ent.x = 120 + (idx * 70);
-    else ent.x = canvas.width - 120 - (idx * 70);
+    else ent.x = cWidth - 120 - (idx * 70);
     ent.y = canvas.height - 124;
   });
 }
@@ -1843,7 +1776,6 @@ function initShop() {
   const curWepKey = player ? player.equippedWeapon : 'pistol';
   const curWepDmg = weaponDamageStats[curWepKey] || 0;
 
-  // Render Credit-Priced & Mastery Finish Skins
   Object.keys(SKINS_CATALOG).forEach(sKey => {
     const skin = SKINS_CATALOG[sKey];
     const isMastery = sKey === 'mastery_gold';
@@ -1870,7 +1802,6 @@ function initShop() {
     skinGrid.appendChild(card);
   });
 
-  // Render Weapons Arsenal
   Object.keys(WEAPONS).forEach(key => {
     const w = WEAPONS[key];
     if (w.ownerOnly && !isOwner) return;
@@ -2058,7 +1989,7 @@ function spinDailyWheel() {
   }, 100);
 }
 
-// --- ADMIN CONSOLE ENGINE WITH NEW COMMANDS (dodge, aimbot, homing) ---
+// --- ADMIN CONSOLE ENGINE ---
 function toggleAdminConsole() {
   if (!player || !hasAdmin(player.name)) return;
   const consoleEl = document.getElementById('adminConsole');
@@ -2114,7 +2045,6 @@ function processCommand(cmd) {
     alert("ACTIVATED ALL ADMIN PERKS!"); return;
   }
 
-  // THREE NEW ADMIN COMMANDS IMPLEMENTATION
   if (action === 'dodge' || action === 'matrix') {
     player.autoDodge = !player.autoDodge;
     alert(`Auto Bullet Dodge: ${player.autoDodge ? "ENABLED" : "DISABLED"}`);
@@ -2274,7 +2204,6 @@ function loop() {
   ctx.fillStyle = theme.bg;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Update Outfit Ability Timers
   if (abilityActiveTimer > 0) {
     abilityActiveTimer--;
     if (abilityActiveTimer <= 0) {
