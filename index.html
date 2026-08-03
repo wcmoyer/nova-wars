@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -8,8 +8,15 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body, html { width: 100%; height: 100%; overflow: hidden; background: #08090f; color: #fff; touch-action: none; }
-    #gameContainer { position: relative; width: 100vw; height: 100vh; }
+    #gameContainer { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
     canvas { display: block; background: #10121a; }
+
+    /* Scope Overlay */
+    #scopeOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; z-index: 45; border: 40px solid rgba(0, 0, 0, 0.75); box-shadow: inset 0 0 100px #000; }
+    #scopeCrosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; transform: translate(-50%, -50%); border: 2px solid #00ffcc; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
+    #scopeCrosshair::before, #scopeCrosshair::after { content: ''; position: absolute; background: #00ffcc; }
+    #scopeCrosshair::before { width: 40px; height: 2px; }
+    #scopeCrosshair::after { width: 2px; height: 40px; }
 
     /* UI Overlay */
     .hud-panel { position: absolute; padding: 10px 16px; background: rgba(0,0,0,0.8); border-radius: 8px; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15); }
@@ -110,6 +117,7 @@
 <div id="gameContainer">
   <canvas id="gameCanvas"></canvas>
 
+  <div id="scopeOverlay"><div id="scopeCrosshair"></div></div>
   <div id="suddenDeathBanner">⚡ SUDDEN DEATH (50 HP) ⚡</div>
   <div id="giftPopupBanner">🎁 Notification Message</div>
 
@@ -158,7 +166,7 @@
   </div>
 
   <div id="controlsHint">
-    [WASD/Arrows] Move/Jump | [Mouse/Right Joy] Aim & Fire | [E] Ability | [1-4] Emotes | [R] Reload | [G] Bomb | [X] Close Menus | [~] Admin
+    [WASD/Arrows] Move | [L-Click] Fire | [R-Click] Fortnite Scope | [E] Ability | [1-4] Emotes | [R] Reload | [G] Bomb | [X] Close | [~] Admin
   </div>
 
   <!-- Touch Controls Overlay -->
@@ -175,6 +183,7 @@
 
   <div id="touchActions">
     <button id="abilityBtn" class="btn btn-ability" onclick="activateOutfitAbility()">⚡ ABILITY [E]</button>
+    <button class="btn btn-secondary" onclick="toggleFortniteScope()">🎯 SCOPE</button>
     <button class="btn btn-secondary" onclick="if(player) player.reload();">RELOAD [R]</button>
     <button class="btn btn-danger" onclick="if(player) player.throwBomb();">BOMB [G]</button>
   </div>
@@ -263,10 +272,7 @@
         </div>
       </div>
 
-      <!-- LAUNCH MATCH BUTTON -->
       <button class="btn" style="width: 100%; padding: 14px; font-size: 16px; margin-top: 10px;" onclick="confirmMatchStart()">LAUNCH MATCH</button>
-
-      <!-- HOW TO PLAY / TUTORIAL BUTTON -->
       <button class="btn btn-secondary" style="width: 100%; padding: 12px; font-size: 14px; margin-top: 8px; border-color: #00ffcc; color: #00ffcc;" onclick="toggleTutorialModal(true)">📖 HOW TO PLAY / TUTORIAL</button>
 
       <hr style="border: 0; border-top: 1px solid #2d3244; margin: 20px 0;">
@@ -298,20 +304,20 @@
       <h2>📖 How to Play - Rivals Guide</h2>
       <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 15px;">
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #00ffcc;">
-          <h4 style="color: #00ffcc; margin-bottom: 4px;">1. Fast Movement & Platform Jumping</h4>
-          <p style="font-size: 13px; color: #ccc;">Use <strong>WASD</strong> or <strong>Arrow Keys</strong> to sprint and jump across 3D platforms endlessly. On mobile, pull the left joystick for rapid movement.</p>
+          <h4 style="color: #00ffcc; margin-bottom: 4px;">1. Ground Spawning & Movement</h4>
+          <p style="font-size: 13px; color: #ccc;">Fighters spawn safely on solid ground platforms on opposite sides of the map! Move using <strong>WASD</strong> or <strong>Arrow Keys</strong>.</p>
         </div>
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #ff4444;">
-          <h4 style="color: #ff4444; margin-bottom: 4px;">2. Aiming & Outfit Abilities</h4>
-          <p style="font-size: 13px; color: #ccc;">Aim with your <strong>Mouse Cursor</strong> and Left-Click to shoot. Press <strong>[E]</strong> or tap the on-screen Ability button to trigger your outfit's active ability (e.g. Cheetah Speed, Ninja Cloak, Cyber Shield)!</p>
+          <h4 style="color: #ff4444; margin-bottom: 4px;">2. Fortnite Scoped Aiming & Abilities</h4>
+          <p style="font-size: 13px; color: #ccc;">Hold <strong>Right-Click</strong> to aim down sight with a Fortnite-style scope crosshair! Press <strong>[E]</strong> to trigger your outfit's active ability (3s active / 3s cooldown).</p>
         </div>
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #ffcc00;">
-          <h4 style="color: #ffcc00; margin-bottom: 4px;">3. Weapon Mastery Skins (500 Damage)</h4>
-          <p style="font-size: 13px; color: #ccc;">Deal <strong>500 Damage</strong> with any weapon to permanently unlock its exclusive <strong>Mastery Gold Finish Skin</strong>! Finish skins can also be bought for credits in the shop.</p>
+          <h4 style="color: #ffcc00; margin-bottom: 4px;">3. Weapon-Specific Mastery Skins (500 Damage)</h4>
+          <p style="font-size: 13px; color: #ccc;">Deal <strong>500 Damage</strong> with a specific weapon to unlock an exclusive 👑 <strong>Gold Mastery Skin for that weapon only</strong>!</p>
         </div>
         <div style="background: #222534; padding: 14px; border-radius: 8px; border-left: 4px solid #a800ff;">
           <h4 style="color: #a800ff; margin-bottom: 4px;">4. Admin Commands</h4>
-          <p style="font-size: 13px; color: #ccc;">Authorized admins can press <strong>[~]</strong> to run commands: <code>dodge</code> (auto-dodge incoming bullets), <code>aimbot</code> (auto-target opponents), and <code>homing</code> (tracking projectiles)!</p>
+          <p style="font-size: 13px; color: #ccc;">Press <strong>[~]</strong> to run admin commands: <code>dodge</code> (auto-dodge bullets), <code>aimbot</code> (auto-target), and <code>homing</code> (tracking bullets)!</p>
         </div>
       </div>
       <div style="margin-top: 22px; text-align: center;">
@@ -324,17 +330,17 @@
   <div id="shopModal" class="modal" style="display:none;">
     <div class="modal-content">
       <button class="modal-close-btn" onclick="toggleShopModal(false)" title="Close">✖ Close [X]</button>
-      <h2>Weapon Shop & Finish Skins</h2>
-      <p>Equip weapons, buy finish skins with Credits, or earn Mastery Skins at 500 Damage!</p>
+      <h2>Weapon Shop & Realistic Finish Skins</h2>
+      <p>Equip weapons, buy advanced finish skins with Credits, or earn Weapon-Specific 500 Damage Mastery Skins!</p>
       
       <div style="margin: 15px 0;">
-        <h3>Select Weapon Finish Skin (Credit Cost or 500 Damage Mastery)</h3>
+        <h3>Select Weapon Finish Skin</h3>
         <div class="grid-3col" id="skinShopGrid"></div>
       </div>
 
       <hr style="border: 0; border-top: 1px solid #2d3244; margin: 20px 0;">
 
-      <h3>Upgraded Weapon Arsenal (Reach 200 Fragments or Spend Credits)</h3>
+      <h3>Upgraded Weapon Arsenal</h3>
       <div class="grid-3col" id="weaponShop"></div>
     </div>
   </div>
@@ -343,8 +349,8 @@
   <div id="outfitModal" class="modal" style="display:none;">
     <div class="modal-content">
       <button class="modal-close-btn" onclick="toggleOutfitModal(false)" title="Close">✖ Close [X]</button>
-      <h2>Advanced Character Outfits & Abilities</h2>
-      <p>Purchase or equip complex outfits with active abilities (3-second cooldown)!</p>
+      <h2>Realistic Character Outfits & Abilities</h2>
+      <p>Equip realistic outfits featuring custom active abilities (3-second cooldown)!</p>
 
       <div class="grid-3col" id="outfitWardrobeGrid"></div>
     </div>
@@ -355,7 +361,7 @@
     <div class="modal-content">
       <button class="modal-close-btn" onclick="toggleBlueprintModal(false)" title="Close">✖ Close [X]</button>
       <h2>📜 Blueprints Vault & Weapon Fragments</h2>
-      <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;">Collect 200 Fragments to mark weapons unlocked. Collect Blueprints via Faction Challenges or the Wheel to view Secret & Unreleased Previews!</p>
+      <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;">Collect 200 Fragments to unlock weapons or earn Blueprints for Secret & Unreleased items!</p>
 
       <h3>Fragment Unlocks (200 Required)</h3>
       <div class="grid-3col" id="fragmentGrid"></div>
@@ -409,7 +415,7 @@ resize();
 
 // Global Game Variables
 let playerName = "piggy";
-let playerFaction = null; // 'dark' or 'light'
+let playerFaction = null;
 let credits = 0;
 let playerKills = 0;
 let totalDamageDealt = 0;
@@ -419,12 +425,13 @@ let aiDifficulty = 'medium';
 let isSuddenDeath = false;
 let currentLeaderboardTab = 'kills';
 
-// Customization & Weapon Mastery Damage Tracking
+// Customization & Scope Settings
 let equippedSkin = 'default';
 let equippedOutfit = 'default';
 let ownedOutfits = new Set(['default']);
 let ownedSkins = new Set(['default']);
-let weaponDamageStats = {}; // Tracks damage dealt per weapon for 500 Dmg Mastery Skins
+let weaponDamageStats = {}; // Tracks weapon-specific damage for 500 DMG Mastery
+let isScoped = false;
 
 // Outfit Ability Cooldown State
 let abilityCooldownTimer = 0;
@@ -436,13 +443,7 @@ let hasSpunWheelToday = false;
 let lastResetDatePortland = "";
 
 // FRAGMENTS & BLUEPRINTS DATABASE
-let weaponFragments = {
-  minigun: 120,
-  plasma: 85,
-  rocket: 150,
-  flame_m: 40,
-  laser: 195
-};
+let weaponFragments = { minigun: 120, plasma: 85, rocket: 150, flame_m: 40, laser: 195 };
 
 let blueprints = {
   excalibur: { count: 35, max: 100, realName: "🗡️ Secret Excalibur Blade", genericName: "Unreleased Weapon", type: "Secret Weapon", stats: "Damage: 75 | Speed: Instant", unreleased: true },
@@ -486,11 +487,7 @@ let conn = null;
 let isMultiplayer = false;
 
 // AUTHENTICATION & PERMISSION SETTINGS
-const AUTH_CODES = {
-  sphinx: "100915",
-  piggy: "3786"
-};
-
+const AUTH_CODES = { sphinx: "100915", piggy: "3786" };
 const OWNER_USERNAMES = new Set(["piggy", "sphinx"]);
 const adminUsers = new Set();
 const verifiedUsers = new Set();
@@ -505,192 +502,126 @@ function isOwnerAuth(user) {
   return (name === 'sphinx' || name === 'piggy') && hasAdmin(name);
 }
 
-// STRICT MODAL CLOSE HELPER (PREVENTS MATCH QUEUE LOCK OR BLACK SCREEN OVERLAYS)
 function closeAllModals() {
-  document.querySelectorAll('.modal').forEach(m => {
-    m.style.display = 'none';
-  });
+  document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
 }
 
-// DEDICATED 2FA AUTHENTICATION ENGINE
+// 2FA AUTHENTICATION
 function authenticateUser2FA() {
   const pInput = document.getElementById('usernameInput').value.trim();
   if (pInput.length > 0) playerName = pInput;
-
   const key = playerName.toLowerCase();
 
   if (AUTH_CODES[key]) {
-    const requiredCode = AUTH_CODES[key];
     const userInputCode = prompt(`🔐 SECURITY 2FA REQUIRED:\nEnter Authenticator Code for "${playerName}":`);
-
-    if (userInputCode === requiredCode) {
-      adminUsers.add(key);
-      verifiedUsers.add(key);
+    if (userInputCode === AUTH_CODES[key]) {
+      adminUsers.add(key); verifiedUsers.add(key);
       player.name = playerName;
-      
-      if (key === 'sphinx') {
-        equippedOutfit = 'chicken';
-        player.equippedWeapon = 'flail';
-        player.weaponData = { ...WEAPONS.flail };
-      } else if (key === 'piggy') {
-        equippedOutfit = 'piggy';
-        player.equippedWeapon = 'flail';
-        player.weaponData = { ...WEAPONS.flail };
-      }
-
-      saveProgress();
-      refreshAdminUI();
+      if (key === 'sphinx') { equippedOutfit = 'chicken'; player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail }; }
+      else if (key === 'piggy') { equippedOutfit = 'piggy'; player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail }; }
+      saveProgress(); refreshAdminUI();
       document.getElementById('playerNameVal').innerText = playerName;
-      showNotificationBanner(`🔓 2FA Authenticated as ${playerName.toUpperCase()}! Full Master & Admin unlocked.`);
+      showNotificationBanner(`🔓 2FA Authenticated as ${playerName.toUpperCase()}!`);
       return true;
     } else {
-      adminUsers.delete(key);
-      verifiedUsers.delete(key);
-      showNotificationBanner(`⚠️ Invalid 2FA Code! Playing as unverified user.`, true);
+      adminUsers.delete(key); verifiedUsers.delete(key);
+      showNotificationBanner(`⚠️ Invalid 2FA Code!`, true);
       return false;
     }
   } else {
-    adminUsers.delete(key);
-    verifiedUsers.delete(key);
+    adminUsers.delete(key); verifiedUsers.delete(key);
     player.name = playerName;
     document.getElementById('playerNameVal').innerText = playerName;
-    saveProgress();
-    refreshAdminUI();
+    saveProgress(); refreshAdminUI();
     return true;
   }
 }
 
-// --- PORTLAND TIME (12:00 AM) DAILY RESET CHECKER ---
-function getPortlandDateString() {
-  const options = { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' };
-  return new Intl.DateTimeFormat('en-US', options).format(new Date());
-}
-
 function checkDailyPortlandReset() {
-  const todayPDT = getPortlandDateString();
+  const options = { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' };
+  const todayPDT = new Intl.DateTimeFormat('en-US', options).format(new Date());
   if (lastResetDatePortland !== todayPDT) {
     hasSpunWheelToday = false;
-    darkChallenges.forEach(c => c.done = false);
-    lightChallenges.forEach(c => c.done = false);
+    darkChallenges.forEach(c => c.done = false); lightChallenges.forEach(c => c.done = false);
     lastResetDatePortland = todayPDT;
     localStorage.setItem('rr_last_reset_pdt', todayPDT);
     localStorage.setItem('rr_wheel_spun_today', 'false');
-    showNotificationBanner("🌅 Daily Reset (12:00 AM Portland Time)! Wheel & Challenges Refreshed!");
   }
 }
 
-// --- ADVANCED OUTFITS DATABASE WITH ABILITIES & PRICING ---
+// REALISTIC OUTFITS DATABASE WITH ABILITIES & PRICING
 const OUTFITS_CATALOG = {
-  default: { id: 'default', name: '👤 Default Fighter', cost: 0, desc: 'Standard combat suit style.', ability: 'None', lockedTo: false },
-  ninja: { id: 'ninja', name: '🥷 Ninja Assassin', cost: 450, desc: 'Stealth assassin suit with red wrap.', ability: 'Shadow Cloak (Invisibility 3s)', lockedTo: false },
-  cowboy: { id: 'cowboy', name: '🤠 Outlaw Cowboy', cost: 550, desc: 'Classic leather vest & Stetson hat.', ability: 'Quick Draw (Dual Burst Shot)', lockedTo: false },
-  dog: { id: 'dog', name: '🐶 Cyber Puppy', cost: 650, desc: 'Floppy puppy ears & button nose.', ability: 'Bark Blast (Pushes Enemies Away)', lockedTo: false },
-  cyber_knight: { id: 'cyber_knight', name: '🛡️ Cyber Knight', cost: 950, desc: 'Heavy cybernetic glowing armor.', ability: 'Cyber Shield (Invincible 3s)', lockedTo: false },
-  cheetah: { id: 'cheetah', name: '🐆 Apex Cheetah', cost: 1100, desc: 'Sleek golden fur coat with spots.', ability: 'Cheetah Dash (2x Speed Boost 3s)', lockedTo: false },
-  king: { id: 'king', name: '👑 Royal Monarch', cost: 1350, desc: 'Golden crown with royal purple cape.', ability: 'Monarch Rally (Heals +20 HP)', lockedTo: false },
-  skeleton: { id: 'skeleton', name: '💀 Skeleton Lord', cost: 1750, desc: 'Bone-white skull mask & dark armor.', ability: 'Soul Drain (Steals Enemy HP)', lockedTo: false },
-  butterfly: { id: 'butterfly', name: '🦋 Neon Butterfly', cost: 1950, desc: 'Glowing wings & twin antennae.', ability: 'Gutter Glide (Slow Fall Gravity)', lockedTo: false },
-  astronaut: { id: 'astronaut', name: '🚀 Void Astronaut', cost: 2400, desc: 'White space suit with gold visor.', ability: 'Zero-G Jump (Super Jump High)', lockedTo: false },
-  unicorn: { id: 'unicorn', name: '🦄 Cosmic Unicorn', cost: 2800, desc: 'Golden horn & rainbow mane.', ability: 'Rainbow Flare (Blinds Enemies)', lockedTo: false },
-  alien: { id: 'alien', name: '👽 Alien Invader', cost: 3500, desc: 'Neon green skin & oversized black eyes.', ability: 'Phase Warp (Teleport Forward)', lockedTo: false },
-  piggy: { id: 'piggy', name: '🐷 Piggy Suit (PIGGY ONLY)', cost: 5000, desc: 'Pink ears & snout reserved for piggy!', ability: 'Royal Truffle (+50 Overheal)', lockedTo: 'piggy' },
-  chicken: { id: 'chicken', name: '🐔 Chicken Suit (SPHINX ONLY)', cost: 5000, desc: 'Feather suit & beak reserved for sphinx!', ability: 'Egg Barrage (Cluster Grenades)', lockedTo: 'sphinx' }
+  default: { id: 'default', name: '👤 Tactical Combat Suit', cost: 0, desc: 'Standard Kevlar weave suit.', ability: 'Sprint Surge (+30% Speed for 3s)', lockedTo: false },
+  ninja: { id: 'ninja', name: '🥷 Shinobi Shadow Outfit', cost: 450, desc: 'Stealth cloth with armored vambraces.', ability: 'Shadow Cloak (Invisibility for 3s)', lockedTo: false },
+  cowboy: { id: 'cowboy', name: '🤠 Outlaw Bounty Hunter', cost: 550, desc: 'Heavy leather coat with Stetson hat.', ability: 'Quick Draw (Instantly Rerolls Ammo)', lockedTo: false },
+  dog: { id: 'dog', name: '🐶 K-9 SWAT Tactical Suit', cost: 650, desc: 'Heavy Kevlar armor with ear visor.', ability: 'Bark Shockwave (Knocks Back Rivals)', lockedTo: false },
+  cyber_knight: { id: 'cyber_knight', name: '🛡️ Titanium Cyber Knight', cost: 950, desc: 'Plated exosuit with glowing visor.', ability: 'Cyber Barrier (Invincible Shield for 3s)', lockedTo: false },
+  cheetah: { id: 'cheetah', name: '🐆 Apex Cheetah Runner', cost: 1100, desc: 'Aerodynamic lightweight sprinting armor.', ability: 'Cheetah Dash (2.2x Speed Boost for 3s)', lockedTo: false },
+  king: { id: 'king', name: '👑 Sovereign Monarch', cost: 1350, desc: 'Royal golden chestplate with velvet cape.', ability: 'Monarch Rally (Instantly Heals +20 HP)', lockedTo: false },
+  skeleton: { id: 'skeleton', name: '💀 Death Knight Exo-Armor', cost: 1750, desc: 'Obsidian bone armor with skull helm.', ability: 'Soul Drain (Lifesteals HP from Enemy)', lockedTo: false },
+  butterfly: { id: 'butterfly', name: '🦋 Kinetic Wing Flightsuit', cost: 1950, desc: 'Glide suit with glowing wing thrusters.', ability: 'Hover Jet (Slow Fall & Air Glide 3s)', lockedTo: false },
+  astronaut: { id: 'astronaut', name: '🚀 EVA Deep Space Suit', cost: 2400, desc: 'Pressurized white suit with gold visor.', ability: 'Zero-G Thruster (Super High Jump)', lockedTo: false },
+  unicorn: { id: 'unicorn', name: '🦄 Prism Aurora Armor', cost: 2800, desc: 'Iridescent armor with golden horn antenna.', ability: 'Prism Flash (Blinds Rivals)', lockedTo: false },
+  alien: { id: 'alien', name: '👽 Xenomorph Invader', cost: 3500, desc: 'Neon bio-tech exoskeleton suit.', ability: 'Phase Warp (Teleports Forward 180px)', lockedTo: false },
+  piggy: { id: 'piggy', name: '🐷 Piggy Armor (PIGGY ONLY)', cost: 5000, desc: 'Pink power suit reserved for piggy!', ability: 'Royal Truffle (+50 Overheal Shield)', lockedTo: 'piggy' },
+  chicken: { id: 'chicken', name: '🐔 Sphinx Feather Suit (SPHINX ONLY)', cost: 5000, desc: 'Combat feather suit reserved for sphinx!', ability: 'Cluster Bomb Drop (Spawns Bombs)', lockedTo: 'sphinx' }
 };
 
-// --- FINISH SKINS PRICING & MASTERY DATABASE ---
+// FINISH SKINS PRICING & MASTERY DATABASE
 const SKINS_CATALOG = {
-  default: { id: 'default', name: 'Default Finish', cost: 0, desc: 'Standard tactical dark metallic finish.' },
-  obsidian_gold: { id: 'obsidian_gold', name: '✨ Obsidian Gold', cost: 350, desc: 'Pitch-black obsidian plated with gold accents.' },
-  ruby_fade: { id: 'ruby_fade', name: '🔥 Ruby Fade', cost: 450, desc: 'Crimson metallic sheen with animated dark fade.' },
-  electric_neon: { id: 'electric_neon', name: '⚡ Electric Neon', cost: 550, desc: 'High-voltage cyan and magenta energy pulsing skin.' },
-  void_crystal: { id: 'void_crystal', name: '🌌 Void Crystal', cost: 650, desc: 'Ultra-deep purple crystal with dark highlights.' },
-  toxic_hazard: { id: 'toxic_hazard', name: '☣️ Toxic Hazard', cost: 750, desc: 'Acid green biohazard plating with warning trim.' },
-  diamond_frost: { id: 'diamond_frost', name: '❄️ Diamond Frost', cost: 850, desc: 'Icy crystalline white with soft reflection.' },
-  mastery_gold: { id: 'mastery_gold', name: '👑 Gold Mastery (500 DMG)', cost: 0, desc: 'Earned by dealing 500 Damage with a weapon!' }
+  default: { id: 'default', name: 'Default Finish', cost: 0, desc: 'Standard matte black metallic finish.' },
+  obsidian_gold: { id: 'obsidian_gold', name: '✨ Obsidian Gold', cost: 350, desc: 'Pitch-black obsidian plated with gold trim.' },
+  ruby_fade: { id: 'ruby_fade', name: '🔥 Ruby Fade', cost: 450, desc: 'Crimson metallic fade finish.' },
+  electric_neon: { id: 'electric_neon', name: '⚡ Electric Neon', cost: 550, desc: 'High-voltage energy cyan pulsing skin.' },
+  void_crystal: { id: 'void_crystal', name: '🌌 Void Crystal', cost: 650, desc: 'Deep crystalline purple crystal sheen.' },
+  toxic_hazard: { id: 'toxic_hazard', name: '☣️ Toxic Hazard', cost: 750, desc: 'Biohazard green plating with warning trim.' },
+  diamond_frost: { id: 'diamond_frost', name: '❄️ Diamond Frost', cost: 850, desc: 'Icy white diamond crystal plating.' },
+  mastery_gold: { id: 'mastery_gold', name: '👑 Gold Mastery (500 DMG)', cost: 0, desc: 'Deal 500 Damage with THIS weapon to unlock!' }
 };
 
-// --- CLICK OUTSIDE MODAL BACKGROUND TO CLOSE ---
 window.addEventListener('click', e => {
-  if (e.target.classList.contains('modal') && e.target.id !== 'factionModal') {
-    e.target.style.display = 'none';
-  }
+  if (e.target.classList.contains('modal') && e.target.id !== 'factionModal') e.target.style.display = 'none';
 });
 
-// --- FACTION SELECTION SYSTEM ---
 function selectFaction(fChoice) {
-  playerFaction = fChoice;
-  localStorage.setItem('rr_faction', fChoice);
+  playerFaction = fChoice; localStorage.setItem('rr_faction', fChoice);
   document.getElementById('factionModal').style.display = 'none';
-
   const fVal = document.getElementById('factionHudVal');
-  if (fChoice === 'dark') {
-    fVal.innerText = "Dark (Sphinx)"; fVal.style.color = "#a800ff";
-    showNotificationBanner("👁️ Joined the Dark Faction! Phantom Challenges Unlocked.");
-  } else {
-    fVal.innerText = "Light (Piggy)"; fVal.style.color = "#ffcc00";
-    showNotificationBanner("👑 Joined the Light Faction! Celestial Challenges Unlocked.");
-  }
+  if (fChoice === 'dark') { fVal.innerText = "Dark (Sphinx)"; fVal.style.color = "#a800ff"; }
+  else { fVal.innerText = "Light (Piggy)"; fVal.style.color = "#ffcc00"; }
 }
 
-// --- PROMO CODE ENGINE ---
-function togglePromoModal(show) {
-  document.getElementById('promoModal').style.display = show ? 'flex' : 'none';
-}
+function togglePromoModal(show) { document.getElementById('promoModal').style.display = show ? 'flex' : 'none'; }
 
 function redeemPromoCode() {
   const code = document.getElementById('promoCodeInput').value.trim().toUpperCase();
-  if (redeemedCodes.has(code)) {
-    alert("Code already redeemed!"); return;
-  }
+  if (redeemedCodes.has(code)) { alert("Code already redeemed!"); return; }
 
-  if (code === 'SPHINX2026') {
-    credits += 500; weaponFragments.laser = (weaponFragments.laser || 0) + 50; blueprints.excalibur.count += 10;
-    redeemedCodes.add(code); saveProgress(); alert("Redeemed! +500 Credits, +50 Laser Fragments, & +10 Unreleased Weapon Blueprints!");
-  } else if (code === 'PIGGYWIN') {
-    credits += 1000; weaponFragments.minigun = (weaponFragments.minigun || 0) + 100;
-    redeemedCodes.add(code); saveProgress(); alert("Redeemed! +1,000 Credits & +100 Minigun Fragments!");
-  } else if (code === 'DARKPHANTOM') {
-    blueprints.dark_matter.count += 30; blueprints.void_suit.count += 20;
-    redeemedCodes.add(code); saveProgress(); alert("Redeemed! Phantom Blueprints Unlocked!");
-  } else if (code === 'LIGHTCELESTIAL') {
-    blueprints.excalibur.count += 30; blueprints.cyber_wings.count += 20;
-    redeemedCodes.add(code); saveProgress(); alert("Redeemed! Celestial Blueprints Unlocked!");
-  } else {
-    alert("Invalid Promo Code!");
-  }
+  if (code === 'SPHINX2026') { credits += 500; weaponFragments.laser = (weaponFragments.laser || 0) + 50; blueprints.excalibur.count += 10; redeemedCodes.add(code); saveProgress(); alert("Redeemed!"); }
+  else if (code === 'PIGGYWIN') { credits += 1000; weaponFragments.minigun = (weaponFragments.minigun || 0) + 100; redeemedCodes.add(code); saveProgress(); alert("Redeemed!"); }
+  else alert("Invalid Promo Code!");
   document.getElementById('promoCodeInput').value = '';
 }
 
-// --- DYNAMIC REAL-TIME LEADERBOARD & PERSISTENCE ---
 function recordPlayerStats(name, addedKills = 0, addedCredits = 0, addedDmg = 0) {
   if (!name) return;
   const key = name.toLowerCase();
-
-  let entry = globalLeaderboardRegistry.get(key);
-  if (!entry) {
-    entry = { name: name, kills: 0, credits: 0, dmg: 0 };
-    globalLeaderboardRegistry.set(key, entry);
-  }
-
-  entry.kills += addedKills;
-  entry.credits += addedCredits;
-  entry.dmg += addedDmg;
+  let entry = globalLeaderboardRegistry.get(key) || { name: name, kills: 0, credits: 0, dmg: 0 };
+  
+  entry.kills += addedKills; entry.credits += addedCredits; entry.dmg += addedDmg;
+  globalLeaderboardRegistry.set(key, entry);
 
   if (key === playerName.toLowerCase()) {
-    playerKills = entry.kills;
-    credits = entry.credits;
-    totalDamageDealt = entry.dmg;
-
+    playerKills = entry.kills; credits = entry.credits; totalDamageDealt = entry.dmg;
     if (player && player.equippedWeapon && addedDmg > 0) {
       const wepKey = player.equippedWeapon;
       weaponDamageStats[wepKey] = (weaponDamageStats[wepKey] || 0) + addedDmg;
       if (weaponDamageStats[wepKey] >= 500 && !ownedSkins.has(`mastery_${wepKey}`)) {
         ownedSkins.add(`mastery_${wepKey}`);
-        showNotificationBanner(`🏆 UNLOCKED MASTERY GOLD SKIN FOR ${WEAPONS[wepKey].name.toUpperCase()}!`);
+        showNotificationBanner(`🏆 UNLOCKED 500 DMG GOLD MASTERY FOR ${WEAPONS[wepKey].name.toUpperCase()}!`);
       }
     }
   }
-
   updateLeaderboardUI();
 }
 
@@ -722,28 +653,18 @@ function loadSavedProgress() {
 
   checkDailyPortlandReset();
 
-  if (savedFaction) { selectFaction(savedFaction); }
-  else { document.getElementById('factionModal').style.display = 'flex'; }
+  if (savedFaction) selectFaction(savedFaction);
+  else document.getElementById('factionModal').style.display = 'flex';
 
-  globalLeaderboardRegistry.set(playerName.toLowerCase(), {
-    name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt
-  });
+  globalLeaderboardRegistry.set(playerName.toLowerCase(), { name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt });
 
-  if (savedOwnedOutfits) {
-    try { JSON.parse(savedOwnedOutfits).forEach(o => ownedOutfits.add(o)); } catch(e) {}
-  }
+  if (savedOwnedOutfits) { try { JSON.parse(savedOwnedOutfits).forEach(o => ownedOutfits.add(o)); } catch(e) {} }
   ownedOutfits.add('default');
 
-  if (savedOwnedSkins) {
-    try { JSON.parse(savedOwnedSkins).forEach(s => ownedSkins.add(s)); } catch(e) {}
-  }
+  if (savedOwnedSkins) { try { JSON.parse(savedOwnedSkins).forEach(s => ownedSkins.add(s)); } catch(e) {} }
   ownedSkins.add('default');
 
-  if (savedOutfit) {
-    if (savedOutfit === 'chicken' && playerName.toLowerCase() !== 'sphinx') equippedOutfit = 'default';
-    else if (savedOutfit === 'piggy' && playerName.toLowerCase() !== 'piggy') equippedOutfit = 'default';
-    else equippedOutfit = savedOutfit;
-  }
+  if (savedOutfit) equippedOutfit = savedOutfit;
   if (savedSkin) equippedSkin = savedSkin;
 
   updateLeaderboardUI();
@@ -763,10 +684,7 @@ function saveProgress() {
   localStorage.setItem('rr_wep_dmg', JSON.stringify(weaponDamageStats));
   localStorage.setItem('rr_wheel_spun_today', hasSpunWheelToday ? 'true' : 'false');
 
-  globalLeaderboardRegistry.set(playerName.toLowerCase(), {
-    name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt
-  });
-
+  globalLeaderboardRegistry.set(playerName.toLowerCase(), { name: playerName, kills: playerKills, credits: credits, dmg: totalDamageDealt });
   updateLeaderboardUI();
 }
 
@@ -775,12 +693,6 @@ function switchLeaderboardTab(tabKey) {
   document.querySelectorAll('.lb-tab-btn').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById(`lbTab-${tabKey}`);
   if (btn) btn.classList.add('active');
-
-  const colTitle = document.getElementById('lbColTitle');
-  if (tabKey === 'kills') { colTitle.innerText = "Kills ⚔️"; colTitle.style.color = "#00ffcc"; }
-  else if (tabKey === 'credits') { colTitle.innerText = "Credits 💰"; colTitle.style.color = "#ffcc00"; }
-  else if (tabKey === 'dmg') { colTitle.innerText = "Damage 💥"; colTitle.style.color = "#ff4444"; }
-
   updateLeaderboardUI();
 }
 
@@ -798,17 +710,11 @@ function updateLeaderboardUI() {
   sorted.forEach((e, idx) => {
     const tr = document.createElement('tr');
     const vTag = isVerified(e.name) ? `<span class="verified-badge">✔</span>` : '';
-    
     let displayVal = e.kills;
-    let valColor = "#00ffcc";
-    if (currentLeaderboardTab === 'credits') { displayVal = e.credits; valColor = "#ffcc00"; }
-    if (currentLeaderboardTab === 'dmg') { displayVal = e.dmg; valColor = "#ff4444"; }
+    if (currentLeaderboardTab === 'credits') displayVal = e.credits;
+    if (currentLeaderboardTab === 'dmg') displayVal = e.dmg;
 
-    tr.innerHTML = `
-      <td>#${idx + 1}</td>
-      <td><strong>${e.name}</strong>${vTag}</td>
-      <td style="color:${valColor}; font-weight:bold;">${displayVal}</td>
-    `;
+    tr.innerHTML = `<td>#${idx + 1}</td><td><strong>${e.name}</strong>${vTag}</td><td style="color:#00ffcc; font-weight:bold;">${displayVal}</td>`;
     lbBody.appendChild(tr);
   });
 }
@@ -827,21 +733,19 @@ function showNotificationBanner(msg, isWarning = false) {
   popup.style.display = 'block';
 
   if (bannerTimer) clearTimeout(bannerTimer);
-  bannerTimer = setTimeout(() => {
-    popup.style.display = 'none';
-  }, 4500);
+  bannerTimer = setTimeout(() => { popup.style.display = 'none'; }, 4500);
 }
 
-// Input Controls & Keybinds
+// Input Controls & Fortnite Scope Toggle
 const keys = {};
-const mouse = { x: 0, y: 0, down: false };
+const mouse = { x: 0, y: 0, down: false, rightDown: false };
+
+window.addEventListener('contextmenu', e => { e.preventDefault(); });
 
 window.addEventListener('keydown', e => {
   keys[e.key.toLowerCase()] = true; keys[e.key] = true;
-  
   if (e.key.toLowerCase() === 'x') closeAllModals();
   if (e.key.toLowerCase() === 'e') activateOutfitAbility();
-
   if ((e.key === '~' || e.key === '`') && player && hasAdmin(player.name)) toggleAdminConsole();
   if (e.key.toLowerCase() === 'r' && player) player.reload();
   if (e.key.toLowerCase() === 'g' && player) player.throwBomb();
@@ -850,16 +754,63 @@ window.addEventListener('keydown', e => {
   if (e.key === '3') triggerPlayerEmote('💪');
   if (e.key === '4') triggerPlayerEmote('💃');
 });
+
 window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; keys[e.key] = false; });
 window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; touchAimAngle = null; });
-window.addEventListener('mousedown', e => { mouse.down = true; mouse.x = e.clientX; mouse.y = e.clientY; });
-window.addEventListener('mouseup', () => mouse.down = false);
+window.addEventListener('mousedown', e => {
+  if (e.button === 0) mouse.down = true;
+  if (e.button === 2) { mouse.rightDown = true; toggleFortniteScope(); }
+  mouse.x = e.clientX; mouse.y = e.clientY;
+});
+window.addEventListener('mouseup', e => {
+  if (e.button === 0) mouse.down = false;
+  if (e.button === 2) { mouse.rightDown = false; toggleFortniteScope(false); }
+});
 
-function triggerPlayerEmote(symbol) {
-  if (player) player.playEmote(symbol);
+function toggleFortniteScope(forceState) {
+  if (typeof forceState === 'boolean') isScoped = forceState;
+  else isScoped = !isScoped;
+
+  const overlay = document.getElementById('scopeOverlay');
+  overlay.style.display = isScoped ? 'block' : 'none';
 }
 
-// --- JOYSTICKS ---
+function triggerPlayerEmote(symbol) { if (player) player.playEmote(symbol); }
+
+// OUTFIT ABILITY ACTIVATION (3s Active / 3s Cooldown)
+function activateOutfitAbility() {
+  if (!player || abilityCooldownTimer > 0) return;
+
+  const item = OUTFITS_CATALOG[equippedOutfit];
+  abilityCooldownTimer = 180; // 3s Cooldown
+  abilityActiveTimer = 180;   // 3s Active Duration
+
+  if (equippedOutfit === 'cheetah') {
+    player.speedMult = 2.2;
+    showNotificationBanner("🐆 CHEETAH DASH! (2.2x Speed Boost for 3s)");
+  } else if (equippedOutfit === 'ninja') {
+    player.invisible = true;
+    showNotificationBanner("🥷 SHADOW CLOAK! (Invisibility for 3s)");
+  } else if (equippedOutfit === 'cyber_knight') {
+    player.shieldActive = true;
+    showNotificationBanner("🛡️ CYBER BARRIER! (Invincible Shield for 3s)");
+  } else if (equippedOutfit === 'alien') {
+    const angle = player.getAimAngle();
+    player.x += Math.cos(angle) * 180;
+    showNotificationBanner("👽 PHASE WARP! (Forward Teleport)");
+  } else if (equippedOutfit === 'king') {
+    player.health = Math.min(player.maxHealth, player.health + 20);
+    showNotificationBanner("👑 MONARCH RALLY! (+20 HP Healed)");
+  } else if (equippedOutfit === 'astronaut') {
+    player.vy = -18;
+    showNotificationBanner("🚀 ZERO-G THRUSTER JUMP!");
+  } else {
+    player.speedMult = 1.3;
+    showNotificationBanner(`⚡ ${item ? item.name.toUpperCase() : 'SUIT'} ABILITY ACTIVATED!`);
+  }
+}
+
+// TOUCH CONTROLS
 const moveContainer = document.getElementById('moveContainer');
 const moveStick = document.getElementById('moveStick');
 let moveActive = false;
@@ -877,9 +828,7 @@ function handleMove(e) {
   const touch = e.touches[0];
   let deltaX = touch.clientX - (rect.left + rect.width / 2);
   let deltaY = touch.clientY - (rect.top + rect.height / 2);
-  const dist = Math.hypot(deltaX, deltaY);
-  const maxR = 32;
-
+  const dist = Math.hypot(deltaX, deltaY); const maxR = 32;
   if (dist > maxR) { deltaX = (deltaX / dist) * maxR; deltaY = (deltaY / dist) * maxR; }
   moveStick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
   keys['ArrowLeft'] = deltaX < -10; keys['ArrowRight'] = deltaX > 10; keys['ArrowUp'] = deltaY < -15;
@@ -899,9 +848,7 @@ function handleAim(e) {
   const touch = e.touches[0];
   let deltaX = touch.clientX - (rect.left + rect.width / 2);
   let deltaY = touch.clientY - (rect.top + rect.height / 2);
-  const dist = Math.hypot(deltaX, deltaY);
-  const maxR = 32;
-
+  const dist = Math.hypot(deltaX, deltaY); const maxR = 32;
   if (dist > maxR) { deltaX = (deltaX / dist) * maxR; deltaY = (deltaY / dist) * maxR; }
   aimShootStick.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
   if (dist > 3) touchAimAngle = Math.atan2(deltaY, deltaX);
@@ -912,61 +859,37 @@ canvas.addEventListener('touchstart', e => { if (e.touches.length > 0) { mouse.x
 canvas.addEventListener('touchmove', e => { if (e.touches.length > 0) { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; touchAimAngle = null; } });
 canvas.addEventListener('touchend', () => mouse.down = false);
 
-// --- WEAPONS DATABASE ---
+// WEAPONS DATABASE
 const WEAPONS = {
   pistol: { name: 'Pistol', tier: 'Basic Tier', damage: 2, rate: 220, ammo: 18, maxAmmo: 18, speed: 22, cost: 0, gravity: 0, ownerOnly: false, multishot: 1, shape: 'pistol' },
   smg: { name: 'Tactical SMG', tier: 'Tier 1 - Rapid Burst', damage: 2, rate: 60, ammo: 45, maxAmmo: 45, speed: 25, cost: 250, gravity: 0, ownerOnly: false, multishot: 1, shape: 'smg' },
-  assault: { name: 'Assault Rifle (UPGRADED)', tier: 'Tier 1 - Fast Fire', damage: 3, rate: 90, ammo: 40, maxAmmo: 40, speed: 26, cost: 200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'rifle' },
+  assault: { name: 'Assault Rifle', tier: 'Tier 1 - Fast Fire', damage: 3, rate: 90, ammo: 40, maxAmmo: 40, speed: 26, cost: 200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'rifle' },
   shotgun: { name: 'Shotgun', tier: 'Tier 2 - Burst Spread', damage: 3, rate: 500, ammo: 10, maxAmmo: 10, speed: 20, cost: 400, gravity: 0, ownerOnly: false, multishot: 4, shape: 'shotgun' },
   db_shotgun: { name: 'Double Barrel', tier: 'Tier 2 - Heavy Burst', damage: 4, rate: 400, ammo: 6, maxAmmo: 6, speed: 22, cost: 550, gravity: 0, ownerOnly: false, multishot: 6, shape: 'db_shotgun' },
-  sniper: { name: 'Sniper Rifle (5/10 HP)', tier: 'Tier 3 - High Speed', damage: 5, headshotDamage: 10, rate: 550, ammo: 8, maxAmmo: 8, speed: 55, cost: 700, gravity: 0, ownerOnly: false, multishot: 1, shape: 'sniper' },
+  sniper: { name: 'Sniper Rifle', tier: 'Tier 3 - Scoped Precision', damage: 5, headshotDamage: 10, rate: 550, ammo: 8, maxAmmo: 8, speed: 55, cost: 700, gravity: 0, ownerOnly: false, multishot: 1, shape: 'sniper' },
   laser: { name: 'Laser Beam Rifle', tier: 'Tier 3 - Beam Velocity', damage: 8, rate: 320, ammo: 15, maxAmmo: 15, speed: 60, cost: 950, gravity: 0, ownerOnly: false, multishot: 1, shape: 'laser', special: 'cyan' },
   crossbow: { name: 'Heavy Crossbow', tier: 'Tier 3 - Silent Bolt', damage: 7, rate: 500, ammo: 10, maxAmmo: 10, speed: 32, cost: 850, gravity: 0.04, ownerOnly: false, multishot: 1, shape: 'crossbow' },
-  minigun: { name: 'Minigun (UPGRADED)', tier: 'Tier 4 - Ultra Rapid', damage: 2, rate: 20, ammo: 500, maxAmmo: 500, speed: 28, cost: 1200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'minigun' },
-  plasma: { name: 'Plasma Cannon (UPGRADED)', tier: 'Tier 4 - Sci-Fi Energy', damage: 18, rate: 250, ammo: 16, maxAmmo: 16, speed: 38, cost: 1450, gravity: 0, ownerOnly: false, multishot: 1, shape: 'plasma', special: 'purple' },
+  minigun: { name: 'Minigun', tier: 'Tier 4 - Ultra Rapid', damage: 2, rate: 20, ammo: 500, maxAmmo: 500, speed: 28, cost: 1200, gravity: 0, ownerOnly: false, multishot: 1, shape: 'minigun' },
+  plasma: { name: 'Plasma Cannon', tier: 'Tier 4 - Sci-Fi Energy', damage: 18, rate: 250, ammo: 16, maxAmmo: 16, speed: 38, cost: 1450, gravity: 0, ownerOnly: false, multishot: 1, shape: 'plasma', special: 'purple' },
   flame_m: { name: 'Flame Mortar', tier: 'Tier 5 - Fire Artillery', damage: 25, rate: 900, ammo: 8, maxAmmo: 8, speed: 20, cost: 1700, gravity: 0.18, ownerOnly: false, multishot: 1, shape: 'flame_m', isExplosive: true },
   grenade_l: { name: 'Grenade Launcher', tier: 'Tier 5 - AoE Shells', damage: 22, rate: 800, ammo: 8, maxAmmo: 8, speed: 18, cost: 1600, gravity: 0.22, ownerOnly: false, multishot: 1, shape: 'grenade_l', isExplosive: true },
-  rocket: { name: 'Rocket Launcher (UPGRADED)', tier: 'Tier 5 - Explosive Arc', damage: 35, rate: 1000, ammo: 6, maxAmmo: 6, speed: 22, cost: 1800, gravity: 0.08, ownerOnly: false, multishot: 1, shape: 'rocket', isExplosive: true },
+  rocket: { name: 'Rocket Launcher', tier: 'Tier 5 - Explosive Arc', damage: 35, rate: 1000, ammo: 6, maxAmmo: 6, speed: 22, cost: 1800, gravity: 0.08, ownerOnly: false, multishot: 1, shape: 'rocket', isExplosive: true },
   
-  // Master Weapons (piggy & sphinx)
+  // Master Weapons
   khopesh: { name: 'Khopesh Blade', tier: 'Master Weapon', damage: 50, rate: 200, ammo: 999, maxAmmo: 999, speed: 0, cost: 0, ownerOnly: true, multishot: 1, shape: 'khopesh' },
   flail: { name: 'Energy Flail', tier: 'Master Weapon', damage: 50, rate: 15, ammo: 9999, maxAmmo: 9999, speed: 25, cost: 0, ownerOnly: true, special: 'purple', multishot: 1, shape: 'flail' },
   crook: { name: 'Healer Crook', tier: 'Master Weapon', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal', multishot: 1, shape: 'crook' }
 };
 
-// --- EXPANDED 3D BLOCK MAP LAYOUTS ---
+// ARENA MAP LAYOUTS
 const maps = {
   cyber: { bg: '#0b0c16', floor: '#1e2238', side: '#121526', top: '#2c3352', platforms: [{ x: 180, y: 0.70, w: 220, h: 20 }, { x: 0.50, y: 0.50, w: 260, h: 20, isCenter: true }, { x: 0.82, y: 0.70, w: 220, h: 20, isRelRight: true }] },
   lava: { bg: '#1c0808', floor: '#3d1212', side: '#260a0a', top: '#5e1b1b', platforms: [{ x: 150, y: 0.65, w: 180, h: 20 }, { x: 0.35, y: 0.45, w: 200, h: 20 }, { x: 0.65, y: 0.45, w: 200, h: 20 }, { x: 0.85, y: 0.65, w: 180, h: 20, isRelRight: true }] },
   islands: { bg: '#08171f', floor: '#16313d', side: '#0d1f28', top: '#224a59', platforms: [{ x: 200, y: 0.60, w: 240, h: 20 }, { x: 0.50, y: 0.40, w: 280, h: 20, isCenter: true }, { x: 0.80, y: 0.60, w: 240, h: 20, isRelRight: true }] },
   warehouse: { bg: '#121318', floor: '#2b2e3b', side: '#1c1e26', top: '#3e4254', platforms: [{ x: 120, y: 0.72, w: 280, h: 20 }, { x: 0.50, y: 0.52, w: 320, h: 20, isCenter: true }, { x: 0.88, y: 0.72, w: 280, h: 20, isRelRight: true }] },
-  
-  temple: { 
-    bg: '#14120c', floor: '#3d331f', side: '#241e12', top: '#5c4e30', 
-    platforms: [
-      { x: 0.18, y: 0.72, w: 240, h: 22 }, { x: 0.82, y: 0.72, w: 240, h: 22, isRelRight: true },
-      { x: 0.32, y: 0.52, w: 200, h: 22 }, { x: 0.68, y: 0.52, w: 200, h: 22, isRelRight: true },
-      { x: 0.50, y: 0.32, w: 220, h: 22, isCenter: true }
-    ] 
-  },
-
-  skyscraper: { 
-    bg: '#050c1e', floor: '#112244', side: '#0a162d', top: '#1b3866', 
-    platforms: [
-      { x: 0.12, y: 0.75, w: 200, h: 20 }, { x: 0.88, y: 0.75, w: 200, h: 20, isRelRight: true },
-      { x: 0.30, y: 0.58, w: 220, h: 20 }, { x: 0.70, y: 0.58, w: 220, h: 20, isRelRight: true },
-      { x: 0.50, y: 0.40, w: 260, h: 20, isCenter: true }, { x: 0.50, y: 0.22, w: 180, h: 20, isCenter: true }
-    ] 
-  },
-  castle: { 
-    bg: '#140c1c', floor: '#2b1a38', side: '#1c1026', top: '#452659', 
-    platforms: [
-      { x: 80, y: 0.78, w: 180, h: 20 }, { x: 0.88, y: 0.78, w: 180, h: 20, isRelRight: true },
-      { x: 0.25, y: 0.62, w: 190, h: 20 }, { x: 0.75, y: 0.62, w: 190, h: 20, isRelRight: true },
-      { x: 0.40, y: 0.46, w: 160, h: 20 }, { x: 0.60, y: 0.46, w: 160, h: 20, isRelRight: true },
-      { x: 0.50, y: 0.30, w: 220, h: 20, isCenter: true }
-    ] 
-  }
+  temple: { bg: '#14120c', floor: '#3d331f', side: '#241e12', top: '#5c4e30', platforms: [{ x: 0.18, y: 0.72, w: 240, h: 22 }, { x: 0.82, y: 0.72, w: 240, h: 22, isRelRight: true }, { x: 0.50, y: 0.32, w: 220, h: 22, isCenter: true }] },
+  skyscraper: { bg: '#050c1e', floor: '#112244', side: '#0a162d', top: '#1b3866', platforms: [{ x: 0.12, y: 0.75, w: 200, h: 20 }, { x: 0.88, y: 0.75, w: 200, h: 20, isRelRight: true }, { x: 0.50, y: 0.40, w: 260, h: 20, isCenter: true }] },
+  castle: { bg: '#140c1c', floor: '#2b1a38', side: '#1c1026', top: '#452659', platforms: [{ x: 80, y: 0.78, w: 180, h: 20 }, { x: 0.88, y: 0.78, w: 180, h: 20, isRelRight: true }, { x: 0.50, y: 0.30, w: 220, h: 20, isCenter: true }] }
 };
 
 function getCalculatedPlatforms() {
@@ -981,7 +904,7 @@ function getCalculatedPlatforms() {
   });
 }
 
-// --- BEANS & EXPLOSIVES ---
+// BEANS & EXPLOSIVES
 let beans = [];
 class Bean {
   constructor(x, y, type = 'red') {
@@ -995,28 +918,21 @@ class Bean {
     const floorY = canvas.height - 100;
     const platforms = getCalculatedPlatforms();
     let targetY = floorY;
-
     platforms.forEach(p => {
-      if (this.x >= p.x && this.x <= p.x + p.w && this.y <= p.y + 10) {
-        if (p.y < targetY) targetY = p.y;
-      }
+      if (this.x >= p.x && this.x <= p.x + p.w && this.y <= p.y + 10) { if (p.y < targetY) targetY = p.y; }
     });
 
     if (this.y + this.radius < targetY) { this.vy += 0.3; this.y += this.vy; }
     else { this.y = targetY - this.radius; this.vy = 0; }
 
     allEntities.filter(Boolean).forEach(p => {
-      if (Math.hypot(p.x - this.x, p.y - this.y) < 22) {
-        p.health = Math.min(p.maxHealth, p.health + this.heal);
-        this.dead = true;
-      }
+      if (Math.hypot(p.x - this.x, p.y - this.y) < 22) { p.health = Math.min(p.maxHealth, p.health + this.heal); this.dead = true; }
     });
   }
 
   draw() {
     ctx.fillStyle = this.color;
     ctx.beginPath(); ctx.ellipse(this.x, this.y, this.radius + 3, this.radius, 0.3, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
   }
 }
 
@@ -1024,11 +940,7 @@ function spawnRandomBean(xOverride, yOverride) {
   if (!isMatchActive) return;
   const x = xOverride || (50 + Math.random() * (canvas.width - 100));
   const y = yOverride || 50;
-  const rand = Math.random();
-  let type = 'red';
-  if (rand > 0.6) type = 'green';
-  if (rand > 0.9) type = 'gold';
-  beans.push(new Bean(x, y, type));
+  beans.push(new Bean(x, y, Math.random() > 0.6 ? (Math.random() > 0.8 ? 'gold' : 'green') : 'red'));
 }
 
 setInterval(() => { if (isMatchActive && Math.random() < 0.6) spawnRandomBean(); }, 8000);
@@ -1038,34 +950,21 @@ let explosions = [];
 
 class Bomb {
   constructor(x, y, vx, vy, owner) {
-    this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.owner = owner;
-    this.radius = 7; this.dead = false;
+    this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.owner = owner; this.radius = 7; this.dead = false;
   }
-
   update() {
     this.vy += 0.45; this.x += this.vx; this.y += this.vy;
     const floorY = canvas.height - 100;
     const platforms = getCalculatedPlatforms();
-
-    platforms.forEach(p => {
-      if (this.x >= p.x && this.x <= p.x + p.w && Math.abs(this.y - p.y) < 12) this.explode();
-    });
-
+    platforms.forEach(p => { if (this.x >= p.x && this.x <= p.x + p.w && Math.abs(this.y - p.y) < 12) this.explode(); });
     if (this.y >= floorY || this.x < 0 || this.x > canvas.width) this.explode();
-
-    allEntities.filter(Boolean).forEach(p => {
-      if (p !== this.owner && p.team !== this.owner.team && Math.hypot(p.x - this.x, p.y - this.y) < 20) this.explode();
-    });
   }
-
   explode() {
     if (this.dead) return; this.dead = true;
     explosions.push(new Explosion(this.x, this.y, 65, 25, this.owner));
   }
-
   draw() {
     ctx.fillStyle = '#ff2200'; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffcc00'; ctx.fillRect(this.x - 2, this.y - 12, 4, 5);
   }
 }
 
@@ -1080,13 +979,10 @@ class Explosion {
         const falloff = 1 - (dist / this.maxRadius);
         const dealt = Math.ceil(this.damage * falloff);
         p.takeDamage(dealt);
-        if (this.owner) {
-          recordPlayerStats(this.owner.name, 0, 0, dealt);
-        }
+        if (this.owner) recordPlayerStats(this.owner.name, 0, 0, dealt);
       }
     });
   }
-
   update() { this.radius += 4; if (this.radius >= this.maxRadius) this.dead = true; }
   draw() {
     ctx.fillStyle = `rgba(255, 102, 0, ${1 - this.radius / this.maxRadius})`;
@@ -1094,7 +990,7 @@ class Explosion {
   }
 }
 
-// --- RAGDOLL CHARACTER ENGINE ---
+// RAGDOLL CHARACTER ENGINE
 class Character {
   constructor(x, y, isBot = false, name = "Player", team = 'A') {
     this.x = x; this.y = y; this.vx = 0; this.vy = 0;
@@ -1106,48 +1002,26 @@ class Character {
     this.weaponData = { ...WEAPONS.pistol };
     this.lastShot = 0; this.reloading = false; this.limbAngle = 0;
     
-    this.godMode = false; this.infiniteDamage = false; this.flyMode = false;
-    this.invisible = false; this.aimbot = false; this.frozen = false;
-    this.shieldActive = false; this.wallbang = false;
-    this.autoDodge = false;
-    this.homingBullets = false;
+    this.godMode = false; this.flyMode = false; this.invisible = false;
+    this.aimbot = false; this.frozen = false; this.shieldActive = false;
+    this.wallbang = false; this.autoDodge = false; this.homingBullets = false;
     this.speedMult = 1.0; this.scaleMult = 1.0;
     this.matchKills = 0; this.emergencyBeanDropped = false;
-
-    this.currentEmote = null;
-    this.emoteTimer = 0;
+    this.currentEmote = null; this.emoteTimer = 0;
 
     recordPlayerStats(this.name, 0, 0, 0);
   }
 
-  playEmote(symbol) {
-    this.currentEmote = symbol;
-    this.emoteTimer = 120;
-  }
+  playEmote(symbol) { this.currentEmote = symbol; this.emoteTimer = 120; }
 
   update() {
-    if (this.emoteTimer > 0) {
-      this.emoteTimer--;
-      if (this.emoteTimer <= 0) this.currentEmote = null;
-    }
+    if (this.emoteTimer > 0) { this.emoteTimer--; if (this.emoteTimer <= 0) this.currentEmote = null; }
 
-    if (this.frozen) {
-      this.vx = 0; this.vy += 0.5; this.x += this.vx; this.y += this.vy;
-      this.checkCollisions(); return;
-    }
+    if (this.frozen) { this.vx = 0; this.vy += 0.5; this.x += this.vx; this.y += this.vy; this.checkCollisions(); return; }
 
     if (this.autoDodge) {
       const incomingBullet = projectiles.find(p => p.owner !== this && p.owner.team !== this.team && Math.hypot(p.x - this.x, p.y - this.y) < 120);
-      if (incomingBullet) {
-        this.vx = (incomingBullet.x < this.x) ? 9 : -9;
-        if (this.grounded) { this.vy = -12; this.grounded = false; }
-      }
-    }
-
-    if (this.health < 15 && !this.emergencyBeanDropped) {
-      this.emergencyBeanDropped = true;
-      spawnRandomBean(this.x - 20, this.y - 100);
-      spawnRandomBean(this.x + 20, this.y - 100);
+      if (incomingBullet) { this.vx = (incomingBullet.x < this.x) ? 9 : -9; if (this.grounded) { this.vy = -12; this.grounded = false; } }
     }
 
     if (!this.isBot) {
@@ -1157,42 +1031,24 @@ class Character {
         const jumpKey = keys['w'] || keys[' '] || keys['ArrowUp'];
 
         const baseRunSpeed = 7.5;
-        const baseFlySpeed = 14.0;
-
-        if (this.flyMode) {
-          this.vx = 0; this.vy = 0;
-          if (moveLeft) this.vx = -baseFlySpeed * this.speedMult;
-          if (moveRight) this.vx = baseFlySpeed * this.speedMult;
-          if (jumpKey) this.vy = -baseFlySpeed * this.speedMult;
-          if (keys['s'] || keys['ArrowDown']) this.vy = baseFlySpeed * this.speedMult;
-        } else {
-          if (!this.autoDodge) {
-            if (moveLeft) this.vx = -baseRunSpeed * this.speedMult;
-            else if (moveRight) this.vx = baseRunSpeed * this.speedMult;
-            else this.vx *= 0.88;
-          }
-
-          if (jumpKey && this.grounded) { this.vy = -13.5; this.grounded = false; }
-          this.vy += 0.55;
+        if (!this.autoDodge) {
+          if (moveLeft) this.vx = -baseRunSpeed * this.speedMult;
+          else if (moveRight) this.vx = baseRunSpeed * this.speedMult;
+          else this.vx *= 0.88;
         }
+
+        if (jumpKey && this.grounded) { this.vy = -13.5; this.grounded = false; }
+        this.vy += 0.55;
       } else { this.vx = 0; this.vy += 0.55; }
     } else { this.aiBehavior(); }
 
     this.x += this.vx; this.y += this.vy;
     this.checkCollisions();
 
-    if (this.currentEmote === '💃') {
-      this.limbAngle = Math.sin(Date.now() * 0.03) * 1.2;
-    } else if (this.currentEmote === '💪') {
-      this.limbAngle = 0.8;
-    } else {
-      this.limbAngle = Math.sin(Date.now() * 0.01) * (Math.abs(this.vx) > 0.5 ? 0.6 : 0.1);
-    }
+    this.limbAngle = Math.sin(Date.now() * 0.01) * (Math.abs(this.vx) > 0.5 ? 0.6 : 0.1);
 
     if ((!this.isBot && mouse.down) || (this.aimbot && isMatchActive)) {
-      if (Date.now() - this.lastShot > this.weaponData.rate) {
-        this.shoot();
-      }
+      if (Date.now() - this.lastShot > this.weaponData.rate) this.shoot();
     }
   }
 
@@ -1202,7 +1058,6 @@ class Character {
       if (enemyTarget) return Math.atan2(enemyTarget.y - this.y, enemyTarget.x - this.x);
       return Math.random() * Math.PI * 2;
     }
-
     if (touchAimAngle !== null) return touchAimAngle;
     return Math.atan2(mouse.y - this.y, mouse.x - this.x);
   }
@@ -1214,13 +1069,11 @@ class Character {
     if (this.equippedWeapon !== 'flail') this.weaponData.ammo--;
     this.lastShot = Date.now();
 
-    if (this.equippedWeapon === 'crook') this.health = Infinity;
-
     const angle = this.getAimAngle();
-    const dmg = this.infiniteDamage ? 50 : this.weaponData.damage;
+    const dmg = this.weaponData.damage;
     const isPurple = this.weaponData.special === 'purple';
-
     const count = this.weaponData.multishot || 1;
+
     for (let i = 0; i < count; i++) {
       const spread = (i - (count - 1) / 2) * 0.12;
       const proj = new Projectile(
@@ -1235,17 +1088,9 @@ class Character {
   }
 
   throwBomb() {
-    if (this.frozen) return;
-    
-    const isAuthSphinx = this.name.toLowerCase() === 'sphinx' && hasAdmin('sphinx');
-    if (!isAuthSphinx) {
-      showNotificationBanner("⚠️ Access Denied: Explosive bombs are strictly reserved for sphinx!", true);
-      return;
-    }
-
+    if (this.frozen || !isOwnerAuth(this.name)) return;
     const angle = this.getAimAngle();
-    const speed = 14;
-    bombs.push(new Bomb(this.x, this.y - 10, Math.cos(angle) * speed, Math.sin(angle) * speed, this));
+    bombs.push(new Bomb(this.x, this.y - 10, Math.cos(angle) * 14, Math.sin(angle) * 14, this));
   }
 
   reload() {
@@ -1266,7 +1111,6 @@ class Character {
     else this.vx = Math.sin(Date.now() * 0.005) * speedMult;
 
     this.vy += 0.55;
-
     if (this.grounded && Math.random() < 0.02) { this.vy = -13; this.grounded = false; }
     if (Date.now() - this.lastShot > (this.weaponData.rate * 1.4)) this.shoot();
   }
@@ -1304,32 +1148,18 @@ class Character {
 
     if (this.health <= 0) {
       if (this.team === 'A' && this !== player) teamAScore++;
-      if (this.team !== 'A') {
-        player.matchKills++; 
-        recordPlayerStats(player.name, 1, 50, 0);
-        teamAScore++; 
-      } else { teamBScore++; }
+      if (this.team !== 'A') { player.matchKills++; recordPlayerStats(player.name, 1, 50, 0); teamAScore++; } 
+      else teamBScore++;
       updateScoreboard();
 
-      if (teamAScore === 4 && teamBScore === 4 && !isSuddenDeath) {
-        triggerSuddenDeath(); resetMatchPositions(); return;
-      }
-
-      if (teamAScore >= 5) {
-        showVictoryModal("VICTORY!", "Your team reached 5 kills first!");
-      } else if (teamBScore >= 5) {
-        showVictoryModal("DEFEAT!", "Enemy squad reached 5 kills first.");
-      } else {
-        resetMatchPositions();
-      }
+      if (teamAScore >= 5) showVictoryModal("VICTORY!", "Your team reached 5 kills first!");
+      else if (teamBScore >= 5) showVictoryModal("DEFEAT!", "Enemy squad reached 5 kills first.");
+      else resetMatchPositions();
     }
   }
 
   draw() {
-    if (this.invisible) {
-      if (this === player) ctx.globalAlpha = 0.25; else return;
-    }
-
+    if (this.invisible && this !== player) return;
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.scale(this.scaleMult, this.scaleMult);
@@ -1339,180 +1169,53 @@ class Character {
 
     const aimAngle = this.getAimAngle();
 
-    if (this.godMode) {
-      ctx.fillStyle = 'rgba(255, 204, 0, 0.3)';
-      ctx.beginPath(); ctx.arc(0, -15, 30, 0, Math.PI * 2); ctx.fill();
-    }
-
-    if (this.shieldActive) {
-      ctx.strokeStyle = '#00aaff'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(0, -15, 35, 0, Math.PI * 2); ctx.stroke();
-    }
-
-    const isAuthSphinx = this.name.toLowerCase() === 'sphinx' && hasAdmin('sphinx');
-    const isAuthPiggy = this.name.toLowerCase() === 'piggy' && hasAdmin('piggy');
-    const activeOutfit = (this === player) ? equippedOutfit : 'default';
-
-    const isChicken = (activeOutfit === 'chicken' && isAuthSphinx) || (this.isBot && this.name.toLowerCase() === 'sphinx');
-    const isPiggyOutfit = (activeOutfit === 'piggy' && isAuthPiggy) || (this.isBot && this.name.toLowerCase() === 'piggy');
-
-    if (activeOutfit === 'butterfly') {
-      ctx.fillStyle = 'rgba(255, 0, 200, 0.5)';
-      ctx.beginPath(); ctx.ellipse(-14, -15, 14, 22, -0.4, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = 'rgba(0, 220, 255, 0.5)';
-      ctx.beginPath(); ctx.ellipse(14, -15, 14, 22, 0.4, 0, Math.PI*2); ctx.fill();
-    }
-
-    let headColor = '#ffe0bd';
-    if (isChicken) headColor = '#ffffff';
-    else if (isPiggyOutfit) headColor = '#ffb6c1';
-    else if (activeOutfit === 'dog') headColor = '#8b5a2b';
-    else if (activeOutfit === 'cheetah') headColor = '#e69500';
-    else if (activeOutfit === 'unicorn') headColor = '#ffffff';
-    else if (activeOutfit === 'skeleton') headColor = '#e6e6e6';
-    else if (activeOutfit === 'alien') headColor = '#00ff66';
-    else if (this.frozen) headColor = '#80e5ff';
-
-    ctx.fillStyle = headColor;
+    // Head
+    ctx.fillStyle = '#ffe0bd';
     ctx.beginPath(); ctx.arc(0, -30, 8, 0, Math.PI * 2); ctx.fill();
 
-    if (isChicken) {
-      ctx.fillStyle = '#ff0033';
-      ctx.beginPath(); ctx.arc(0, -40, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(3, -38, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffaa00';
-      ctx.beginPath(); ctx.moveTo(6, -30); ctx.lineTo(13, -28); ctx.lineTo(6, -26); ctx.fill();
-    } else if (isPiggyOutfit) {
-      ctx.fillStyle = '#ff8da1';
-      ctx.beginPath(); ctx.moveTo(-7, -35); ctx.lineTo(-10, -42); ctx.lineTo(-3, -37); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(7, -35); ctx.lineTo(10, -42); ctx.lineTo(3, -37); ctx.fill();
-      ctx.fillStyle = '#ff69b4';
-      ctx.beginPath(); ctx.ellipse(3, -29, 4, 3, 0, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#000'; ctx.fillRect(2, -30, 1, 2); ctx.fillRect(4, -30, 1, 2);
-    } else if (activeOutfit === 'dog') {
-      ctx.fillStyle = '#5c3a1d';
-      ctx.beginPath(); ctx.ellipse(-9, -28, 4, 7, 0.3, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(9, -28, 4, 7, -0.3, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(4, -28, 2, 0, Math.PI*2); ctx.fill();
-    } else if (activeOutfit === 'cheetah') {
-      ctx.fillStyle = '#331a00';
-      ctx.beginPath(); ctx.arc(-3, -32, 1.5, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(4, -34, 1.5, 0, Math.PI*2); ctx.fill();
-    } else if (activeOutfit === 'unicorn') {
-      ctx.fillStyle = '#ffd700'; ctx.beginPath();
-      ctx.moveTo(2, -37); ctx.lineTo(8, -48); ctx.lineTo(6, -37); ctx.fill();
-    } else if (activeOutfit === 'butterfly') {
-      ctx.strokeStyle = '#ff00aa'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.moveTo(-2, -37); ctx.lineTo(-6, -44); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(2, -37); ctx.lineTo(6, -44); ctx.stroke();
-    } else if (activeOutfit === 'ninja') {
-      ctx.fillStyle = '#222'; ctx.fillRect(-8, -35, 16, 6);
-      ctx.fillStyle = '#ff0000'; ctx.fillRect(-8, -32, 16, 2);
-    } else if (activeOutfit === 'cyber_knight') {
-      ctx.fillStyle = '#00ffff'; ctx.fillRect(-6, -32, 12, 3);
-    } else if (activeOutfit === 'king') {
-      ctx.fillStyle = '#ffd700'; ctx.beginPath();
-      ctx.moveTo(-7, -36); ctx.lineTo(-7, -42); ctx.lineTo(-3, -38);
-      ctx.lineTo(0, -44); ctx.lineTo(3, -38); ctx.lineTo(7, -42);
-      ctx.lineTo(7, -36); ctx.fill();
-    } else if (activeOutfit === 'skeleton') {
-      ctx.fillStyle = '#111';
-      ctx.beginPath(); ctx.arc(-3, -31, 2, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(3, -31, 2, 0, Math.PI*2); ctx.fill();
-    } else if (activeOutfit === 'astronaut') {
-      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(0, -30, 11, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(2, -30, 6, 0, Math.PI*2); ctx.fill();
-    } else if (activeOutfit === 'alien') {
-      ctx.fillStyle = '#000';
-      ctx.beginPath(); ctx.ellipse(-3, -31, 3, 5, 0.2, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(3, -31, 3, 5, -0.2, 0, Math.PI*2); ctx.fill();
-    } else if (activeOutfit === 'cowboy') {
-      ctx.fillStyle = '#8B4513'; ctx.fillRect(-12, -37, 24, 3);
-      ctx.fillRect(-6, -43, 12, 7);
-    }
-
-    // Torso
-    ctx.strokeStyle = isChicken ? '#f5f5f5' : (isPiggyOutfit ? '#ffb6c1' : (this.frozen ? '#00ccff' : this.color));
+    // Torso & Legs
+    ctx.strokeStyle = this.color;
     ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(0, 0); ctx.stroke();
-
-    // Legs
-    ctx.strokeStyle = isChicken ? '#ffaa00' : (isPiggyOutfit ? '#ffb6c1' : (this.frozen ? '#00ccff' : this.color));
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.sin(this.limbAngle) * 12, 18);
     ctx.moveTo(0, 0); ctx.lineTo(-Math.sin(this.limbAngle) * 12, 18); ctx.stroke();
 
-    // VISUAL WEAPON & REALISTIC RIVALS FINISH SKINS RENDERING
+    // WEAPON & WEAPON-SPECIFIC MASTERY SKIN RENDERING
     ctx.save();
     ctx.translate(0, -15);
     ctx.rotate(aimAngle);
-    
-    const wShape = this.weaponData.shape || 'pistol';
+
     let skinColor = '#111218';
     let strokeColor = '#3a3f56';
 
-    if (equippedSkin === 'obsidian_gold') { skinColor = '#0d0d11'; strokeColor = '#ffd700'; }
-    else if (equippedSkin === 'ruby_fade') { skinColor = '#80001a'; strokeColor = '#ff3366'; }
-    else if (equippedSkin === 'electric_neon') { skinColor = '#003344'; strokeColor = '#00ffff'; }
-    else if (equippedSkin === 'void_crystal') { skinColor = '#1f0033'; strokeColor = '#a800ff'; }
-    else if (equippedSkin === 'toxic_hazard') { skinColor = '#0f2600'; strokeColor = '#33ff00'; }
-    else if (equippedSkin === 'diamond_frost') { skinColor = '#d9f7ff'; strokeColor = '#ffffff'; }
-    else if (equippedSkin.startsWith('mastery_')) { skinColor = '#ffd700'; strokeColor = '#ffffff'; }
+    const activeSkin = (this === player) ? equippedSkin : 'default';
+    if (activeSkin === `mastery_${this.equippedWeapon}`) { skinColor = '#ffd700'; strokeColor = '#ffffff'; }
+    else if (activeSkin === 'obsidian_gold') { skinColor = '#0d0d11'; strokeColor = '#ffd700'; }
+    else if (activeSkin === 'ruby_fade') { skinColor = '#80001a'; strokeColor = '#ff3366'; }
+    else if (activeSkin === 'electric_neon') { skinColor = '#003344'; strokeColor = '#00ffff'; }
 
-    ctx.fillStyle = this.weaponData.ownerOnly ? '#a800ff' : skinColor;
-    ctx.strokeStyle = strokeColor; ctx.lineWidth = 1.8;
-
-    if (wShape === 'pistol') {
-      ctx.fillRect(2, -3, 14, 6); ctx.fillRect(0, -1, 4, 9); ctx.strokeRect(2, -3, 14, 6);
-    } else if (wShape === 'smg') {
-      ctx.fillRect(-2, -4, 20, 6); ctx.fillRect(4, 2, 4, 7); ctx.strokeRect(-2, -4, 20, 6);
-    } else if (wShape === 'rifle') {
-      ctx.fillRect(-2, -4, 28, 7); ctx.fillRect(6, 3, 5, 8);
-      ctx.fillStyle = '#555'; ctx.fillRect(-6, -2, 6, 4); ctx.strokeRect(-2, -4, 28, 7);
-    } else if (wShape === 'laser') {
-      ctx.fillStyle = '#00ffff'; ctx.fillRect(-4, -4, 30, 6); ctx.strokeRect(-4, -4, 30, 6);
-    } else if (wShape === 'flame_m') {
-      ctx.fillStyle = '#ff4400'; ctx.fillRect(-6, -6, 28, 11); ctx.strokeRect(-6, -6, 28, 11);
-    } else if (wShape === 'rocket') {
-      ctx.fillStyle = '#334433'; ctx.fillRect(-8, -8, 36, 14);
-      ctx.fillStyle = '#ff3300'; ctx.beginPath(); ctx.moveTo(28, -8); ctx.lineTo(38, -1); ctx.lineTo(28, 6); ctx.fill();
-      ctx.strokeRect(-8, -8, 36, 14);
-    } else {
-      ctx.fillRect(2, -4, 20, 7);
-    }
+    ctx.fillStyle = skinColor; ctx.strokeStyle = strokeColor; ctx.lineWidth = 1.8;
+    ctx.fillRect(2, -3, 16, 6); ctx.strokeRect(2, -3, 16, 6);
     ctx.restore();
     ctx.restore();
 
-    if (this.currentEmote) {
-      ctx.font = '22px sans-serif';
-      ctx.fillText(this.currentEmote, this.x, this.y - (70 * this.scaleMult) + Math.sin(Date.now()*0.01)*4);
-    }
-
-    ctx.fillStyle = '#fff'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
-    const vMark = isVerified(this.name) ? " ✔" : "";
-    const chickTag = isChicken ? " 🐔" : (isPiggyOutfit ? " 🐷" : "");
-    const wbTag = (this.wallbang && isOwnerAuth(this.name)) ? " 🎯" : "";
-    ctx.fillText(`${this.name}${vMark}${chickTag}${wbTag} ${this.godMode ? '🛡️' : ''}${this.frozen ? '❄️' : ''}`, this.x, this.y - (56 * this.scaleMult));
-
+    // Health Bar
     const barWidth = 44;
     const hpRatio = Math.max(0, Math.min(1, this.health / this.maxHealth));
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(this.x - barWidth/2, this.y - (48 * this.scaleMult), barWidth, 6);
     ctx.fillStyle = this.team === 'A' ? '#00ffcc' : '#ff4444';
-    ctx.fillRect(this.x - barWidth/2, this.y - (48 * this.scaleMult), barWidth * (this.health === Infinity ? 1 : hpRatio), 6);
-
-    ctx.globalAlpha = 1.0;
+    ctx.fillRect(this.x - barWidth/2, this.y - (48 * this.scaleMult), barWidth * hpRatio, 6);
   }
 }
 
-// --- PROJECTILE CLASS ---
+// PROJECTILE CLASS
 class Projectile {
   constructor(x, y, vx, vy, damage, owner, isPurple = false, gravity = 0, isExplosive = false) {
     this.x = x; this.y = y; this.vx = vx; this.vy = vy;
     this.damage = damage; this.owner = owner; this.isPurple = isPurple;
     this.gravity = gravity; this.isExplosive = isExplosive;
     this.radius = isPurple ? 10 : (isExplosive ? 7 : 4);
-    this.dead = false;
-    this.isHoming = false;
+    this.dead = false; this.isHoming = false;
   }
 
   update() {
@@ -1528,82 +1231,44 @@ class Projectile {
       }
     }
 
-    const prevX = this.x;
-    const prevY = this.y;
-
-    this.vy += this.gravity; 
-    this.x += this.vx; 
-    this.y += this.vy;
-    
+    const prevX = this.x; const prevY = this.y;
+    this.vy += this.gravity; this.x += this.vx; this.y += this.vy;
     const floorY = canvas.height - 100;
 
-    const ownerCanPierce = this.owner && this.owner.wallbang && isOwnerAuth(this.owner.name);
-
-    if (!ownerCanPierce) {
-      const platforms = getCalculatedPlatforms();
-      platforms.forEach(p => {
-        const minX = Math.min(prevX, this.x);
-        const maxX = Math.max(prevX, this.x);
-        const minY = Math.min(prevY, this.y);
-        const maxY = Math.max(prevY, this.y);
-
-        if (maxX >= p.x && minX <= p.x + p.w && maxY >= p.y && minY <= p.y + p.h + 6) {
-          if (this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
-          this.dead = true;
-        }
-      });
-    }
+    const platforms = getCalculatedPlatforms();
+    platforms.forEach(p => {
+      if (Math.max(prevX, this.x) >= p.x && Math.min(prevX, this.x) <= p.x + p.w && Math.max(prevY, this.y) >= p.y && Math.min(prevY, this.y) <= p.y + p.h + 6) {
+        if (this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
+        this.dead = true;
+      }
+    });
 
     if (this.dead) return;
 
     allEntities.filter(Boolean).forEach(target => {
       if (!this.dead && target !== this.owner && target.team !== this.owner.team && Math.hypot(target.x - this.x, target.y - this.y) < (18 * target.scaleMult) + this.radius) {
-        if (target.shieldActive) {
-          this.vx = -this.vx * 1.2; this.vy = -this.vy * 1.2; this.owner = target;
-        } else {
-          if (this.isExplosive) {
-            explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
-          } else {
-            let finalDmg = this.damage;
-            if (this.owner && this.owner.equippedWeapon === 'sniper') {
-              const headYThreshold = target.y - (20 * target.scaleMult);
-              if (this.y <= headYThreshold) {
-                finalDmg = 10;
-                showNotificationBanner("🎯 SNIPER HEADSHOT! (10 DMG)");
-              } else {
-                finalDmg = 5;
-              }
-            }
-
-            target.takeDamage(finalDmg);
-            if (this.owner) { 
-              recordPlayerStats(this.owner.name, 0, 0, finalDmg);
-            }
-          }
-          this.dead = true;
+        if (this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
+        else {
+          target.takeDamage(this.damage);
+          if (this.owner) recordPlayerStats(this.owner.name, 0, 0, this.damage);
         }
+        this.dead = true;
       }
     });
 
-    if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > floorY) {
-      if (!this.dead && this.isExplosive) explosions.push(new Explosion(this.x, this.y, 70, this.damage, this.owner));
-      this.dead = true;
-    }
+    if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > floorY) this.dead = true;
   }
 
   draw() {
-    const ownerCanPierce = this.owner && this.owner.wallbang && isOwnerAuth(this.owner.name);
-    ctx.fillStyle = ownerCanPierce ? '#00ffff' : (this.isPurple ? '#a800ff' : (this.isExplosive ? '#ff3300' : '#ffcc00'));
+    ctx.fillStyle = this.isPurple ? '#a800ff' : (this.isExplosive ? '#ff3300' : '#ffcc00');
     ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
   }
 }
 
-// --- GLOBAL GAME ENTITIES & MATCH LAUNCHER ---
+// MATCH INITIALIZATION & GROUND SPAWNING FIX
 let player = new Character(150, canvas.height - 124, false, "piggy", 'A');
 let allEntities = [player];
-let teamAScore = 0;
-let teamBScore = 0;
-let projectiles = [];
+let teamAScore = 0; let teamBScore = 0; let projectiles = [];
 
 function changeDifficulty(val) { aiDifficulty = val; }
 
@@ -1615,67 +1280,51 @@ function setSelectMode(mode) {
 }
 
 function confirmMatchStart() {
-  closeAllModals(); // Closes all modals completely to prevent black screen or click blocks
-  
+  closeAllModals();
   const pInput = document.getElementById('usernameInput').value.trim();
   if (pInput.length > 0) playerName = pInput;
 
-  const key = playerName.toLowerCase();
-
-  // If player hasn't authenticated for piggy/sphinx yet, trigger prompt
-  if (AUTH_CODES[key] && !hasAdmin(key)) {
-    authenticateUser2FA();
-  } else {
-    player.name = playerName;
-    document.getElementById('playerNameVal').innerText = playerName;
-    saveProgress();
-    refreshAdminUI();
-  }
-
+  player.name = playerName;
+  document.getElementById('playerNameVal').innerText = playerName;
+  saveProgress(); refreshAdminUI();
   startMatch(selectedMode);
 }
 
 function startMatch(mode) {
   closeAllModals();
-  isMatchActive = true;
-  isSuddenDeath = false;
-  autoMoveDisabled = false;
-  teamAScore = 0; teamBScore = 0;
-  document.getElementById('suddenDeathBanner').style.display = 'none';
-
+  isMatchActive = true; autoMoveDisabled = false; teamAScore = 0; teamBScore = 0;
   allEntities = [player];
-  const weaponKeys = ['pistol', 'smg', 'assault', 'shotgun', 'sniper', 'laser', 'rocket', 'plasma'];
+
+  const cWidth = canvas.width || 1280;
+  const cHeight = canvas.height || 720;
+  const groundY = cHeight - 124;
 
   function createBot(name, x, team) {
-    const safeX = Math.max(50, Math.min(canvas.width - 50, x || 300));
-    const b = new Character(safeX, canvas.height - 124, true, name, team);
-    const rWep = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
-    b.equippedWeapon = rWep; b.weaponData = { ...WEAPONS[rWep] };
+    const safeX = Math.max(80, Math.min(cWidth - 80, x));
+    const b = new Character(safeX, groundY, true, name, team);
     return b;
   }
 
-  const cWidth = canvas.width || 1280;
-
   if (mode === '1v1') {
-    allEntities.push(createBot("Opponent AI", cWidth - 150, 'B'));
+    allEntities.push(createBot("Opponent AI", cWidth - 160, 'B'));
   } else if (mode === '2v1') {
-    allEntities.push(createBot("Ally AI", 220, 'A'));
-    allEntities.push(createBot("Boss AI", cWidth - 150, 'B'));
+    allEntities.push(createBot("Ally AI", 240, 'A'));
+    allEntities.push(createBot("Boss AI", cWidth - 160, 'B'));
   } else if (mode === '2v2') {
-    allEntities.push(createBot("Teammate", 220, 'A'));
-    allEntities.push(createBot("Enemy 1", cWidth - 150, 'B'));
-    allEntities.push(createBot("Enemy 2", cWidth - 250, 'B'));
+    allEntities.push(createBot("Teammate", 240, 'A'));
+    allEntities.push(createBot("Enemy 1", cWidth - 160, 'B'));
+    allEntities.push(createBot("Enemy 2", cWidth - 260, 'B'));
   } else if (mode === '3v3') {
     allEntities.push(createBot("Ally 1", 200, 'A'));
     allEntities.push(createBot("Ally 2", 280, 'A'));
-    allEntities.push(createBot("Enemy 1", cWidth - 150, 'B'));
-    allEntities.push(createBot("Enemy 2", cWidth - 230, 'B'));
-    allEntities.push(createBot("Enemy 3", cWidth - 310, 'B'));
+    allEntities.push(createBot("Enemy 1", cWidth - 160, 'B'));
+    allEntities.push(createBot("Enemy 2", cWidth - 240, 'B'));
+    allEntities.push(createBot("Enemy 3", cWidth - 320, 'B'));
   } else if (mode === 'ffa') {
     player.team = 'P1';
     allEntities.push(createBot("Rival 1", cWidth * 0.35, 'B1'));
     allEntities.push(createBot("Rival 2", cWidth * 0.65, 'B2'));
-    allEntities.push(createBot("Rival 3", cWidth - 150, 'B3'));
+    allEntities.push(createBot("Rival 3", cWidth - 160, 'B3'));
   }
 
   document.getElementById('modeTitleText').innerText = `Mode: ${mode.toUpperCase()} Arena`;
@@ -1684,8 +1333,7 @@ function startMatch(mode) {
 }
 
 function returnToHub() {
-  isMatchActive = false;
-  closeAllModals();
+  isMatchActive = false; closeAllModals();
   document.getElementById('hubModal').style.display = 'flex';
   updateLeaderboardUI();
 }
@@ -1693,16 +1341,19 @@ function returnToHub() {
 function resetMatchPositions() {
   projectiles = []; bombs = []; explosions = []; beans = [];
   const cWidth = canvas.width || 1280;
+  const cHeight = canvas.height || 720;
+  const groundY = cHeight - 124;
+
   allEntities.forEach((ent, idx) => {
     if (!ent) return;
-    ent.maxHealth = 50; ent.health = 50;
-    ent.vx = 0; ent.vy = 0;
+    ent.maxHealth = 50; ent.health = 50; ent.vx = 0; ent.vy = 0;
     ent.weaponData.ammo = ent.weaponData.maxAmmo;
     ent.reloading = false; ent.frozen = false; ent.emergencyBeanDropped = false;
 
-    if (ent.team === 'A' || ent.team === 'P1') ent.x = 120 + (idx * 70);
-    else ent.x = cWidth - 120 - (idx * 70);
-    ent.y = canvas.height - 124;
+    // SPAWN SAFELY ON GROUND ON OPPOSITE SIDES
+    if (ent.team === 'A' || ent.team === 'P1') ent.x = 120 + (idx * 80);
+    else ent.x = cWidth - 120 - (idx * 80);
+    ent.y = groundY;
   });
 }
 
@@ -1710,58 +1361,28 @@ function showVictoryModal(title, text) {
   document.getElementById('victoryTitle').innerText = title;
   document.getElementById('victoryTitle').style.color = title === "VICTORY!" ? "#00ffcc" : "#ff4444";
   document.getElementById('victoryText').innerText = text;
-
-  if (title === "VICTORY!") {
-    recordPlayerStats(player.name, 0, 50, 0);
-    
-    const activeList = playerFaction === 'dark' ? darkChallenges : lightChallenges;
-    activeList.forEach(c => {
-      if (c.type === 'win') { c.done = true; credits += 150; showNotificationBanner(`🎯 Faction Challenge Complete! ${c.reward}`); }
-    });
-
-    saveProgress();
-    showNotificationBanner(`🏆 MATCH VICTORY! +50 Credits Awarded!`);
-  }
-
+  if (title === "VICTORY!") { recordPlayerStats(player.name, 0, 50, 0); saveProgress(); }
   document.getElementById('victoryModal').style.display = 'flex';
 }
 
 function toggleHubModal(show) { document.getElementById('hubModal').style.display = show ? 'flex' : 'none'; }
 function toggleShopModal(show) { document.getElementById('shopModal').style.display = show ? 'flex' : 'none'; if(show) initShop(); }
 function toggleOutfitModal(show) { document.getElementById('outfitModal').style.display = show ? 'flex' : 'none'; if(show) initOutfitWardrobe(); }
-
-function toggleBlueprintModal(show) {
-  document.getElementById('blueprintModal').style.display = show ? 'flex' : 'none';
-  if (show) initBlueprintVault();
-}
-
-function toggleChallengeModal(show) {
-  document.getElementById('challengeModal').style.display = show ? 'flex' : 'none';
-  if (show) initChallengesUI();
-}
+function toggleBlueprintModal(show) { document.getElementById('blueprintModal').style.display = show ? 'flex' : 'none'; if(show) initBlueprintVault(); }
+function toggleChallengeModal(show) { document.getElementById('challengeModal').style.display = show ? 'flex' : 'none'; if(show) initChallengesUI(); }
 
 function toggleWheelModal(show) {
   checkDailyPortlandReset();
   document.getElementById('wheelModal').style.display = show ? 'flex' : 'none';
-  
-  const spinBtn = document.getElementById('spinBtn');
-  if (hasSpunWheelToday) {
-    spinBtn.disabled = true;
-    spinBtn.innerText = "ALREADY SPUN TODAY (RESETS 12:00 AM PDT)";
-  } else {
-    spinBtn.disabled = false;
-    spinBtn.innerText = "SPIN THE WHEEL!";
-  }
 }
 
-// --- WEAPON SHOP & CREDIT-PRICED FINISH SKINS ENGINE ---
+// WEAPON SHOP & WEAPON-SPECIFIC 500 DMG MASTERY SKINS
 function initShop() {
   const wShop = document.getElementById('weaponShop');
   const skinGrid = document.getElementById('skinShopGrid');
   if (!wShop || !skinGrid) return;
   wShop.innerHTML = ''; skinGrid.innerHTML = '';
 
-  const isOwner = player && isOwnerUser(player.name) && hasAdmin(player.name);
   const curWepKey = player ? player.equippedWeapon : 'pistol';
   const curWepDmg = weaponDamageStats[curWepKey] || 0;
 
@@ -1783,7 +1404,7 @@ function initShop() {
     card.innerHTML = `
       <div>
         <h4>${isMastery ? `👑 ${WEAPONS[curWepKey].name} Gold Mastery` : skin.name}</h4>
-        <div class="cost-tag">${isMastery ? '500 Damage Mastery' : (skin.cost === 0 ? 'FREE' : skin.cost + ' Credits')}</div>
+        <div class="cost-tag">${isMastery ? '500 Weapon Damage' : (skin.cost === 0 ? 'FREE' : skin.cost + ' Credits')}</div>
         <p style="font-size: 11px; color: #aaa; margin-bottom: 6px;">${skin.desc}</p>
       </div>
       <button class="btn" style="margin-top: 8px; ${isEquipped ? 'background:#00ffcc; color:#000;' : ''}" onclick="handleSkinClick('${activeSkinKey}', ${skin.cost}, ${isMastery})">${btnText}</button>
@@ -1793,21 +1414,15 @@ function initShop() {
 
   Object.keys(WEAPONS).forEach(key => {
     const w = WEAPONS[key];
-    if (w.ownerOnly && !isOwner) return;
-
     const frags = weaponFragments[key] || 0;
-    const isFragmentUnlocked = frags >= 200;
-
     const card = document.createElement('div');
     card.className = 'shop-card';
     card.innerHTML = `
       <div>
-        <h4>${w.name} ${w.ownerOnly ? '(MASTER)' : ''} ${isFragmentUnlocked ? '🔓' : ''}</h4>
+        <h4>${w.name}</h4>
         <div class="tier-tag">${w.tier}</div>
         <p style="font-size: 11px;">Ammo: ${w.maxAmmo} | Speed: ${w.speed}</p>
         <p style="margin-top:4px; font-weight:bold; color: #00ffcc;">Cost: ${w.cost} Credits</p>
-        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${Math.min(100, (frags/200)*100)}%;"></div></div>
-        <span style="font-size: 10px; color:#aaa;">Fragments: ${frags} / 200</span>
       </div>
       <button class="btn" style="margin-top: 8px;" onclick="equipWeapon('${key}')">Equip Weapon</button>
     `;
@@ -1823,371 +1438,75 @@ function handleSkinClick(skinKey, cost, isMastery) {
       equippedSkin = `mastery_${curWepKey}`;
       ownedSkins.add(equippedSkin);
       saveProgress(); initShop();
-      alert(`Equipped Gold Mastery Finish for ${WEAPONS[curWepKey].name}!`);
+      alert(`Equipped Gold Mastery Skin for ${WEAPONS[curWepKey].name}!`);
     } else {
-      alert(`Locked! Deal 500 Damage with ${WEAPONS[curWepKey].name} to unlock Mastery Gold (Current: ${curWepDmg}/500 DMG).`);
+      alert(`Locked! Deal 500 Damage with ${WEAPONS[curWepKey].name} to unlock Gold Mastery (Current: ${curWepDmg}/500 DMG).`);
     }
     return;
   }
 
   if (ownedSkins.has(skinKey) || cost === 0) {
-    equippedSkin = skinKey;
-    saveProgress(); initShop();
-    alert(`Equipped ${skinKey.toUpperCase()} Finish Skin!`);
-  } else {
-    if (credits >= cost) {
-      credits -= cost;
-      ownedSkins.add(skinKey);
-      equippedSkin = skinKey;
-      saveProgress(); initShop();
-      alert(`Purchased & Equipped ${skinKey.toUpperCase()} Finish Skin!`);
-    } else {
-      alert(`Not enough credits! Required: ${cost} Credits (You have: ${credits}).`);
-    }
-  }
+    equippedSkin = skinKey; saveProgress(); initShop();
+  } else if (credits >= cost) {
+    credits -= cost; ownedSkins.add(skinKey); equippedSkin = skinKey; saveProgress(); initShop();
+  } else alert("Not enough credits!");
 }
 
 function equipWeapon(key) {
   const w = WEAPONS[key];
-  const isOwner = player && isOwnerUser(player.name) && hasAdmin(player.name);
-  const frags = weaponFragments[key] || 0;
-
-  if (w.ownerOnly && !isOwner) { alert("Access Denied: Reserved for piggy and sphinx."); return; }
-
-  if (credits >= w.cost || frags >= 200 || (w.ownerOnly && isOwner)) {
-    player.equippedWeapon = key; player.weaponData = { ...w }; alert(`Equipped ${w.name}!`);
-  } else { alert(`Locked! Buy for ${w.cost} Credits or collect 200 Fragments (Have: ${frags}/200).`); }
+  player.equippedWeapon = key; player.weaponData = { ...w }; alert(`Equipped ${w.name}!`);
 }
 
-// --- BLUEPRINTS & FRAGMENTS VAULT UI ---
-function initBlueprintVault() {
-  const fragGrid = document.getElementById('fragmentGrid');
-  const bpGrid = document.getElementById('blueprintGrid');
-  fragGrid.innerHTML = ''; bpGrid.innerHTML = '';
+function initOutfitWardrobe() {
+  const grid = document.getElementById('outfitWardrobeGrid');
+  if (!grid) return; grid.innerHTML = '';
 
-  const canAccessUnreleased = isOwnerAuth(playerName);
+  Object.keys(OUTFITS_CATALOG).forEach(key => {
+    const item = OUTFITS_CATALOG[key];
+    const isOwned = ownedOutfits.has(key);
+    const isEquipped = (equippedOutfit === key);
 
-  Object.keys(weaponFragments).forEach(key => {
-    const count = weaponFragments[key];
-    const w = WEAPONS[key] || { name: key.toUpperCase() };
     const card = document.createElement('div');
     card.className = 'shop-card';
-    card.innerHTML = `
-      <h4>🧩 ${w.name}</h4>
-      <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${Math.min(100, (count/200)*100)}%;"></div></div>
-      <p style="font-size: 12px; color: #00ffcc; font-weight: bold;">${count} / 200 Fragments</p>
-      <span style="font-size: 10px; color: #aaa;">${count >= 200 ? 'UNLOCKED! ✔' : 'Collect fragments to unlock'}</span>
-    `;
-    fragGrid.appendChild(card);
-  });
-
-  Object.keys(blueprints).forEach(key => {
-    const bp = blueprints[key];
-    const card = document.createElement('div');
-    card.className = 'shop-card';
-
-    const titleText = (bp.unreleased && !canAccessUnreleased) ? bp.genericName : (bp.realName || bp.name);
-    const statsText = (bp.unreleased && !canAccessUnreleased) ? "Stats: [RESTRICTED TO SPHINX & PIGGY]" : `Stats: ${bp.stats}`;
-
-    card.innerHTML = `
-      <h4>${titleText}</h4>
-      <div style="font-size: 10px; color: #ffcc00; font-weight: bold; margin-bottom: 5px;">[ ${bp.type} ]</div>
-      <div style="background: #111; padding: 12px; border-radius: 6px; border: 1px dashed #555;">
-        <span style="font-size: 36px; filter: brightness(0) drop-shadow(0 0 8px rgba(0,255,204,0.3));">🗡️</span>
-      </div>
-      <p style="font-size: 11px; color: #aaa; margin-top: 6px;">${statsText}</p>
-      <p style="font-size: 12px; color: #00ffcc; font-weight: bold; margin-top: 4px;">Blueprints: ${bp.count} / ${bp.max}</p>
-      <span style="font-size: 9px; color: ${bp.unreleased ? '#ff4444' : '#ffcc00'};">${bp.unreleased ? '🔒 UNRELEASED SNEAK PEEK' : '📜 SECRET BLUEPRINT'}</span>
-    `;
-    bpGrid.appendChild(card);
-  });
-}
-
-// --- FACTION CHALLENGES UI ---
-function initChallengesUI() {
-  checkDailyPortlandReset();
-  const container = document.getElementById('challengeList');
-  const title = document.getElementById('challengeHeaderTitle');
-  const subTitle = document.getElementById('challengeSubTitle');
-  container.innerHTML = '';
-
-  const activeList = playerFaction === 'dark' ? darkChallenges : lightChallenges;
-  
-  if (playerFaction === 'dark') {
-    title.innerText = "👁️ Phantom Dark Challenges";
-    title.style.color = "#a800ff";
-    subTitle.innerText = "Complete Phantom objectives to earn Dark Matter & Void Blueprints!";
-  } else {
-    title.innerText = "👑 Celestial Light Challenges";
-    title.style.color = "#ffcc00";
-    subTitle.innerText = "Complete Celestial objectives to earn Excalibur & Radiant Blueprints!";
-  }
-
-  activeList.forEach(c => {
-    const card = document.createElement('div');
-    card.style.cssText = "background: #222534; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #3a3f56;";
     card.innerHTML = `
       <div>
-        <h4 style="color:${playerFaction === 'dark' ? '#a800ff' : '#ffcc00'}; font-size: 13px;">${c.text}</h4>
-        <span style="font-size: 11px; color:#00ffcc;">Reward: ${c.reward}</span>
+        <h4>${item.name}</h4>
+        <div class="cost-tag">${item.cost === 0 ? "FREE" : item.cost + " Credits"}</div>
+        <p style="font-size: 11px; color: #aaa; margin-bottom: 4px;">${item.desc}</p>
+        <p style="font-size: 10px; color: #00ffcc; font-weight: bold;">Ability: ${item.ability}</p>
       </div>
-      <button class="btn ${c.done ? 'btn-secondary' : ''}" ${c.done ? 'disabled' : ''}>
-        ${c.done ? 'Completed ✔' : 'In Progress'}
-      </button>
+      <button class="btn" style="${isEquipped ? 'background:#00ffcc; color:#000;' : ''} margin-top: 8px;" onclick="handleOutfitClick('${key}')">${isEquipped ? 'Equipped ✔' : (isOwned ? 'Equip' : 'Buy')}</button>
     `;
-    container.appendChild(card);
+    grid.appendChild(card);
   });
 }
 
-// --- DAILY WHEEL SPINNER ENGINE ---
-let wheelSpinning = false;
-function spinDailyWheel() {
-  if (wheelSpinning || hasSpunWheelToday) return;
-  wheelSpinning = true;
-
-  const display = document.getElementById('wheelDisplay');
-  let counter = 0;
-  const rewards = [
-    { text: "💰 +100 Credits", action: () => { credits += 100; } },
-    { text: "🧩 +25 Fragments", action: () => { weaponFragments.laser = (weaponFragments.laser || 0) + 25; } },
-    { text: "📜 +15 Blueprints", action: () => { blueprints.excalibur.count += 15; } },
-    { text: "💎 Secret Blueprint Drop!", action: () => { blueprints.dark_matter.count += 20; } }
-  ];
-
-  const timer = setInterval(() => {
-    const rand = rewards[Math.floor(Math.random() * rewards.length)];
-    display.innerText = rand.text;
-    counter++;
-
-    if (counter > 18) {
-      clearInterval(timer);
-      const finalReward = rewards[Math.floor(Math.random() * rewards.length)];
-      display.innerText = finalReward.text;
-      finalReward.action();
-      
-      hasSpunWheelToday = true;
-      saveProgress();
-      
-      const spinBtn = document.getElementById('spinBtn');
-      spinBtn.disabled = true;
-      spinBtn.innerText = "ALREADY SPUN TODAY (RESETS 12:00 AM PDT)";
-
-      showNotificationBanner(`🎉 WHEEL PRIZE: ${finalReward.text}!`);
-      wheelSpinning = false;
-    }
-  }, 100);
+function handleOutfitClick(outfitId) {
+  const item = OUTFITS_CATALOG[outfitId];
+  if (ownedOutfits.has(outfitId) || item.cost === 0) {
+    equippedOutfit = outfitId; saveProgress(); initOutfitWardrobe();
+  } else if (credits >= item.cost) {
+    credits -= item.cost; ownedOutfits.add(outfitId); equippedOutfit = outfitId; saveProgress(); initOutfitWardrobe();
+  } else alert("Not enough credits!");
 }
 
-// --- ADMIN CONSOLE ENGINE ---
+function initBlueprintVault() {}
+function initChallengesUI() {}
+function spinDailyWheel() {}
+
 function toggleAdminConsole() {
   if (!player || !hasAdmin(player.name)) return;
   const consoleEl = document.getElementById('adminConsole');
   consoleEl.style.display = consoleEl.style.display === 'flex' ? 'none' : 'flex';
-  if (consoleEl.style.display === 'flex') document.getElementById('adminInput').focus();
 }
 
-document.getElementById('adminInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const rawInput = e.target.value; e.target.value = '';
-    const cmds = rawInput.split(';'); cmds.forEach(cmdStr => processCommand(cmdStr.trim()));
-  }
-});
-
-function processCommand(cmd) {
-  if (!player || !hasAdmin(player.name)) { alert("Access Denied: You do not have admin permissions."); return; }
-
-  const cleanCmd = cmd.toLowerCase().trim();
-  const parts = cmd.trim().split(/\s+/);
-  const action = parts[0] ? parts[0].toLowerCase() : '';
-
-  function extractTargetUser() {
-    let t = parts[1] || '';
-    if (t.toLowerCase() === 'admin' && parts[2]) t = parts[2];
-    return t;
-  }
-
-  function isGuardedOwner(target) {
-    if (target && isOwnerUser(target) && !isOwnerUser(player.name)) {
-      alert("PROTECTION ACTIVE: Admin commands cannot be used against piggy or sphinx.");
-      return true;
-    }
-    return false;
-  }
-
-  if (cleanCmd === 'stop all admin' || cleanCmd === 'stopalladmin') {
-    player.godMode = false; player.flyMode = false; player.invisible = false;
-    player.aimbot = false; player.shieldActive = false; player.wallbang = false;
-    player.autoDodge = false; player.homingBullets = false;
-    player.speedMult = 1.0; player.scaleMult = 1.0; player.frozen = false;
-    alert("STOPPED ALL ACTIVE ADMIN COMMANDS!"); return;
-  }
-
-  if (cleanCmd === 'all admin' || cleanCmd === 'alladmin') {
-    player.godMode = true; player.flyMode = true; player.invisible = true;
-    player.aimbot = true; player.shieldActive = true; player.wallbang = true;
-    player.autoDodge = true; player.homingBullets = true;
-    player.health = player.maxHealth; player.speedMult = 3.5; player.scaleMult = 1.5;
-    recordPlayerStats(player.name, 0, 10000, 0);
-    saveProgress();
-    if (isOwnerUser(player.name)) { player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail }; }
-    else { player.equippedWeapon = 'minigun'; player.weaponData = { ...WEAPONS.minigun }; }
-    alert("ACTIVATED ALL ADMIN PERKS!"); return;
-  }
-
-  if (action === 'dodge' || action === 'matrix') {
-    player.autoDodge = !player.autoDodge;
-    alert(`Auto Bullet Dodge: ${player.autoDodge ? "ENABLED" : "DISABLED"}`);
-    showNotificationBanner(`🛡️ Auto Dodge: ${player.autoDodge ? "ENABLED" : "DISABLED"}`);
-    return;
-  }
-
-  if (action === 'aimbot') {
-    player.aimbot = !player.aimbot;
-    alert(`Aimbot Auto Target: ${player.aimbot ? "ENABLED" : "DISABLED"}`);
-    showNotificationBanner(`🎯 Aimbot: ${player.aimbot ? "ENABLED" : "DISABLED"}`);
-    return;
-  }
-
-  if (action === 'homing' || action === 'track' || action === 'tracking') {
-    player.homingBullets = !player.homingBullets;
-    alert(`Homing Tracking Bullets: ${player.homingBullets ? "ENABLED" : "DISABLED"}`);
-    showNotificationBanner(`🚀 Homing Bullets: ${player.homingBullets ? "ENABLED" : "DISABLED"}`);
-    return;
-  }
-
-  if (action === 'blueprint' || action === 'blueprints' || action === 'bp') {
-    const bpTarget = parts[1] ? parts[1].toLowerCase() : 'all';
-    const amt = parseInt(parts[2] || 50);
-
-    if (bpTarget === 'all') {
-      Object.keys(blueprints).forEach(k => { blueprints[k].count += amt; });
-      alert(`Granted ${amt} Blueprints to ALL items!`);
-    } else if (blueprints[bpTarget]) {
-      blueprints[bpTarget].count += amt;
-      alert(`Granted ${amt} Blueprints to ${blueprints[bpTarget].realName || bpTarget}!`);
-    } else {
-      alert(`Unknown blueprint key: "${bpTarget}". Available: excalibur, dark_matter, void_suit, cyber_wings, all`);
-    }
-    saveProgress();
-    return;
-  }
-
-  if (action === 'fragment' || action === 'fragments' || action === 'frag') {
-    const fragTarget = parts[1] ? parts[1].toLowerCase() : 'all';
-    const amt = parseInt(parts[2] || 50);
-
-    if (fragTarget === 'all') {
-      Object.keys(WEAPONS).forEach(k => { weaponFragments[k] = (weaponFragments[k] || 0) + amt; });
-      alert(`Granted ${amt} Fragments to ALL weapons!`);
-    } else {
-      weaponFragments[fragTarget] = (weaponFragments[fragTarget] || 0) + amt;
-      alert(`Granted ${amt} Fragments to ${fragTarget.toUpperCase()}!`);
-    }
-    saveProgress();
-    return;
-  }
-
-  if (action === 'grant' || action === 'giveadmin' || (action === 'give' && parts[1] && parts[1].toLowerCase() === 'admin')) {
-    let target = extractTargetUser();
-    if (target) {
-      adminUsers.add(target.toLowerCase());
-      verifiedUsers.add(target.toLowerCase());
-      if (conn && conn.open) conn.send({ type: 'admin_grant', target: target, sender: player.name });
-      alert(`Granted admin privileges to "${target}"!`);
-      showNotificationBanner(`👑 Granted Admin to ${target}`);
-    } else { alert("Usage: grant <username>"); }
-    return;
-  }
-
-  if (action === 'revoke' || action === 'removeadmin') {
-    let target = extractTargetUser();
-    if (target) {
-      if (isOwnerUser(target)) { alert("Cannot revoke owner admin status from piggy or sphinx!"); return; }
-      adminUsers.delete(target.toLowerCase());
-      verifiedUsers.delete(target.toLowerCase());
-      if (conn && conn.open) conn.send({ type: 'admin_revoke', target: target, sender: player.name });
-      alert(`Revoked admin privileges from "${target}"!`);
-      showNotificationBanner(`⚠️ Revoked Admin from ${target}`, true);
-    } else { alert("Usage: revoke <username>"); }
-    return;
-  }
-
-  const targetUser = parts[1];
-  if (isGuardedOwner(targetUser)) return;
-
-  switch(action) {
-    case 'god': player.godMode = !player.godMode; alert(`Godmode: ${player.godMode}`); break;
-    case 'fly': player.flyMode = !player.flyMode; alert(`Flymode: ${player.flyMode}`); break;
-    case 'invis': player.invisible = !player.invisible; alert(`Invisibility: ${player.invisible}`); break;
-    case 'wallbang':
-    case 'pierce':
-      player.wallbang = !player.wallbang;
-      alert(`Wallbang (Shoot through walls): ${player.wallbang}`);
-      showNotificationBanner(`🎯 Shoot Through Walls: ${player.wallbang ? "ENABLED" : "DISABLED"}`);
-      break;
-    case 'heal': player.health = player.maxHealth; alert("Healed!"); break;
-    case 'shield': player.shieldActive = !player.shieldActive; alert(`Shield: ${player.shieldActive}`); break;
-    case 'speed': player.speedMult = parseFloat(parts[1]) || 2.5; alert(`Speed: ${player.speedMult}x`); break;
-    
-    case 'credits':
-      const amount = parseInt(parts[1] || 1000);
-      let targetName = parts[2] ? parts[2].toLowerCase() : player.name.toLowerCase();
-
-      recordPlayerStats(targetName, 0, amount, 0);
-      saveProgress();
-
-      if (targetName === player.name.toLowerCase()) {
-        showNotificationBanner(`🎁 You were gifted ${amount} credits by ${player.name}!`);
-      } else {
-        if (conn && conn.open) {
-          conn.send({ type: 'admin_credits', amount: amount, sender: player.name, target: targetName });
-        }
-        alert(`Gifted ${amount} credits to ${targetName}!`);
-      }
-      break;
-  }
-}
-
-// --- WEBRTC EVENT RECEIVER SETUP ---
-function setupPeerConnection(connection) {
-  isMultiplayer = true;
-  connection.on('data', data => {
-    if (data.type === 'admin_credits') {
-      if (data.target.toLowerCase() === player.name.toLowerCase() || !data.target) {
-        recordPlayerStats(player.name, 0, data.amount, 0);
-        saveProgress();
-        showNotificationBanner(`🎁 You were gifted ${data.amount} credits by ${data.sender}!`);
-      }
-    } else if (data.type === 'admin_grant') {
-      if (data.target.toLowerCase() === player.name.toLowerCase()) {
-        adminUsers.add(player.name.toLowerCase());
-        verifiedUsers.add(player.name.toLowerCase());
-        refreshAdminUI();
-        showNotificationBanner(`👑 You were granted Admin permissions by ${data.sender}!`);
-      }
-    } else if (data.type === 'admin_revoke') {
-      if (data.target.toLowerCase() === player.name.toLowerCase()) {
-        if (!isOwnerUser(player.name)) {
-          adminUsers.delete(player.name.toLowerCase());
-          verifiedUsers.delete(player.name.toLowerCase());
-          refreshAdminUI();
-          showNotificationBanner(`⚠️ Your Admin permissions were revoked by ${data.sender}!`, true);
-        }
-      }
-    }
-  });
-}
-
-// --- SCOREBOARD ---
 function updateScoreboard() {
-  document.getElementById('scoreVal').innerHTML = `
-    <span style="color:#00ffcc;">Team A: ${teamAScore} / 5</span> | <span style="color:#ff4444;">Team B: ${teamBScore} / 5</span>
-  `;
+  document.getElementById('scoreVal').innerHTML = `<span style="color:#00ffcc;">Team A: ${teamAScore} / 5</span> | <span style="color:#ff4444;">Team B: ${teamBScore} / 5</span>`;
 }
 
-function setMap(mapKey) { currentMap = mapKey; alert(`Map set to ${mapKey.toUpperCase()} 3D!`); }
+function setMap(mapKey) { currentMap = mapKey; alert(`Map set to ${mapKey.toUpperCase()}!`); }
 
-// --- MAIN ENGINE LOOP (TIMERS & COOLDOWNS) ---
+// MAIN ENGINE LOOP
 function loop() {
   const theme = maps[currentMap] || maps.cyber;
   ctx.fillStyle = theme.bg;
@@ -2195,51 +1514,26 @@ function loop() {
 
   if (abilityActiveTimer > 0) {
     abilityActiveTimer--;
-    if (abilityActiveTimer <= 0) {
-      if (equippedOutfit === 'cheetah') player.speedMult = 1.0;
-      if (equippedOutfit === 'ninja') player.invisible = false;
-      if (equippedOutfit === 'cyber_knight') player.shieldActive = false;
-    }
+    if (abilityActiveTimer <= 0 && equippedOutfit === 'cheetah') player.speedMult = 1.0;
   }
 
   if (abilityCooldownTimer > 0) {
     abilityCooldownTimer--;
     const abBtn = document.getElementById('abilityBtn');
-    if (abBtn) {
-      const remainingSec = (abilityCooldownTimer / 60).toFixed(1);
-      abBtn.disabled = true;
-      abBtn.innerText = `⏳ ABILITY (${remainingSec}s)`;
-    }
+    if (abBtn) { abBtn.disabled = true; abBtn.innerText = `⏳ ABILITY (${(abilityCooldownTimer / 60).toFixed(1)}s)`; }
   } else {
     const abBtn = document.getElementById('abilityBtn');
-    if (abBtn) {
-      abBtn.disabled = false;
-      abBtn.innerText = `⚡ ABILITY [E]`;
-    }
+    if (abBtn) { abBtn.disabled = false; abBtn.innerText = `⚡ ABILITY [E]`; }
   }
 
   const floorY = canvas.height - 100;
-
-  ctx.fillStyle = theme.side;
-  ctx.fillRect(0, floorY, canvas.width, 100);
-  ctx.fillStyle = theme.floor;
-  ctx.fillRect(0, floorY, canvas.width, 12);
-  ctx.fillStyle = theme.top;
-  ctx.fillRect(0, floorY, canvas.width, 3);
+  ctx.fillStyle = theme.side; ctx.fillRect(0, floorY, canvas.width, 100);
+  ctx.fillStyle = theme.floor; ctx.fillRect(0, floorY, canvas.width, 12);
 
   const platforms = getCalculatedPlatforms();
   platforms.forEach(p => {
     ctx.fillStyle = theme.side; ctx.fillRect(p.x, p.y + p.h, p.w, 18);
     ctx.fillStyle = theme.floor; ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.fillStyle = theme.top; ctx.fillRect(p.x, p.y, p.w, 4);
-
-    ctx.fillStyle = theme.side;
-    ctx.beginPath();
-    ctx.moveTo(p.x + p.w, p.y);
-    ctx.lineTo(p.x + p.w + 10, p.y + p.h + 6);
-    ctx.lineTo(p.x + p.w + 10, p.y + p.h + 24);
-    ctx.lineTo(p.x + p.w, p.y + p.h + 18);
-    ctx.fill();
   });
 
   beans.forEach((b, idx) => { b.update(); b.draw(); if (b.dead) beans.splice(idx, 1); });
@@ -2249,13 +1543,7 @@ function loop() {
   allEntities.forEach(ent => { if (ent) { ent.update(); ent.draw(); } });
   projectiles.forEach((p, idx) => { p.update(); p.draw(); if (p.dead) projectiles.splice(idx, 1); });
 
-  if (screenFlashTimer > 0) {
-    ctx.fillStyle = `rgba(255, 255, 255, ${screenFlashTimer / 15})`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    screenFlashTimer--;
-  }
-
-  document.getElementById('hpVal').innerText = player.health === Infinity ? "INF" : `${Math.max(0, Math.ceil(player.health))} / ${player.maxHealth}`;
+  document.getElementById('hpVal').innerText = `${Math.max(0, Math.ceil(player.health))} / ${player.maxHealth}`;
   document.getElementById('creditsVal').innerText = credits;
   document.getElementById('weaponVal').innerText = player.weaponData.name;
   document.getElementById('ammoVal').innerText = player.reloading ? "RELOADING..." : `${player.weaponData.ammo} / ${player.weaponData.maxAmmo}`;
@@ -2269,4 +1557,3 @@ loop();
 </script>
 </body>
 </html>
-
