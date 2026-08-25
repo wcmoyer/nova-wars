@@ -4,18 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Rival Ragdolls - 3D Arena Shooter</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body, html { width: 100%; height: 100%; overflow: hidden; background: #08090f; color: #fff; touch-action: none; }
     #gameContainer { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
     canvas { display: block; background: #0a0c16; width: 100%; height: 100%; }
 
+    /* Scope Overlay */
     #scopeOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; z-index: 45; border: 40px solid rgba(0, 0, 0, 0.75); box-shadow: inset 0 0 100px #000; }
     #scopeCrosshair { position: absolute; top: 50%; left: 50%; width: 24px; height: 24px; transform: translate(-50%, -50%); border: 2px solid #00ffcc; border-radius: 50%; display: flex; justify-content: center; align-items: center; }
     #scopeCrosshair::before, #scopeCrosshair::after { content: ''; position: absolute; background: #00ffcc; }
     #scopeCrosshair::before { width: 44px; height: 2px; }
     #scopeCrosshair::after { width: 2px; height: 44px; }
 
+    /* UI Overlay */
     .hud-panel { position: absolute; padding: 8px 14px; background: rgba(10, 12, 22, 0.9); border-radius: 8px; backdrop-filter: blur(8px); border: 1px solid rgba(0,255,204,0.3); pointer-events: auto; }
     #statsHud { top: 12px; left: 12px; display: flex; gap: 12px; align-items: center; z-index: 60; }
     .stat-box { display: flex; flex-direction: column; }
@@ -26,8 +29,10 @@
     #scoreHud h3 { font-size: 10px; color: #ffcc00; text-transform: uppercase; margin-bottom: 2px; }
     #scoreVal { font-size: 15px; font-weight: bold; color: #fff; }
 
+    /* Quick Controls Bar */
     #quickControls { position: absolute; top: 62px; left: 12px; right: 12px; display: flex; gap: 6px; flex-wrap: wrap; z-index: 70; pointer-events: auto; }
 
+    /* Buttons */
     .btn { background: #00ffcc; color: #000; border: none; padding: 7px 12px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 11px; box-shadow: 0 0 10px rgba(0,255,204,0.2); }
     .btn:hover { background: #00cca3; transform: scale(1.03); }
     .btn-secondary { background: #1e2235; color: #fff; border: 1px solid #3a3f58; box-shadow: none; }
@@ -36,18 +41,22 @@
     .btn-ability { background: linear-gradient(135deg, #a800ff, #00ffcc); color: #fff; font-size: 12px; font-weight: 800; border: 1px solid #00ffcc; text-shadow: 0 0 4px #000; }
     .btn-ability:disabled { background: #333; color: #777; border-color: #555; cursor: not-allowed; }
 
+    /* Notification Banner */
     #giftPopupBanner { position: absolute; top: 22%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; font-weight: 800; color: #ffcc00; background: rgba(15, 15, 25, 0.95); border: 2px solid #ffcc00; padding: 12px 24px; border-radius: 12px; text-shadow: 0 0 10px rgba(255, 204, 0, 0.8); box-shadow: 0 0 24px rgba(255, 204, 0, 0.4); display: none; z-index: 150; pointer-events: none; text-align: center; }
     #suddenDeathBanner { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); font-size: 24px; font-weight: 900; color: #ff0055; text-shadow: 0 0 12px #ff0055; letter-spacing: 3px; display: none; z-index: 80; }
 
     .hud-select { background: #111; color: #ffcc00; border: 1px solid #555; padding: 3px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; outline: none; cursor: pointer; }
 
+    /* Emote Bar */
     #emoteBar { position: absolute; bottom: 75px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(0,0,0,0.85); padding: 6px 12px; border-radius: 30px; border: 1px solid rgba(0,255,204,0.3); z-index: 60; backdrop-filter: blur(6px); }
     .emote-btn { background: #1e2230; border: 1px solid #444; border-radius: 50%; width: 36px; height: 36px; font-size: 16px; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; }
     .emote-btn:hover { transform: scale(1.18); background: #00ffcc; border-color: #00ffcc; }
 
+    /* Admin Console */
     #adminConsole { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 850px; max-width: 95vw; display: none; flex-direction: column; gap: 8px; z-index: 100; }
     #adminConsole input { width: 100%; padding: 12px; background: rgba(10,10,15,0.95); border: 2px solid #9900ff; color: #00ffcc; font-family: monospace; font-size: 13px; border-radius: 6px; outline: none; }
 
+    /* Touch Controls Overlay */
     #touchOverlay { position: absolute; bottom: 85px; left: 25px; right: 25px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; z-index: 50; }
     .joy-container { width: 100px; height: 100px; background: rgba(255,255,255,0.08); border: 2px solid rgba(0,255,204,0.4); border-radius: 50%; position: relative; pointer-events: auto; backdrop-filter: blur(4px); touch-action: none; display: flex; justify-content: center; align-items: center; }
     .joy-stick { width: 40px; height: 40px; border-radius: 50%; position: absolute; pointer-events: none; transition: 0.05s ease-out; }
@@ -56,6 +65,7 @@
     .joy-label { position: absolute; top: -18px; font-size: 9px; font-weight: bold; letter-spacing: 1px; color: #aaa; text-transform: uppercase; pointer-events: none; }
     #touchActions { position: absolute; bottom: 18px; right: 140px; display: flex; gap: 8px; pointer-events: auto; z-index: 60; }
 
+    /* Modal / Overlay UI */
     .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(4, 5, 12, 0.94); display: none; justify-content: center; align-items: center; z-index: 300; }
     .modal-content { position: relative; background: #141724; border: 2px solid #00ffcc; width: 860px; max-width: 95vw; max-height: 88vh; border-radius: 12px; padding: 22px; overflow-y: auto; color: #fff; box-shadow: 0 0 30px rgba(0,255,204,0.25); }
     .modal-close-btn { position: absolute; top: 14px; right: 16px; background: rgba(255, 68, 68, 0.2); border: 1px solid #ff4444; color: #ff4444; font-size: 13px; font-weight: bold; padding: 5px 11px; border-radius: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.2s; z-index: 10; }
@@ -266,15 +276,15 @@
       <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
         <div style="background: #1c2032; padding: 12px; border-radius: 8px; border-left: 4px solid #00ffcc;">
           <h4 style="color: #00ffcc; margin-bottom: 3px;">1. Ground Spawning & Controls</h4>
-          <p style="font-size: 12px; color: #ccc;">Fighters spawn safely on solid elevated ground platforms! Move using <strong>WASD</strong> or <strong>Arrow Keys</strong>.</p>
+          <p style="font-size: 12px; color: #ccc;">Fighters spawn safely on solid elevated ground platforms. Move using <strong>WASD</strong> or <strong>Arrow Keys</strong>.</p>
         </div>
         <div style="background: #1c2032; padding: 12px; border-radius: 8px; border-left: 4px solid #ff4444;">
           <h4 style="color: #ff4444; margin-bottom: 3px;">2. Fortnite Scoped Aiming & Active Abilities</h4>
-          <p style="font-size: 12px; color: #ccc;">Hold <strong>Right-Click</strong> to aim down sight with a Fortnite-style scope crosshair! Press <strong>[E]</strong> or tap the on-screen Ability button to trigger your outfit's active ability (e.g. Cheetah Dash, Ninja Cloak, Cyber Barrier)!</p>
+          <p style="font-size: 12px; color: #ccc;">Hold <strong>Right-Click</strong> to aim down sight with a Fortnite-style scope crosshair. Press <strong>[E]</strong> or tap the on-screen Ability button to trigger your outfit's active ability (e.g. Cheetah Dash, Ninja Cloak, Cyber Barrier).</p>
         </div>
         <div style="background: #1c2032; padding: 12px; border-radius: 8px; border-left: 4px solid #ffcc00;">
           <h4 style="color: #ffcc00; margin-bottom: 3px;">3. Weapon-Specific Mastery Skins (500 Damage)</h4>
-          <p style="font-size: 12px; color: #ccc;">Deal <strong>500 Damage</strong> with a specific weapon to unlock an exclusive 👑 <strong>Gold Mastery Skin for that weapon only</strong>!</p>
+          <p style="font-size: 12px; color: #ccc;">Deal <strong>500 Damage</strong> with a specific weapon to unlock an exclusive 👑 <strong>Gold Mastery Skin for that weapon only</strong>.</p>
         </div>
       </div>
       <div style="margin-top: 18px; text-align: center;">
@@ -287,7 +297,7 @@
     <div class="modal-content">
       <button class="modal-close-btn" onclick="toggleShopModal(false)">✖ Close [X]</button>
       <h2>Weapon Shop & Realistic Finish Skins</h2>
-      <p style="font-size:12px; color:#aaa;">Equip weapons, buy finish skins with Credits, or earn Weapon-Specific 500 Damage Mastery Skins!</p>
+      <p style="font-size:12px; color:#aaa;">Equip weapons, buy finish skins with Credits, or earn Weapon-Specific 500 Damage Mastery Skins.</p>
       <div style="margin: 12px 0;">
         <h3>Select Weapon Finish Skin</h3>
         <div class="grid-3col" id="skinShopGrid"></div>
@@ -302,7 +312,7 @@
     <div class="modal-content">
       <button class="modal-close-btn" onclick="toggleOutfitModal(false)">✖ Close [X]</button>
       <h2>Realistic Character Outfits & Abilities</h2>
-      <p style="font-size:12px; color:#aaa;">Equip realistic outfits featuring custom active abilities (3-second cooldown)!</p>
+      <p style="font-size:12px; color:#aaa;">Equip realistic outfits featuring custom active abilities (3-second cooldown).</p>
       <div class="grid-3col" id="outfitWardrobeGrid"></div>
     </div>
   </div>
@@ -311,7 +321,7 @@
     <div class="modal-content">
       <button class="modal-close-btn" onclick="toggleBlueprintModal(false)">✖ Close [X]</button>
       <h2>📜 Blueprints Vault & Weapon Fragments</h2>
-      <p style="color: #aaa; font-size: 12px; margin-bottom: 12px;">Collect 200 Fragments to unlock weapons or earn Blueprints for Secret & Unreleased items!</p>
+      <p style="color: #aaa; font-size: 12px; margin-bottom: 12px;">Collect 200 Fragments to unlock weapons or earn Blueprints for Secret & Unreleased items.</p>
       <h3>Fragment Unlocks (200 Required)</h3>
       <div class="grid-3col" id="fragmentGrid"></div>
       <hr style="border: 0; border-top: 1px solid #282d44; margin: 16px 0;">
@@ -324,7 +334,7 @@
     <div class="modal-content" style="max-width: 580px;">
       <button class="modal-close-btn" onclick="toggleChallengeModal(false)">✖ Close [X]</button>
       <h2 id="challengeHeaderTitle">🎯 Faction Challenges</h2>
-      <p style="color: #aaa; font-size: 12px; margin-bottom: 12px;" id="challengeSubTitle">Complete tasks during battle to earn Fragments, Blueprints, and Credits!</p>
+      <p style="color: #aaa; font-size: 12px; margin-bottom: 12px;" id="challengeSubTitle">Complete tasks during battle to earn Fragments, Blueprints, and Credits.</p>
       <div style="display: flex; flex-direction: column; gap: 10px;" id="challengeList"></div>
     </div>
   </div>
@@ -333,7 +343,7 @@
     <div class="modal-content" style="max-width: 420px; text-align: center;">
       <button class="modal-close-btn" onclick="toggleWheelModal(false)">✖ Close [X]</button>
       <h2>🎡 Daily Prize Wheel</h2>
-      <p style="color: #aaa; font-size: 12px; margin-bottom: 18px;">Spin the wheel to win Credits, Fragments, or Secret Blueprints!</p>
+      <p style="color: #aaa; font-size: 12px; margin-bottom: 18px;">Spin the wheel to win Credits, Fragments, or Secret Blueprints.</p>
       <div id="wheelDisplay" style="width: 200px; height: 200px; border-radius: 50%; border: 6px solid #00ffcc; margin: 0 auto; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle, #1c2032, #0d0f18); box-shadow: 0 0 25px rgba(0,255,204,0.3); font-weight: bold; font-size: 16px; color: #ffcc00; text-shadow: 0 0 8px #ffcc00;">
         🎁 SPIN ME!
       </div>
@@ -439,9 +449,9 @@ function authenticateUser2FA() {
     const userInputCode = prompt(`🔐 SECURITY 2FA REQUIRED:\nEnter Authenticator Code for "${playerName}":`);
     if (userInputCode === AUTH_CODES[key]) {
       adminUsers.add(key); verifiedUsers.add(key);
-      player.name = playerName;
-      if (key === 'sphinx') { equippedOutfit = 'chicken'; player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail }; }
-      else if (key === 'piggy') { equippedOutfit = 'piggy'; player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail }; }
+      if (player) player.name = playerName;
+      if (key === 'sphinx') { equippedOutfit = 'chicken'; if (player) { player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail }; } }
+      else if (key === 'piggy') { equippedOutfit = 'piggy'; if (player) { player.equippedWeapon = 'flail'; player.weaponData = { ...WEAPONS.flail }; } }
       saveProgress(); refreshAdminUI();
       document.getElementById('playerNameVal').innerText = playerName;
       showNotificationBanner(`🔓 2FA Authenticated as ${playerName.toUpperCase()}!`);
@@ -453,7 +463,7 @@ function authenticateUser2FA() {
     }
   } else {
     adminUsers.delete(key); verifiedUsers.delete(key);
-    player.name = playerName;
+    if (player) player.name = playerName;
     document.getElementById('playerNameVal').innerText = playerName;
     saveProgress(); refreshAdminUI();
     return true;
@@ -657,7 +667,6 @@ function showNotificationBanner(msg, isWarning = false) {
   bannerTimer = setTimeout(() => { popup.style.display = 'none'; }, 4500);
 }
 
-// Input Controls
 const keys = {};
 const mouse = { x: 0, y: 0, down: false, rightDown: false };
 
@@ -728,7 +737,6 @@ function activateOutfitAbility() {
   }
 }
 
-// Touch Controls
 const moveContainer = document.getElementById('moveContainer');
 const moveStick = document.getElementById('moveStick');
 let moveActive = false;
@@ -777,7 +785,6 @@ canvas.addEventListener('touchstart', e => { if (e.touches.length > 0) { mouse.x
 canvas.addEventListener('touchmove', e => { if (e.touches.length > 0) { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; touchAimAngle = null; } });
 canvas.addEventListener('touchend', () => mouse.down = false);
 
-// WEAPONS ARSENAL
 const WEAPONS = {
   pistol: { name: 'Pistol', tier: 'Basic Tier', damage: 2, rate: 220, ammo: 18, maxAmmo: 18, speed: 22, cost: 0, gravity: 0, ownerOnly: false, multishot: 1 },
   smg: { name: 'Tactical SMG', tier: 'Tier 1 - Rapid Burst', damage: 2, rate: 60, ammo: 45, maxAmmo: 45, speed: 25, cost: 250, gravity: 0, ownerOnly: false, multishot: 1 },
@@ -797,7 +804,6 @@ const WEAPONS = {
   crook: { name: 'Healer Crook', tier: 'Master Weapon', damage: 1, rate: 150, ammo: 100, maxAmmo: 100, speed: 15, cost: 0, ownerOnly: true, special: 'heal', multishot: 1 }
 };
 
-// ARENA MAPS
 const maps = {
   cyber: { bg: '#080a14', floor: '#00ffcc', side: '#101428', top: '#00ffff', platforms: [{ x: 0.18, y: 0.70, w: 240, h: 22 }, { x: 0.50, y: 0.48, w: 280, h: 22, isCenter: true }, { x: 0.82, y: 0.70, w: 240, h: 22, isRelRight: true }] },
   lava: { bg: '#140606', floor: '#ff3300', side: '#280c0c', top: '#ffaa00', platforms: [{ x: 0.18, y: 0.70, w: 240, h: 22 }, { x: 0.50, y: 0.48, w: 280, h: 22, isCenter: true }, { x: 0.82, y: 0.70, w: 240, h: 22, isRelRight: true }] },
@@ -824,88 +830,6 @@ function getCalculatedPlatforms() {
   });
 }
 
-// BEANS & BOMBS
-let beans = [];
-class Bean {
-  constructor(x, y, type = 'red') {
-    this.x = x; this.y = y; this.type = type; this.radius = 8; this.vy = 0;
-    if (type === 'red') { this.heal = 10; this.color = '#ff3366'; }
-    if (type === 'green') { this.heal = 20; this.color = '#00ff66'; }
-    if (type === 'gold') { this.heal = 35; this.color = '#ffcc00'; }
-  }
-  update() {
-    const floorY = canvas.height * 0.78;
-    const platforms = getCalculatedPlatforms();
-    let targetY = floorY;
-    platforms.forEach(p => {
-      if (this.x >= p.x && this.x <= p.x + p.w && this.y <= p.y + 10) { if (p.y < targetY) targetY = p.y; }
-    });
-    if (this.y + this.radius < targetY) { this.vy += 0.3; this.y += this.vy; }
-    else { this.y = targetY - this.radius; this.vy = 0; }
-
-    allEntities.filter(Boolean).forEach(p => {
-      if (Math.hypot(p.x - this.x, p.y - this.y) < 22) { p.health = Math.min(p.maxHealth, p.health + this.heal); this.dead = true; }
-    });
-  }
-  draw() {
-    ctx.fillStyle = this.color;
-    ctx.beginPath(); ctx.ellipse(this.x, this.y, this.radius + 3, this.radius, 0.3, 0, Math.PI * 2); ctx.fill();
-  }
-}
-
-function spawnRandomBean(xOverride, yOverride) {
-  if (!isMatchActive) return;
-  const x = xOverride || (50 + Math.random() * (canvas.width - 100));
-  const y = yOverride || 50;
-  beans.push(new Bean(x, y, Math.random() > 0.6 ? (Math.random() > 0.8 ? 'gold' : 'green') : 'red'));
-}
-setInterval(() => { if (isMatchActive && Math.random() < 0.6) spawnRandomBean(); }, 8000);
-
-let bombs = [];
-let explosions = [];
-
-class Bomb {
-  constructor(x, y, vx, vy, owner) {
-    this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.owner = owner; this.radius = 7; this.dead = false;
-  }
-  update() {
-    this.vy += 0.45; this.x += this.vx; this.y += this.vy;
-    const floorY = canvas.height * 0.78;
-    const platforms = getCalculatedPlatforms();
-    platforms.forEach(p => { if (this.x >= p.x && this.x <= p.x + p.w && Math.abs(this.y - p.y) < 12) this.explode(); });
-    if (this.y >= floorY || this.x < 0 || this.x > canvas.width) this.explode();
-  }
-  explode() {
-    if (this.dead) return; this.dead = true;
-    explosions.push(new Explosion(this.x, this.y, 65, 25, this.owner));
-  }
-  draw() {
-    ctx.fillStyle = '#ff2200'; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
-  }
-}
-
-class Explosion {
-  constructor(x, y, maxRadius, damage, owner) {
-    this.x = x; this.y = y; this.maxRadius = maxRadius; this.radius = 5;
-    this.damage = damage; this.owner = owner; this.dead = false;
-    allEntities.filter(Boolean).forEach(p => {
-      const dist = Math.hypot(p.x - this.x, p.y - this.y);
-      if (dist < this.maxRadius) {
-        const falloff = 1 - (dist / this.maxRadius);
-        const dealt = Math.ceil(this.damage * falloff);
-        p.takeDamage(dealt);
-        if (this.owner) recordPlayerStats(this.owner.name, 0, 0, dealt);
-      }
-    });
-  }
-  update() { this.radius += 4; if (this.radius >= this.maxRadius) this.dead = true; }
-  draw() {
-    ctx.fillStyle = `rgba(255, 102, 0, ${1 - this.radius / this.maxRadius})`;
-    ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
-  }
-}
-
-// CHARACTER CLASS
 class Character {
   constructor(x, y, isBot = false, name = "Player", team = 'A') {
     this.x = x; this.y = y; this.vx = 0; this.vy = 0;
@@ -1107,7 +1031,6 @@ class Character {
     ctx.fillStyle = skinColor; ctx.strokeStyle = strokeColor; ctx.lineWidth = 2;
     ctx.fillRect(2, -4, 18, 8); ctx.strokeRect(2, -4, 18, 8);
     ctx.restore();
-
     ctx.restore();
 
     const barWidth = 48;
@@ -1122,7 +1045,6 @@ class Character {
   }
 }
 
-// PROJECTILES
 class Projectile {
   constructor(x, y, vx, vy, damage, owner, isPurple = false, gravity = 0, isExplosive = false) {
     this.x = x; this.y = y; this.vx = vx; this.vy = vy;
@@ -1184,7 +1106,7 @@ class Projectile {
   }
 }
 
-// INITIALIZATION & SAFE POSITION SPAWNING
+// Instantiate entities safely after sizing
 let player = new Character(200, 300, false, "piggy", 'A');
 let allEntities = [player];
 let teamAScore = 0; let teamBScore = 0; let projectiles = [];
@@ -1217,7 +1139,10 @@ function confirmMatchStart() {
 
 function startMatch(mode) {
   closeAllModals();
-  isMatchActive = true; autoMoveDisabled = false; teamAScore = 0; teamBScore = 0;
+  isMatchActive = true; 
+  autoMoveDisabled = false; 
+  teamAScore = 0; 
+  teamBScore = 0;
   allEntities = [player];
 
   const cW = canvas.width || 1280;
@@ -1255,7 +1180,8 @@ function startMatch(mode) {
 }
 
 function returnToHub() {
-  isMatchActive = false; closeAllModals();
+  isMatchActive = false; 
+  closeAllModals();
   document.getElementById('hubModal').style.display = 'flex';
   updateLeaderboardUI();
 }
@@ -1548,44 +1474,137 @@ document.getElementById('adminInput').addEventListener('keydown', e => {
 });
 
 function processCommand(cmd) {
-  if (!player || !hasAdmin(player.name)) { alert("Access Denied."); return; }
+  if (!player || !hasAdmin(player.name)) { alert("Access Denied: You do not have admin permissions."); return; }
+
   const cleanCmd = cmd.toLowerCase().trim();
   const parts = cmd.trim().split(/\s+/);
   const action = parts[0] ? parts[0].toLowerCase() : '';
 
-  if (cleanCmd === 'stop all admin') {
+  function extractTargetUser() {
+    let t = parts[1] || '';
+    if (t.toLowerCase() === 'admin' && parts[2]) t = parts[2];
+    return t;
+  }
+
+  function isGuardedOwner(target) {
+    if (target && isOwnerUser(target) && !isOwnerUser(player.name)) {
+      alert("PROTECTION ACTIVE: Admin commands cannot be used against piggy or sphinx.");
+      return true;
+    }
+    return false;
+  }
+
+  if (cleanCmd === 'stop all admin' || cleanCmd === 'stopalladmin') {
     player.godMode = false; player.flyMode = false; player.invisible = false;
     player.aimbot = false; player.shieldActive = false; player.wallbang = false;
     player.autoDodge = false; player.homingBullets = false;
     player.speedMult = 1.0; player.scaleMult = 1.2; player.frozen = false;
-    alert("STOPPED ALL ADMIN MODES"); return;
+    alert("STOPPED ALL ACTIVE ADMIN COMMANDS!"); return;
   }
 
-  if (cleanCmd === 'all admin') {
+  if (cleanCmd === 'all admin' || cleanCmd === 'alladmin') {
     player.godMode = true; player.flyMode = true; player.invisible = true;
     player.aimbot = true; player.shieldActive = true; player.wallbang = true;
     player.autoDodge = true; player.homingBullets = true;
     player.health = player.maxHealth; player.speedMult = 3.5; player.scaleMult = 1.5;
-    recordPlayerStats(player.name, 0, 10000, 0); saveProgress();
-    alert("ACTIVATED ALL ADMIN PERKS"); return;
+    recordPlayerStats(player.name, 0, 10000, 0);
+    saveProgress();
+    alert("ACTIVATED ALL ADMIN PERKS!"); return;
   }
 
   if (action === 'dodge' || action === 'matrix') {
     player.autoDodge = !player.autoDodge;
-    alert(`Auto Dodge: ${player.autoDodge}`); return;
+    alert(`Auto Bullet Dodge: ${player.autoDodge ? "ENABLED" : "DISABLED"}`);
+    return;
   }
+
   if (action === 'aimbot') {
     player.aimbot = !player.aimbot;
-    alert(`Aimbot: ${player.aimbot}`); return;
+    alert(`Aimbot Auto Target: ${player.aimbot ? "ENABLED" : "DISABLED"}`);
+    return;
   }
+
   if (action === 'homing' || action === 'track') {
     player.homingBullets = !player.homingBullets;
-    alert(`Homing: ${player.homingBullets}`); return;
+    alert(`Homing Tracking Bullets: ${player.homingBullets ? "ENABLED" : "DISABLED"}`);
+    return;
   }
-  if (action === 'credits') {
-    const amount = parseInt(parts[1] || 1000);
-    recordPlayerStats(player.name, 0, amount, 0); saveProgress();
-    showNotificationBanner(`🎁 Added ${amount} credits!`);
+
+  if (action === 'blueprint' || action === 'blueprints' || action === 'bp') {
+    const bpTarget = parts[1] ? parts[1].toLowerCase() : 'all';
+    const amt = parseInt(parts[2] || 50);
+
+    if (bpTarget === 'all') {
+      Object.keys(blueprints).forEach(k => { blueprints[k].count += amt; });
+      alert(`Granted ${amt} Blueprints to ALL items!`);
+    } else if (blueprints[bpTarget]) {
+      blueprints[bpTarget].count += amt;
+      alert(`Granted ${amt} Blueprints to ${blueprints[bpTarget].realName || bpTarget}!`);
+    } else {
+      alert(`Unknown blueprint key: "${bpTarget}". Available: excalibur, dark_matter, void_suit, cyber_wings, all`);
+    }
+    saveProgress();
+    return;
+  }
+
+  if (action === 'fragment' || action === 'fragments' || action === 'frag') {
+    const fragTarget = parts[1] ? parts[1].toLowerCase() : 'all';
+    const amt = parseInt(parts[2] || 50);
+
+    if (fragTarget === 'all') {
+      Object.keys(WEAPONS).forEach(k => { weaponFragments[k] = (weaponFragments[k] || 0) + amt; });
+      alert(`Granted ${amt} Fragments to ALL weapons!`);
+    } else {
+      weaponFragments[fragTarget] = (weaponFragments[fragTarget] || 0) + amt;
+      alert(`Granted ${amt} Fragments to ${fragTarget.toUpperCase()}!`);
+    }
+    saveProgress();
+    return;
+  }
+
+  if (action === 'grant' || action === 'giveadmin') {
+    let target = extractTargetUser();
+    if (target) {
+      adminUsers.add(target.toLowerCase());
+      verifiedUsers.add(target.toLowerCase());
+      alert(`Granted admin privileges to "${target}"!`);
+      showNotificationBanner(`👑 Granted Admin to ${target}`);
+    } else { alert("Usage: grant <username>"); }
+    return;
+  }
+
+  if (action === 'revoke' || action === 'removeadmin') {
+    let target = extractTargetUser();
+    if (target) {
+      if (isOwnerUser(target)) { alert("Cannot revoke owner admin status from piggy or sphinx!"); return; }
+      adminUsers.delete(target.toLowerCase());
+      verifiedUsers.delete(target.toLowerCase());
+      alert(`Revoked admin privileges from "${target}"!`);
+      showNotificationBanner(`⚠️ Revoked Admin from ${target}`, true);
+    } else { alert("Usage: revoke <username>"); }
+    return;
+  }
+
+  const targetUser = parts[1];
+  if (isGuardedOwner(targetUser)) return;
+
+  switch(action) {
+    case 'god': player.godMode = !player.godMode; alert(`Godmode: ${player.godMode}`); break;
+    case 'fly': player.flyMode = !player.flyMode; alert(`Flymode: ${player.flyMode}`); break;
+    case 'invis': player.invisible = !player.invisible; alert(`Invisibility: ${player.invisible}`); break;
+    case 'wallbang':
+      player.wallbang = !player.wallbang;
+      alert(`Wallbang: ${player.wallbang}`);
+      break;
+    case 'heal': player.health = player.maxHealth; alert("Healed!"); break;
+    case 'shield': player.shieldActive = !player.shieldActive; alert(`Shield: ${player.shieldActive}`); break;
+    case 'speed': player.speedMult = parseFloat(parts[1]) || 2.5; alert(`Speed: ${player.speedMult}x`); break;
+    case 'credits':
+      const amount = parseInt(parts[1] || 1000);
+      recordPlayerStats(player.name, 0, amount, 0);
+      saveProgress();
+      showNotificationBanner(`🎁 Added ${amount} credits!`);
+      break;
   }
 }
 
